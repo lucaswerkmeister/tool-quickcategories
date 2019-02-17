@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    {% block head %}
+    <meta charset="utf-8">
+    <title>{% block title %}QuickCategories{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://tools-static.wmflabs.org/cdnjs/ajax/libs/twitter-bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    {% endblock head %}
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+      <a href="{{ url_for('index') }}" class="navbar-brand">QuickCategories</a>
+      <ul class="navbar-nav mr-auto">
+        <li><a href="https://meta.wikimedia.org/wiki/User:Lucas_Werkmeister/QuickCategories" class="nav-link">Documentation</a></li>
+        <li><a href="//tools.wmflabs.org/" class="nav-link">Wikimedia Toolforge</a></li>
+        <li><a href="https://phabricator.wikimedia.org/source/tool-quickcategories/" class="nav-link">Source code</a></li>
+      </ul>
+      {{ authentication_area() }}
+    </nav>
+    <main class="container mt-3">
+      {% block main %}
+      {% endblock main %}
+    </main>
+  </body>
+</html>
