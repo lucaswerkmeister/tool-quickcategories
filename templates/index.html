@@ -1,6 +1,28 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>QuickCategories</h1>
+<form method="post" action="batch">
+  <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+  <div class="form-group">
+    <label for="domain">Wiki domain</label>
+    <input
+      id="domain" class="form-control"
+      name="domain" type="text"
+      required pattern="[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org"
+      placeholder="commons.wikimedia.org">
+  </div>
+  <div class="form-group">
+    <label for="commands">Commands</label>
+    <textarea
+      id="commands" class="form-control"
+      name="commands"
+      rows="20"
+      required
+      placeholder="Commons:Sandbox|+Category:Test|-Category:Other test&#x0A;Other page|+Category:Sandbox"></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">Start batch</button>
+</form>
+<!-- TODO remove the stuff below -->
 <p>
   <strong>Congratulations!</strong>
   You’ve started creating a new tool – that’s awesome!
