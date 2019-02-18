@@ -5,6 +5,7 @@ import mwapi
 import mwoauth
 import os
 import random
+import re
 import requests_oauthlib
 import string
 import toolforge
@@ -85,6 +86,15 @@ def authentication_area():
 def index():
     return flask.render_template('index.html')
 
+@app.route('/batch', methods=['POST'])
+def new_batch():
+    if not submitted_request_valid():
+        return 'CSRF error', 400
+    domain = flask.request.form.get('domain', '(not provided)')
+    if not is_wikimedia_domain(domain):
+        return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
+    return 'TODO'
+
 @app.route('/greet/<name>')
 def greet(name):
     return flask.render_template('greet.html',
@@ -138,6 +148,10 @@ def oauth_callback():
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
     return flask.redirect(flask.url_for('index'))
+
+
+def is_wikimedia_domain(domain):
+    return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org', domain) is not None
 
 
 def full_url(endpoint, **kwargs):
