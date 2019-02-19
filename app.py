@@ -8,7 +8,7 @@ import random
 import re
 import requests_oauthlib # type: ignore
 import string
-import toolforge # type: ignore
+import toolforge
 import werkzeug
 import yaml
 

@@ -1,5 +1,5 @@
 .PHONY: check
 
 check:
-	find -name '*.py' -not -name 'test_*.py' -exec mypy -- {} +
+	MYPYPATH=stubs/ find -name '*.py' -not -name 'test_*.py' -exec mypy -- {} +
 	pytest
