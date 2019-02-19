@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import flask
-import mwapi
-import mwoauth
+import flask # type: ignore
+import mwapi # type: ignore
+import mwoauth # type: ignore
 import os
 import random
 import re
-import requests_oauthlib
+import requests_oauthlib # type: ignore
 import string
-import toolforge
+import toolforge # type: ignore
+import werkzeug
 import yaml
 
 
@@ -29,13 +30,13 @@ if 'oauth' in app.config:
 
 
 @app.template_global()
-def csrf_token():
+def csrf_token() -> str:
     if 'csrf_token' not in flask.session:
         flask.session['csrf_token'] = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(64))
     return flask.session['csrf_token']
 
 @app.template_global()
-def form_value(name):
+def form_value(name: str) -> flask.Markup:
     if 'repeat_form' in flask.g and name in flask.request.form:
         return (flask.Markup(r' value="') +
                 flask.Markup.escape(flask.request.form[name]) +
@@ -44,7 +45,7 @@ def form_value(name):
         return flask.Markup()
 
 @app.template_global()
-def form_attributes(name):
+def form_attributes(name: str) -> flask.Markup:
     return (flask.Markup(r' id="') +
             flask.Markup.escape(name) +
             flask.Markup(r'" name="') +
@@ -53,7 +54,7 @@ def form_attributes(name):
             form_value(name))
 
 @app.template_filter()
-def user_link(user_name):
+def user_link(user_name: str) -> flask.Markup:
     return (flask.Markup(r'<a href="https://meta.wikimedia.org/wiki/User:') +
             flask.Markup.escape(user_name.replace(' ', '_')) +
             flask.Markup(r'">') +
@@ -63,7 +64,7 @@ def user_link(user_name):
             flask.Markup(r'</a>'))
 
 @app.template_global()
-def authentication_area():
+def authentication_area() -> flask.Markup:
     if 'oauth' not in app.config:
         return flask.Markup()
 
@@ -96,7 +97,7 @@ def new_batch():
     return 'TODO'
 
 @app.route('/greet/<name>')
-def greet(name):
+def greet(name: str):
     return flask.render_template('greet.html',
                                  name=name)
 
@@ -150,15 +151,15 @@ def oauth_callback():
     return flask.redirect(flask.url_for('index'))
 
 
-def is_wikimedia_domain(domain):
+def is_wikimedia_domain(domain: str) -> bool:
     return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org', domain) is not None
 
 
-def full_url(endpoint, **kwargs):
+def full_url(endpoint: str, **kwargs) -> str:
     scheme=flask.request.headers.get('X-Forwarded-Proto', 'http')
     return flask.url_for(endpoint, _external=True, _scheme=scheme, **kwargs)
 
-def submitted_request_valid():
+def submitted_request_valid() -> bool:
     """Check whether a submitted POST request is valid.
 
     If this method returns False, the request might have been issued
@@ -188,7 +189,7 @@ def submitted_request_valid():
     return True
 
 @app.after_request
-def deny_frame(response):
+def deny_frame(response: werkzeug.Response) -> werkzeug.Response:
     """Disallow embedding the tool’s pages in other websites.
 
     If other websites can embed this tool’s pages, e. g. in <iframe>s,

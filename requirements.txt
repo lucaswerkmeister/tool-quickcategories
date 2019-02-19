@@ -1,6 +1,7 @@
 flask
 mwapi
 mwoauth
+mypy
 pytest
 pyyaml
 requests_oauthlib
