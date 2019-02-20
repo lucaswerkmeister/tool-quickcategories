@@ -61,6 +61,11 @@ def test_Command_repr():
 
 
 @pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
+def test_CategoryAction_init_empty(clazz):
+    with pytest.raises(AssertionError):
+        clazz('')
+
+@pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
 def test_CategoryAction_init_wikilink(clazz):
     with pytest.raises(AssertionError):
         clazz('[[Category:Cat 1]]')

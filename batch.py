@@ -48,6 +48,7 @@ class CategoryAction(Action):
     """An action to modify a category in the wikitext of a page."""
 
     def __init__(self, category: str):
+        assert category
         assert not category.startswith('Category:')
         assert '[' not in category
         assert ']' not in category
