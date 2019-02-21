@@ -33,7 +33,7 @@ class Command:
             self.actions == value.actions
 
     def __str__(self) -> str:
-        return '|'.join([self.page, *[str(action) for action in self.actions]])
+        return self.page + '|' + '|'.join([str(action) for action in self.actions])
 
     def __repr__(self) -> str:
         return 'Command(' + repr(self.page) + ', ' + repr(self.actions) + ')'
