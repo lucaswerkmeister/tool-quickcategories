@@ -12,6 +12,8 @@ import toolforge
 import werkzeug
 import yaml
 
+import parse_tpsv
+
 
 app = flask.Flask(__name__)
 
@@ -94,7 +96,12 @@ def new_batch():
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
         return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
-    return 'TODO'
+    try:
+        batch = parse_tpsv.parse_batch({}, flask.request.form.get('commands', '')) # TODO authentication via OAuth
+    except parse_tpsv.ParseBatchError as e:
+        return str(e)
+    else:
+        return str(batch)
 
 @app.route('/greet/<name>')
 def greet(name: str):
