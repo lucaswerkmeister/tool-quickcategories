@@ -9,7 +9,6 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-import werkzeug
 import yaml
 
 import parse_tpsv
@@ -196,7 +195,7 @@ def submitted_request_valid() -> bool:
     return True
 
 @app.after_request
-def deny_frame(response: werkzeug.Response) -> werkzeug.Response:
+def deny_frame(response: flask.Response) -> flask.Response:
     """Disallow embedding the tool’s pages in other websites.
 
     If other websites can embed this tool’s pages, e. g. in <iframe>s,
