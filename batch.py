@@ -48,6 +48,8 @@ class Action:
 class CategoryAction(Action):
     """An action to modify a category in the wikitext of a page."""
 
+    symbol = ''
+
     def __init__(self, category: str):
         assert category, 'category should not be empty'
         assert not category.startswith('Category:'), 'category should not include namespace'
@@ -62,9 +64,18 @@ class CategoryAction(Action):
                 return True
         return False
 
+    def __eq__(self, value: Any) -> bool:
+        return type(self) is type(value) and \
+            self.category == value.category
+
+    def __str__(self) -> str:
+        return type(self).symbol + 'Category:' + self.category
+
 
 class AddCategoryAction(CategoryAction):
     """An action to add a category to the wikitext of a page."""
+
+    symbol = '+'
 
     def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
         wikicode = mwparserfromhell.parse(wikitext)
@@ -85,19 +96,14 @@ class AddCategoryAction(CategoryAction):
             wikicode.append(wikilink)
         return str(wikicode)
 
-    def __eq__(self, value: Any) -> bool:
-        return type(value) is AddCategoryAction and \
-            self.category == value.category
-
-    def __str__(self) -> str:
-        return '+Category:' + self.category
-
     def __repr__(self) -> str:
         return 'AddCategoryAction(' + repr(self.category) + ')'
 
 
 class RemoveCategoryAction(CategoryAction):
     """An action to remove a category from the wikitext of a page."""
+
+    symbol = '-'
 
     def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
         wikicode = mwparserfromhell.parse(wikitext)
@@ -120,13 +126,6 @@ class RemoveCategoryAction(CategoryAction):
                 del wikicode.nodes[index] # this should happen *after* the above blocks, otherwise the indices get confusing
                 break
         return str(wikicode)
-
-    def __eq__(self, value: Any) -> bool:
-        return type(value) is RemoveCategoryAction and \
-            self.category == value.category
-
-    def __str__(self) -> str:
-        return '-Category:' + self.category
 
     def __repr__(self) -> str:
         return 'RemoveCategoryAction(' + repr(self.category) + ')'
