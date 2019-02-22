@@ -118,6 +118,27 @@ def test_AddCategoryAction_repr():
     assert eval(repr(addCategory1)) == addCategory1
 
 
+@pytest.mark.parametrize('wikitext, expected', [
+    ('', ''),
+    ('[[Category:Test]]', ''),
+    ('end of article\n[[Category:Test]]', 'end of article'),
+    ('[[Category:Test]]\nbeginning of article', 'beginning of article'),
+    ('[[Category:Start]][[Category:Test]][[Category:End]]', '[[Category:Start]][[Category:End]]'),
+    ('[[Category:Start]]\n[[Category:Test]]\n[[Category:End]]', '[[Category:Start]]\n[[Category:End]]'),
+    ('[[Kategorie:Test]]', ''),
+    ('[[K:Test]]', ''),
+    ('[[Category:Test|sort key]]', ''),
+    ('[[:Category:Test]]', '[[:Category:Test]]'),
+    ('[[:Category:Test|link text]]', '[[:Category:Test|link text]]'),
+    ('<nowiki>[[Category:Test]]</nowiki>', '<nowiki>[[Category:Test]]</nowiki>'),
+    ('[[Test]]', '[[Test]]'),
+    ('[[Special:Test]]', '[[Special:Test]]'),
+])
+def test_RemoveCategoryAction_apply(wikitext, expected):
+    action = RemoveCategoryAction('Test')
+    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
+    assert expected == actual
+
 def test_RemoveCategoryAction_eq_same():
     assert removeCategory2 == removeCategory2
 

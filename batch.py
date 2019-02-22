@@ -56,6 +56,12 @@ class CategoryAction(Action):
         self.category = category
         super().__init__()
 
+    def _is_category(self, wikilink: mwparserfromhell.nodes.wikilink.Wikilink, category_info: Tuple[str, List[str]]) -> bool:
+        for category_namespace_name in category_info[1]:
+            if wikilink.startswith('[[' + category_namespace_name + ':'):
+                return True
+        return False
+
 
 class AddCategoryAction(CategoryAction):
     """An action to add a category to the wikitext of a page."""
@@ -64,12 +70,7 @@ class AddCategoryAction(CategoryAction):
         wikicode = mwparserfromhell.parse(wikitext)
         last_category = None
         for wikilink in wikicode.ifilter_wikilinks():
-            is_category = False
-            for category_namespace_name in category_info[1]:
-                if wikilink.startswith('[[' + category_namespace_name + ':'):
-                    is_category = True
-                    break
-            if not is_category:
+            if not self._is_category(wikilink, category_info):
                 continue
             if wikilink.title.split(':', 1)[1] == self.category:
                 return wikitext
@@ -97,6 +98,28 @@ class AddCategoryAction(CategoryAction):
 
 class RemoveCategoryAction(CategoryAction):
     """An action to remove a category from the wikitext of a page."""
+
+    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+        wikicode = mwparserfromhell.parse(wikitext)
+        for index, wikilink in enumerate(wikicode.nodes):
+            if not isinstance(wikilink, mwparserfromhell.nodes.wikilink.Wikilink):
+                continue
+            if not self._is_category(wikilink, category_info):
+                continue
+            if wikilink.title.split(':', 1)[1] == self.category:
+                # also remove preceding line break
+                if index-1 >= 0 and \
+                   isinstance(wikicode.nodes[index-1], mwparserfromhell.nodes.text.Text) and \
+                   wikicode.nodes[index-1].value.endswith('\n'):
+                    wikicode.nodes[index-1].value = wikicode.nodes[index-1].value[:-1]
+                # or following line break
+                elif index+1 < len(wikicode.nodes) and \
+                   isinstance(wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and \
+                   wikicode.nodes[index+1].value.startswith('\n'):
+                    wikicode.nodes[index+1].value = wikicode.nodes[index+1].value[1:]
+                del wikicode.nodes[index] # this should happen *after* the above blocks, otherwise the indices get confusing
+                break
+        return str(wikicode)
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is RemoveCategoryAction and \
