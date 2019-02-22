@@ -64,6 +64,9 @@ class CategoryAction(Action):
                 return True
         return False
 
+    def summary(self, category_info: Tuple[str, List[str]]) -> str:
+        return type(self).symbol + '[[' + category_info[0] + ':' + self.category + ']]'
+
     def __eq__(self, value: Any) -> bool:
         return type(self) is type(value) and \
             self.category == value.category

@@ -98,6 +98,9 @@ def test_AddCategoryAction_apply(wikitext, expected):
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
     assert expected == actual
 
+def test_AddCategoryAction_summary():
+    assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
+
 def test_AddCategoryAction_eq_same():
     assert addCategory1 == addCategory1
 
@@ -138,6 +141,9 @@ def test_RemoveCategoryAction_apply(wikitext, expected):
     action = RemoveCategoryAction('Test')
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
     assert expected == actual
+
+def test_RemoveCategoryAction_summary():
+    assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test]]'
 
 def test_RemoveCategoryAction_eq_same():
     assert removeCategory2 == removeCategory2
