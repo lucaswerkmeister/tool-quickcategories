@@ -78,6 +78,26 @@ def test_CategoryAction_init_category_namespace(clazz):
         clazz('Category:Cat 1')
 
 
+@pytest.mark.parametrize('wikitext, expected', [
+    ('', '[[Category:Test]]'),
+    ('end of article', 'end of article\n[[Category:Test]]'),
+    ('end of article\n[[Category:A]]\n[[Category:B]]', 'end of article\n[[Category:A]]\n[[Category:B]]\n[[Category:Test]]'),
+    ('some wikitext\n[[Category:Here]]\nmore wikitext', 'some wikitext\n[[Category:Here]]\n[[Category:Test]]\nmore wikitext'),
+    ('it is [[Category:Test]] already present', 'it is [[Category:Test]] already present'),
+    ('[[Kategorie:Test]]', '[[Kategorie:Test]]'),
+    ('[[K:Test]]', '[[K:Test]]'),
+    ('[[Category:Test|sort key]]', '[[Category:Test|sort key]]'),
+    ('[[:Category:Test]]', '[[:Category:Test]]\n[[Category:Test]]'),
+    ('[[:Category:Test|link text]]', '[[:Category:Test|link text]]\n[[Category:Test]]'),
+    ('<nowiki>[[Category:Test]]</nowiki>', '<nowiki>[[Category:Test]]</nowiki>\n[[Category:Test]]'),
+    ('[[Test]]', '[[Test]]\n[[Category:Test]]'),
+    ('[[Special:Test]]', '[[Special:Test]]\n[[Category:Test]]'),
+])
+def test_AddCategoryAction_apply(wikitext, expected):
+    action = AddCategoryAction('Test')
+    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
+    assert expected == actual
+
 def test_AddCategoryAction_eq_same():
     assert addCategory1 == addCategory1
 

@@ -1,4 +1,5 @@
-from typing import Any, List
+import mwparserfromhell # type: ignore
+from typing import Any, List, Tuple
 
 
 class Batch:
@@ -58,6 +59,30 @@ class CategoryAction(Action):
 
 class AddCategoryAction(CategoryAction):
     """An action to add a category to the wikitext of a page."""
+
+    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+        wikicode = mwparserfromhell.parse(wikitext)
+        last_category = None
+        for wikilink in wikicode.ifilter_wikilinks():
+            is_category = False
+            for category_namespace_name in category_info[1]:
+                if wikilink.startswith('[[' + category_namespace_name + ':'):
+                    is_category = True
+                    break
+            if not is_category:
+                continue
+            if wikilink.title.split(':', 1)[1] == self.category:
+                return wikitext
+            last_category = wikilink
+        wikilink = mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category)
+        if last_category:
+            wikicode.insert_after(last_category, wikilink)
+            wikicode.insert_before(wikilink, '\n')
+        else:
+            if wikicode:
+                wikicode.append('\n')
+            wikicode.append(wikilink)
+        return str(wikicode)
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is AddCategoryAction and \

@@ -1,6 +1,7 @@
 flask
 mwapi
 mwoauth
+mwparserfromhell
 mypy
 pytest
 pyyaml
