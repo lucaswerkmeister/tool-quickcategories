@@ -23,3 +23,18 @@ def category_info(session: mwapi.Session) -> Tuple[str, List[str]]:
         if namespacealias['id'] == category_namespace_id:
             category_namespace_names.append(namespacealias['alias'])
     return category_namespace_name, category_namespace_names
+
+
+def comma_separator(session: mwapi.Session) -> str:
+    return session.get(action='query',
+                       meta='allmessages',
+                       ammessages='comma-separator',
+                       formatversion=2)['query']['allmessages'][0]['content']
+
+
+def parentheses(session: mwapi.Session, content: str) -> str:
+    return session.get(action='query',
+                       meta='allmessages',
+                       ammessages='parentheses',
+                       amargs=content,
+                       formatversion=2)['query']['allmessages'][0]['content']

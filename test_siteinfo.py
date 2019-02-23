@@ -92,3 +92,35 @@ def test_category_info_ruwiki():
     session = FakeSession(response)
     category_info = siteinfo.category_info(session)
     assert category_info == ('Категория', ['Категория', 'Category', 'К'])
+
+
+def test_comma_separator():
+    response = {
+        'query': {
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': '、 ',
+                },
+            ],
+        },
+    }
+    session = FakeSession(response)
+    comma_separator = siteinfo.comma_separator(session)
+    assert comma_separator == '、 '
+
+
+def test_parentheses():
+    response = {
+        'query': {
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': '（foo）',
+                },
+            ],
+        },
+    }
+    session = FakeSession(response)
+    parentheses = siteinfo.parentheses(session, 'foo')
+    assert parentheses == '（foo）'
