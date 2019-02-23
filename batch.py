@@ -42,7 +42,12 @@ class Command:
 
 class Action:
     """A transformation to a piece of wikitext."""
-    pass
+
+    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+        raise NotImplementedError
+
+    def summary(self, category_info: Tuple[str, List[str]]) -> str:
+        raise NotImplementedError
 
 
 class CategoryAction(Action):
