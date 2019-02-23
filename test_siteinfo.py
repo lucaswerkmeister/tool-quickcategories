@@ -12,17 +12,17 @@ class FakeSession:
 
 def test_category_info_enwiki():
     response = {
-        'query':{
+        'query': {
             'namespaces': {
                 # ...
-                '14':{
+                '14': {
                     'id': 14,
                     'name': 'Category',
                     'canonical': 'Category',
                 },
-                '15':{
+                '15': {
                     'id':15,
-                    'name':'Category talk',
+                    'name': 'Category talk',
                     'canonical': 'Category talk',
                 },
                 # ...
@@ -30,7 +30,7 @@ def test_category_info_enwiki():
             'namespacealiases': [
                 # ...
             ],
-        }
+        },
     }
     session = FakeSession(response)
     category_info = siteinfo.category_info(session)
@@ -38,17 +38,17 @@ def test_category_info_enwiki():
 
 def test_category_info_dewiki():
     response = {
-        'query':{
+        'query': {
             'namespaces': {
                 # ...
-                '14':{
+                '14': {
                     'id': 14,
                     'name': 'Kategorie',
                     'canonical': 'Category',
                 },
-                '15':{
-                    'id':15,
-                    'name':'Kategorie Diskussion',
+                '15': {
+                    'id': 15,
+                    'name': 'Kategorie Diskussion',
                     'canonical': 'Category talk',
                 },
                 # ...
@@ -56,7 +56,7 @@ def test_category_info_dewiki():
             'namespacealiases': [
                 # ...
             ],
-        }
+        },
     }
     session = FakeSession(response)
     category_info = siteinfo.category_info(session)
@@ -64,17 +64,17 @@ def test_category_info_dewiki():
 
 def test_category_info_ruwiki():
     response = {
-        'query':{
+        'query': {
             'namespaces': {
                 # ...
-                '14':{
+                '14': {
                     'id': 14,
                     'name': 'Категория',
                     'canonical': 'Category',
                 },
-                '15':{
+                '15': {
                     'id':15,
-                    'name':'Обсуждение категории',
+                    'name': 'Обсуждение категории',
                     'canonical': 'Category talk',
                 },
                 # ...
@@ -87,7 +87,7 @@ def test_category_info_ruwiki():
                 },
                 # ...
             ],
-        }
+        },
     }
     session = FakeSession(response)
     category_info = siteinfo.category_info(session)
