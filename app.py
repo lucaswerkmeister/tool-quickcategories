@@ -108,8 +108,16 @@ def new_batch():
         batch = parse_tpsv.parse_batch({}, flask.request.form.get('commands', '')) # TODO authentication via OAuth
     except parse_tpsv.ParseBatchError as e:
         return str(e)
-    else:
+
+    session = authenticated_session(domain)
+    if not session:
         return str(batch)
+
+    if len(batch.commands) <= 1:
+        batch.commands[0].run(session)
+        return 'Okay!'
+    else:
+        return 'Too long!'
 
 @app.route('/greet/<name>')
 def greet(name: str):
