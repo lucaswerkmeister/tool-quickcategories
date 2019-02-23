@@ -45,7 +45,8 @@ class Command:
         slot = revision['slots']['main']
         if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
             raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], self.page))
-        wikitext = slot['content']
+        original_wikitext = slot['content']
+        wikitext = original_wikitext
         summary = ''
         category_info = siteinfo.category_info(session)
 
@@ -59,6 +60,8 @@ class Command:
             summary += action_summary
             wikitext = new_wikitext
 
+        if wikitext == original_wikitext:
+            return
         token = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
         session.post(action='edit',
