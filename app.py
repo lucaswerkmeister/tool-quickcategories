@@ -114,7 +114,8 @@ def new_batch():
         return str(batch)
 
     if len(batch.commands) <= 1:
-        batch.commands[0].run(session)
+        for command in batch.commands:
+            command.run(session)
         return 'Okay!'
     else:
         return 'Too long!'
