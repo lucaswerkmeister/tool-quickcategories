@@ -140,6 +140,21 @@ def test_AddCategoryAction_apply(wikitext, expected):
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
     assert expected == actual
 
+def test_AddCategoryAction_apply_detects_underscores():
+    action = AddCategoryAction('My Test Category')
+    wikitext = '[[Category:My_Test_Category]]'
+    assert wikitext == action.apply(wikitext, ('Category', ['Category']))
+
+def test_AddCategoryAction_apply_preserves_underscores():
+    action1 = AddCategoryAction('Test Category 1')
+    action2 = AddCategoryAction('Test_Category_2')
+    action3 = AddCategoryAction('Test_Category 3')
+    expected = '[[Category:Test Category 1]]\n[[Category:Test_Category_2]]\n[[Category:Test_Category 3]]'
+    actual = ''
+    for action in [action1, action2, action3]:
+        actual = action.apply(actual, ('Category', ['Category']))
+    assert expected == actual
+
 def test_AddCategoryAction_summary():
     assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
 

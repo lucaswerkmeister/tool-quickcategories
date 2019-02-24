@@ -117,6 +117,9 @@ class CategoryAction(Action):
                 return True
         return False
 
+    def _same_category(self, category1: str, category2: str) -> bool:
+        return category1.replace(' ', '_') == category2.replace(' ', '_')
+
     def summary(self, category_info: Tuple[str, List[str]]) -> str:
         return type(self).symbol + '[[' + category_info[0] + ':' + self.category + ']]'
 
@@ -139,7 +142,7 @@ class AddCategoryAction(CategoryAction):
         for wikilink in wikicode.ifilter_wikilinks():
             if not self._is_category(wikilink, category_info):
                 continue
-            if wikilink.title.split(':', 1)[1] == self.category:
+            if self._same_category(wikilink.title.split(':', 1)[1], self.category):
                 return wikitext
             last_category = wikilink
         wikilink = mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category)
@@ -168,7 +171,7 @@ class RemoveCategoryAction(CategoryAction):
                 continue
             if not self._is_category(wikilink, category_info):
                 continue
-            if wikilink.title.split(':', 1)[1] == self.category:
+            if self._same_category(wikilink.title.split(':', 1)[1], self.category):
                 # also remove preceding line break
                 if index-1 >= 0 and \
                    isinstance(wikicode.nodes[index-1], mwparserfromhell.nodes.text.Text) and \
