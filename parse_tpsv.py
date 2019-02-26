@@ -2,10 +2,12 @@
 
 from typing import Dict, List
 
-import batch
+from action import Action, AddCategoryAction, RemoveCategoryAction
+from batch import Batch
+from command import Command
 
 
-def parse_batch(authentication: dict, tpsv: str) -> batch.Batch:
+def parse_batch(authentication: dict, tpsv: str) -> Batch:
     commands = []
     errors = []
     for line in tpsv.split('\n'):
@@ -18,10 +20,10 @@ def parse_batch(authentication: dict, tpsv: str) -> batch.Batch:
             errors.append(e)
     if errors:
         raise ParseBatchError(errors)
-    return batch.Batch(authentication, commands)
+    return Batch(authentication, commands)
 
 
-def parse_command(line: str) -> batch.Command:
+def parse_command(line: str) -> Command:
     [page, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
     if not other_fields:
         raise ValueError("no actions for page '%s'" % page)
@@ -34,14 +36,14 @@ def parse_command(line: str) -> batch.Command:
             errors.append(e)
     if errors:
         raise ParseCommandError(page, errors)
-    return batch.Command(page, actions)
+    return Command(page, actions)
 
 
-def parse_action(field: str) -> batch.Action:
+def parse_action(field: str) -> Action:
     if field.startswith('+Category:'):
-        return batch.AddCategoryAction(field[10:])
+        return AddCategoryAction(field[10:])
     elif field.startswith('-Category:'):
-        return batch.RemoveCategoryAction(field[10:])
+        return RemoveCategoryAction(field[10:])
     else:
         raise ValueError("invalid field '%s'" % field)
 

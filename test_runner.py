@@ -2,8 +2,9 @@ import mwapi
 import os
 import pytest
 
-import batch
-import runner
+from action import AddCategoryAction, RemoveCategoryAction
+from command import Command
+from runner import Runner
 
 def test_run_command():
     if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
@@ -17,10 +18,10 @@ def test_run_command():
                  lgpassword=os.environ['MW_PASSWORD'],
                  lgtoken=lgtoken)
 
-    command = batch.Command('QuickCategories CI Test', [batch.AddCategoryAction('Added cat'),
-                                                        batch.AddCategoryAction('Already present cat'),
-                                                        batch.RemoveCategoryAction('Removed cat'),
-                                                        batch.RemoveCategoryAction('Not present cat')])
+    command = Command('QuickCategories CI Test', [AddCategoryAction('Added cat'),
+                                                  AddCategoryAction('Already present cat'),
+                                                  RemoveCategoryAction('Removed cat'),
+                                                  RemoveCategoryAction('Not present cat')])
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
     session.post(action='edit',
@@ -28,7 +29,7 @@ def test_run_command():
                  text='Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
                  summary='setup',
                  token=csrftoken)
-    runner.Runner().run_command(command, session)
+    Runner().run_command(command, session)
 
     actual = session.get(action='query',
                          titles=[command.page],
