@@ -1,12 +1,12 @@
 import mwapi # type: ignore
 
-import batch
+from command import Command
 import siteinfo
 
 
 class Runner():
 
-    def run_command(self, command: batch.Command, session: mwapi.Session):
+    def run_command(self, command: Command, session: mwapi.Session):
         response = session.get(action='query',
                                titles=[command.page],
                                prop=['revisions'],
