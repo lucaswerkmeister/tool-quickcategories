@@ -1,7 +1,6 @@
 from typing import Any, List
 
 from command import Command
-import siteinfo
 
 
 class Batch:
