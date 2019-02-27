@@ -3,11 +3,11 @@
 from typing import Dict, List
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
-from batch import Batch
+from batch import NewBatch
 from command import Command
 
 
-def parse_batch(authentication: dict, tpsv: str) -> Batch:
+def parse_batch(tpsv: str) -> NewBatch:
     commands = []
     errors = []
     for line in tpsv.split('\n'):
@@ -20,7 +20,7 @@ def parse_batch(authentication: dict, tpsv: str) -> Batch:
             errors.append(e)
     if errors:
         raise ParseBatchError(errors)
-    return Batch(authentication, commands)
+    return NewBatch(commands)
 
 
 def parse_command(line: str) -> Command:
