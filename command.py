@@ -33,3 +33,22 @@ class Command:
 
     def __repr__(self) -> str:
         return 'Command(' + repr(self.page) + ', ' + repr(self.actions) + ')'
+
+
+class CommandPlan:
+    """A command that should be run in the future."""
+
+    def __init__(self, id: int, command: Command):
+        self.id = id
+        self.command = command
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandPlan and \
+            self.id == value.id and \
+            self.command == value.command
+
+    def __str__(self) -> str:
+        return str(self.command)
+
+    def __repr__(self) -> str:
+        return 'CommandPlan(' + repr(self.id) + ', ' + repr(self.command) + ')'

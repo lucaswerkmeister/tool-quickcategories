@@ -1,14 +1,14 @@
 import mwapi # type: ignore
 
-from command import Command
+from command import CommandPlan
 import siteinfo
 
 
 class Runner():
 
-    def run_command(self, command: Command, session: mwapi.Session):
+    def run_command(self, plan: CommandPlan, session: mwapi.Session):
         response = session.get(action='query',
-                               titles=[command.page],
+                               titles=[plan.command.page],
                                prop=['revisions'],
                                rvprop=['ids', 'content', 'contentmodel', 'timestamp'],
                                rvslots=['main'],
@@ -19,11 +19,11 @@ class Runner():
         revision = page['revisions'][0]
         slot = revision['slots']['main']
         if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
-            raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], command.page))
+            raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], plan.command.page))
         original_wikitext = slot['content']
         category_info = siteinfo.category_info(session)
 
-        wikitext, actions = command.apply(original_wikitext, category_info)
+        wikitext, actions = plan.command.apply(original_wikitext, category_info)
         summary = ''
         for action, noop in actions:
             action_summary = action.summary(category_info)

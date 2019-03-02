@@ -1,5 +1,5 @@
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command
+from command import Command, CommandPlan
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -42,3 +42,25 @@ def test_Command_str():
 
 def test_Command_repr():
     assert eval(repr(command1)) == command1
+
+
+commandPlan1 = CommandPlan(42, command1)
+
+
+def test_CommandPlan_eq_same():
+    assert commandPlan1 == commandPlan1
+
+def test_CommandPlan_eq_equal():
+    assert commandPlan1 == CommandPlan(commandPlan1.id, commandPlan1.command)
+
+def test_CommandPlan_eq_different_id():
+    assert commandPlan1 != CommandPlan(43, commandPlan1.command)
+
+def test_CommandPlan_eq_different_command():
+    assert commandPlan1 != CommandPlan(commandPlan1.id, command2)
+
+def test_CommandPlan_str():
+    assert str(commandPlan1) == str(command1)
+
+def test_CommandPlan_repr():
+    assert eval(repr(commandPlan1)) == commandPlan1

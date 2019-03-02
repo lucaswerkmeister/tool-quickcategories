@@ -3,7 +3,7 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command
+from command import Command, CommandPlan
 from runner import Runner
 
 def test_run_command():
@@ -29,7 +29,7 @@ def test_run_command():
                  text='Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
                  summary='setup',
                  token=csrftoken)
-    Runner().run_command(command, session)
+    Runner().run_command(CommandPlan(0, command), session)
 
     actual = session.get(action='query',
                          titles=[command.page],
