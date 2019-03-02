@@ -1,5 +1,7 @@
+import pytest
+
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan
+from command import Command, CommandPlan, CommandEdit, CommandNoop
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -64,3 +66,60 @@ def test_CommandPlan_str():
 
 def test_CommandPlan_repr():
     assert eval(repr(commandPlan1)) == commandPlan1
+
+
+commandEdit1 = CommandEdit(42, command1, 1234, 1235)
+
+
+def test_CommandEdit_init():
+    with pytest.raises(AssertionError):
+        CommandEdit(42, command1, base_revision=1235, revision=1234)
+
+def test_CommandEdit_eq_same():
+    assert commandEdit1 == commandEdit1
+
+def test_CommandEdit_eq_equal():
+    assert commandEdit1 == CommandEdit(42, command1, 1234, 1235)
+
+def test_CommandEdit_eq_different_id():
+    assert commandEdit1 != CommandEdit(43, commandEdit1.command, commandEdit1.base_revision, commandEdit1.revision)
+
+def test_CommandEdit_eq_different_command():
+    assert commandEdit1 != CommandEdit(commandEdit1.id, command2, commandEdit1.base_revision, commandEdit1.revision)
+
+def test_CommandEdit_eq_different_base_revisoin():
+    assert commandEdit1 != CommandEdit(commandEdit1.id, commandEdit1.command, 1233, commandEdit1.revision)
+
+def test_CommandEdit_eq_different_revision():
+    assert commandEdit1 != CommandEdit(commandEdit1.id, commandEdit1.command, commandEdit1.base_revision, 1236)
+
+def test_CommandEdit_str():
+    assert str(commandEdit1) == str(command1)
+
+def test_CommandEdit_repr():
+    assert eval(repr(commandEdit1)) == commandEdit1
+
+
+commandNoop1 = CommandNoop(42, command1, 1234)
+
+
+def test_CommandNoop_eq_same():
+    assert commandNoop1 == commandNoop1
+
+def test_CommandNoop_eq_equal():
+    assert commandNoop1 == CommandNoop(42, command1, 1234)
+
+def test_CommandNoop_eq_different_id():
+    assert commandNoop1 != CommandNoop(43, commandNoop1.command, commandNoop1.revision)
+
+def test_CommandNoop_eq_different_command():
+    assert commandNoop1 != CommandNoop(commandNoop1.id, command2, commandNoop1.revision)
+
+def test_CommandNoop_eq_different_revision():
+    assert commandNoop1 != CommandNoop(commandNoop1.id, commandNoop1.command, 1235)
+
+def test_CommandNoop_str():
+    assert str(commandNoop1) == str(command1)
+
+def test_CommandNoop_repr():
+    assert eval(repr(commandNoop1)) == commandNoop1

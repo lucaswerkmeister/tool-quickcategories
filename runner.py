@@ -1,12 +1,12 @@
 import mwapi # type: ignore
 
-from command import CommandPlan
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop
 import siteinfo
 
 
 class Runner():
 
-    def run_command(self, plan: CommandPlan, session: mwapi.Session):
+    def run_command(self, plan: CommandPlan, session: mwapi.Session) -> CommandFinish:
         response = session.get(action='query',
                                titles=[plan.command.page],
                                prop=['revisions'],
@@ -34,17 +34,19 @@ class Runner():
             summary += action_summary
 
         if wikitext == original_wikitext:
-            return
+            return CommandNoop(plan.id, plan.command, revision['revid'])
         token = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
-        session.post(action='edit',
-                     pageid=page['pageid'],
-                     text=wikitext,
-                     summary=summary,
-                     bot=True,
-                     basetimestamp=revision['timestamp'],
-                     starttimestamp=response['curtimestamp'],
-                     contentformat='text/x-wiki',
-                     contentmodel='wikitext',
-                     token=token,
-                     formatversion=2)
+        response = session.post(action='edit',
+                                pageid=page['pageid'],
+                                text=wikitext,
+                                summary=summary,
+                                bot=True,
+                                basetimestamp=revision['timestamp'],
+                                starttimestamp=response['curtimestamp'],
+                                contentformat='text/x-wiki',
+                                contentmodel='wikitext',
+                                token=token,
+                                formatversion=2)
+        assert response['edit']['oldrevid'] == revision['revid']
+        return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])

@@ -3,7 +3,7 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan
+from command import Command, CommandPlan, CommandEdit
 from runner import Runner
 
 def test_run_command():
@@ -24,19 +24,21 @@ def test_run_command():
                                                   RemoveCategoryAction('Not present cat')])
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
-    session.post(action='edit',
-                 title=command.page,
-                 text='Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
-                 summary='setup',
-                 token=csrftoken)
-    Runner().run_command(CommandPlan(0, command), session)
+    setup_edit = session.post(action='edit',
+                              title=command.page,
+                              text='Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
+                              summary='setup',
+                              token=csrftoken)
+    edit = Runner().run_command(CommandPlan(0, command), session)
+
+    assert isinstance(edit, CommandEdit)
+    assert edit.base_revision == setup_edit['edit']['newrevid']
 
     actual = session.get(action='query',
-                         titles=[command.page],
+                         revids=[edit.revision],
                          prop=['revisions'],
                          rvprop=['content'],
                          rvslots=['main'],
-                         rvlimit=1,
                          formatversion=2)['query']['pages'][0]['revisions'][0]['slots']['main']['content']
     session.post(action='edit',
                  title=command.page,
