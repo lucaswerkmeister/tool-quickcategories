@@ -117,7 +117,9 @@ def new_batch():
 
 @app.route('/batch/<int:id>/')
 def batch(id: int):
-    return str(batch_store.get_batch(id))
+    batch = batch_store.get_batch(id)
+    return flask.render_template('batch.html',
+                                 batch=batch)
 
 @app.route('/greet/<name>')
 def greet(name: str):
