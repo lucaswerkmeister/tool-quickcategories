@@ -35,12 +35,16 @@ class Command:
         return 'Command(' + repr(self.page) + ', ' + repr(self.actions) + ')'
 
 
-class CommandPlan:
-    """A command that should be run in the future."""
+class CommandRecord:
+    """A command that was recorded in some store."""
 
     def __init__(self, id: int, command: Command):
         self.id = id
         self.command = command
+
+
+class CommandPlan(CommandRecord):
+    """A command that should be run in the future."""
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandPlan and \
@@ -54,13 +58,9 @@ class CommandPlan:
         return 'CommandPlan(' + repr(self.id) + ', ' + repr(self.command) + ')'
 
 
-class CommandFinish:
+class CommandFinish(CommandRecord):
     """A command that was intended to be run at some point
     and should now no longer be run."""
-
-    def __init__(self, id: int, command: Command):
-        self.id = id
-        self.command = command
 
 
 class CommandSuccess(CommandFinish):
