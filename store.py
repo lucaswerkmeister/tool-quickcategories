@@ -24,4 +24,4 @@ class InMemoryStore:
         return open_batch
 
     def get_batch(self, id: int) -> Optional[OpenBatch]:
-        return self.batches[id]
+        return self.batches.get(id)

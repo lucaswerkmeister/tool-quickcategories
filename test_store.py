@@ -17,3 +17,6 @@ def test_InMemoryStore_get_batch():
     store = InMemoryStore()
     open_batch = store.store_batch(newBatch1)
     assert open_batch is store.get_batch(open_batch.id)
+
+def test_InMemoryStore_get_batch_None():
+    assert InMemoryStore().get_batch(0) is None
