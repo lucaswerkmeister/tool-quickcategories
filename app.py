@@ -105,7 +105,7 @@ def new_batch():
     if not is_wikimedia_domain(domain):
         return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
     try:
-        batch = parse_tpsv.parse_batch({}, flask.request.form.get('commands', '')) # TODO authentication via OAuth
+        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''))
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 
