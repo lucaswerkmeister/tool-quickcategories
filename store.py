@@ -7,8 +7,8 @@ from command import CommandPlan
 class InMemoryStore:
 
     def __init__(self):
-        self.next_batch_id = 0
-        self.next_command_id = 0
+        self.next_batch_id = 1
+        self.next_command_id = 1
         self.batches = {}
 
     def store_batch(self, new_batch: NewBatch) -> OpenBatch:
