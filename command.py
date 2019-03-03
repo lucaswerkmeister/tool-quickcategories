@@ -3,6 +3,7 @@ from typing import Any, List, Tuple
 from action import Action
 from siteinfo import CategoryInfo
 
+
 class Command:
     """A list of actions to perform on a page."""
 
