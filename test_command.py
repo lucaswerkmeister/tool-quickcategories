@@ -94,7 +94,7 @@ def test_CommandEdit_eq_different_revision():
     assert commandEdit1 != CommandEdit(commandEdit1.id, commandEdit1.command, commandEdit1.base_revision, 1236)
 
 def test_CommandEdit_str():
-    assert str(commandEdit1) == str(command2)
+    assert str(commandEdit1) == '# ' + str(command2)
 
 def test_CommandEdit_repr():
     assert eval(repr(commandEdit1)) == commandEdit1
@@ -119,7 +119,7 @@ def test_CommandNoop_eq_different_revision():
     assert commandNoop1 != CommandNoop(commandNoop1.id, commandNoop1.command, 1235)
 
 def test_CommandNoop_str():
-    assert str(commandNoop1) == str(command2)
+    assert str(commandNoop1) == '# ' + str(command2)
 
 def test_CommandNoop_repr():
     assert eval(repr(commandNoop1)) == commandNoop1

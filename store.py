@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import List, Optional
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan
+from command import CommandPlan, CommandRecord
 
 
 class InMemoryStore:
@@ -12,13 +12,12 @@ class InMemoryStore:
         self.batches = {}
 
     def store_batch(self, new_batch: NewBatch) -> OpenBatch:
-        command_plans = {}
+        command_plans = [] # type: List[CommandRecord]
         for command in new_batch.commands:
-            command_plans[self.next_command_id] = CommandPlan(self.next_command_id, command)
+            command_plans.append(CommandPlan(self.next_command_id, command))
             self.next_command_id += 1
         open_batch = OpenBatch(self.next_batch_id,
-                               command_plans,
-                               command_finishes={})
+                               command_plans)
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
         return open_batch

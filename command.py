@@ -64,6 +64,9 @@ class CommandFinish(CommandRecord):
     """A command that was intended to be run at some point
     and should now no longer be run."""
 
+    def __str__(self) -> str:
+        return '# ' + str(self.command)
+
 
 class CommandSuccess(CommandFinish):
     """A command that was successfully run."""
@@ -86,9 +89,6 @@ class CommandEdit(CommandSuccess):
             self.base_revision == value.base_revision and \
             self.revision == value.revision
 
-    def __str__(self) -> str:
-        return str(self.command)
-
     def __repr__(self) -> str:
         return 'CommandEdit(' + \
             repr(self.id) + ', ' + \
@@ -109,9 +109,6 @@ class CommandNoop(CommandSuccess):
             self.id == value.id and \
             self.command == value.command and \
             self.revision == value.revision
-
-    def __str__(self) -> str:
-        return str(self.command)
 
     def __repr__(self) -> str:
         return 'CommandNoop(' + \

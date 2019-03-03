@@ -5,7 +5,8 @@ from test_batch import newBatch1
 
 def test_InMemoryStore_store_batch_command_ids():
     open_batch = InMemoryStore().store_batch(newBatch1)
-    assert len(open_batch.command_plans.keys()) == 2
+    assert len(open_batch.command_records) == 2
+    assert open_batch.command_records[0].id != open_batch.command_records[1].id
 
 def test_InMemoryStore_store_batch_batch_ids():
     store = InMemoryStore()
