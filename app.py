@@ -178,6 +178,21 @@ def oauth_callback():
 def is_wikimedia_domain(domain: str) -> bool:
     return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org', domain) is not None
 
+def slice_from_args(args: dict) -> slice:
+    try:
+        offset = int(args['offset'])
+    except (KeyError, ValueError):
+        offset = 0
+    offset = max(0, offset)
+
+    try:
+        limit = int(args['limit'])
+    except (KeyError, ValueError):
+        limit = 50
+    limit = max(1, min(500, limit))
+
+    return slice(offset, offset+limit)
+
 
 def full_url(endpoint: str, **kwargs) -> str:
     scheme=flask.request.headers.get('X-Forwarded-Proto', 'http')
