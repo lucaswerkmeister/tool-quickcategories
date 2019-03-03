@@ -2,7 +2,10 @@ import mwapi # type: ignore
 from typing import List, Tuple
 
 
-def category_info(session: mwapi.Session) -> Tuple[str, List[str]]:
+CategoryInfo = Tuple[str, List[str]]
+
+
+def category_info(session: mwapi.Session) -> CategoryInfo:
     """Return the primary name of the category namespace and all the names
     with which a category link may be formed."""
     response = session.get(action='query',

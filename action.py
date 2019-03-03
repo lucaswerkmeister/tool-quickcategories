@@ -1,14 +1,16 @@
 import mwparserfromhell # type: ignore
 from typing import Any, List, Tuple
 
+from siteinfo import CategoryInfo
+
 
 class Action:
     """A transformation to a piece of wikitext."""
 
-    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+    def apply(self, wikitext: str, category_info: CategoryInfo) -> str:
         raise NotImplementedError
 
-    def summary(self, category_info: Tuple[str, List[str]]) -> str:
+    def summary(self, category_info: CategoryInfo) -> str:
         raise NotImplementedError
 
 
@@ -25,7 +27,7 @@ class CategoryAction(Action):
         self.category = category
         super().__init__()
 
-    def _is_category(self, wikilink: mwparserfromhell.nodes.wikilink.Wikilink, category_info: Tuple[str, List[str]]) -> bool:
+    def _is_category(self, wikilink: mwparserfromhell.nodes.wikilink.Wikilink, category_info: CategoryInfo) -> bool:
         for category_namespace_name in category_info[1]:
             if wikilink.startswith('[[' + category_namespace_name + ':'):
                 return True
@@ -34,7 +36,7 @@ class CategoryAction(Action):
     def _same_category(self, category1: str, category2: str) -> bool:
         return category1.replace(' ', '_') == category2.replace(' ', '_')
 
-    def summary(self, category_info: Tuple[str, List[str]]) -> str:
+    def summary(self, category_info: CategoryInfo) -> str:
         return type(self).symbol + '[[' + category_info[0] + ':' + self.category + ']]'
 
     def __eq__(self, value: Any) -> bool:
@@ -50,7 +52,7 @@ class AddCategoryAction(CategoryAction):
 
     symbol = '+'
 
-    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+    def apply(self, wikitext: str, category_info: CategoryInfo) -> str:
         wikicode = mwparserfromhell.parse(wikitext)
         last_category = None
         for wikilink in wikicode.ifilter_wikilinks():
@@ -78,7 +80,7 @@ class RemoveCategoryAction(CategoryAction):
 
     symbol = '-'
 
-    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> str:
+    def apply(self, wikitext: str, category_info: CategoryInfo) -> str:
         wikicode = mwparserfromhell.parse(wikitext)
         for index, wikilink in enumerate(wikicode.nodes):
             if not isinstance(wikilink, mwparserfromhell.nodes.wikilink.Wikilink):

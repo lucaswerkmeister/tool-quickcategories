@@ -1,6 +1,7 @@
 from typing import Any, List, Tuple
 
 from action import Action
+from siteinfo import CategoryInfo
 
 class Command:
     """A list of actions to perform on a page."""
@@ -9,7 +10,7 @@ class Command:
         self.page = page
         self.actions = actions
 
-    def apply(self, wikitext: str, category_info: Tuple[str, List[str]]) -> Tuple[str, List[Tuple[Action, bool]]]:
+    def apply(self, wikitext: str, category_info: CategoryInfo) -> Tuple[str, List[Tuple[Action, bool]]]:
         """Apply the actions of this command to the given wikitext and return
         the result as well as the actions together with the
         information whether they were a no-op or not.
