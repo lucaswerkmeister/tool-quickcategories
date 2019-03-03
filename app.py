@@ -13,6 +13,7 @@ from typing import Optional
 import yaml
 
 import parse_tpsv
+import store
 
 
 app = flask.Flask(__name__)
@@ -29,6 +30,8 @@ except FileNotFoundError:
 
 if 'oauth' in app.config:
     consumer_token = mwoauth.ConsumerToken(app.config['oauth']['consumer_key'], app.config['oauth']['consumer_secret'])
+
+batch_store = store.InMemoryStore()
 
 
 @app.template_global()
@@ -109,16 +112,12 @@ def new_batch():
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 
-    session = authenticated_session(domain)
-    if not session:
-        return str(batch)
+    id = batch_store.store_batch(batch).id
+    return flask.redirect(flask.url_for('batch', id=id))
 
-    if len(batch.commands) <= 1:
-        for command in batch.commands:
-            command.run(session)
-        return 'Okay!'
-    else:
-        return 'Too long!'
+@app.route('/batch/<int:id>/')
+def batch(id: int):
+    return str(batch_store.get_batch(id))
 
 @app.route('/greet/<name>')
 def greet(name: str):
