@@ -11,12 +11,13 @@ class InMemoryStore:
         self.next_command_id = 1
         self.batches = {}
 
-    def store_batch(self, new_batch: NewBatch) -> OpenBatch:
+    def store_batch(self, new_batch: NewBatch, domain: str) -> OpenBatch:
         command_plans = [] # type: List[CommandRecord]
         for command in new_batch.commands:
             command_plans.append(CommandPlan(self.next_command_id, command))
             self.next_command_id += 1
         open_batch = OpenBatch(self.next_batch_id,
+                               domain,
                                command_plans)
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch

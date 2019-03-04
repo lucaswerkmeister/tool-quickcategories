@@ -25,21 +25,25 @@ class OpenBatch:
 
     def __init__(self,
                  id: int,
+                 domain: str,
                  command_records: List[CommandRecord]):
         assert command_records
         assert any(map(lambda command_record: isinstance(command_record, CommandPlan), command_records))
         self.id = id
+        self.domain = domain
         self.command_records = command_records
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is OpenBatch and \
             self.id == value.id and \
+            self.domain == value.domain and \
             self.command_records == value.command_records
 
     def __str__(self) -> str:
-        return '\n'.join([str(command_record) for command_record in self.command_records])
+        return '# ' + self.domain + '\n' + '\n'.join([str(command_record) for command_record in self.command_records])
 
     def __repr__(self) -> str:
         return 'OpenBatch(' + \
             repr(self.id) + ', ' + \
+            repr(self.domain) + ', ' + \
             repr(self.command_records) + ')'
