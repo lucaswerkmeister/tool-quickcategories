@@ -12,6 +12,7 @@ import toolforge
 from typing import Optional
 import yaml
 
+from command import CommandPlan, CommandEdit, CommandNoop
 import parse_tpsv
 import store
 
@@ -121,8 +122,30 @@ def batch(id: int):
     if batch is None:
         return flask.render_template('batch_not_found.html',
                                      id=id), 404
+
+    command_records = batch.command_records[slice_from_args(flask.request.args)]
+    command_markups = []
+    for command_record in command_records:
+        command_markup = flask.Markup(flask.render_template('command.html',
+                                                            command=command_record.command))
+        if isinstance(command_record, CommandPlan):
+            command_markups.append(flask.Markup(flask.render_template('command_plan.html',
+                                                                      command_markup=command_markup,
+                                                                      command_plan=command_record)))
+        elif isinstance(command_record, CommandEdit):
+            command_markups.append(flask.Markup(flask.render_template('command_edit.html',
+                                                                      command_markup=command_markup,
+                                                                      command_edit=command_record)))
+        elif isinstance(command_record, CommandNoop):
+            command_markups.append(flask.Markup(flask.render_template('command_noop.html',
+                                                                      command_markup=command_markup,
+                                                                      command_noop=command_record)))
+        else:
+            raise ValueError('Unknown command record type')
+
     return flask.render_template('batch.html',
-                                 batch=batch)
+                                 batch=batch,
+                                 commands=command_markups)
 
 @app.route('/greet/<name>')
 def greet(name: str):
