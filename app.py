@@ -127,17 +127,21 @@ def batch(id: int):
     command_markups = []
     for command_record in command_records:
         command_markup = flask.Markup(flask.render_template('command.html',
+                                                            domain=batch.domain,
                                                             command=command_record.command))
         if isinstance(command_record, CommandPlan):
             command_markups.append(flask.Markup(flask.render_template('command_plan.html',
+                                                                      domain=batch.domain,
                                                                       command_markup=command_markup,
                                                                       command_plan=command_record)))
         elif isinstance(command_record, CommandEdit):
             command_markups.append(flask.Markup(flask.render_template('command_edit.html',
+                                                                      domain=batch.domain,
                                                                       command_markup=command_markup,
                                                                       command_edit=command_record)))
         elif isinstance(command_record, CommandNoop):
             command_markups.append(flask.Markup(flask.render_template('command_noop.html',
+                                                                      domain=batch.domain,
                                                                       command_markup=command_markup,
                                                                       command_noop=command_record)))
         else:
