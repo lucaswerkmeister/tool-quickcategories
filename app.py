@@ -12,7 +12,7 @@ import toolforge
 from typing import Optional
 import yaml
 
-from command import CommandPlan, CommandEdit, CommandNoop
+from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop
 import parse_tpsv
 import store
 
@@ -88,6 +88,31 @@ def authentication_area() -> flask.Markup:
             user_link(identity['username']) +
             flask.Markup(r'</span>'))
 
+@app.template_global() # TODO make domain part of Command and turn this into a template filter?
+def render_command(command: Command, domain: str):
+    return flask.Markup(flask.render_template('command.html',
+                                              domain=domain,
+                                              command=command))
+
+@app.template_global() # TODO also turn into a template filter?
+def render_command_record(command_record: CommandRecord, domain: str):
+    if isinstance(command_record, CommandPlan):
+        command_record_markup = flask.render_template('command_plan.html',
+                                                      domain=domain,
+                                                      command_plan=command_record)
+    elif isinstance(command_record, CommandEdit):
+        command_record_markup = flask.render_template('command_edit.html',
+                                                      domain=domain,
+                                                      command_edit=command_record)
+    elif isinstance(command_record, CommandNoop):
+        command_record_markup = flask.render_template('command_noop.html',
+                                                      domain=domain,
+                                                      command_noop=command_record)
+    else:
+        raise ValueError('Unknown command record type')
+
+    return flask.Markup(command_record_markup)
+
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
         access_token = mwoauth.AccessToken(**flask.session['oauth_access_token'])
@@ -124,32 +149,8 @@ def batch(id: int):
                                      id=id), 404
 
     command_records = batch.command_records[slice_from_args(flask.request.args)]
-    command_markups = []
-    for command_record in command_records:
-        command_markup = flask.Markup(flask.render_template('command.html',
-                                                            domain=batch.domain,
-                                                            command=command_record.command))
-        if isinstance(command_record, CommandPlan):
-            command_markups.append(flask.Markup(flask.render_template('command_plan.html',
-                                                                      domain=batch.domain,
-                                                                      command_markup=command_markup,
-                                                                      command_plan=command_record)))
-        elif isinstance(command_record, CommandEdit):
-            command_markups.append(flask.Markup(flask.render_template('command_edit.html',
-                                                                      domain=batch.domain,
-                                                                      command_markup=command_markup,
-                                                                      command_edit=command_record)))
-        elif isinstance(command_record, CommandNoop):
-            command_markups.append(flask.Markup(flask.render_template('command_noop.html',
-                                                                      domain=batch.domain,
-                                                                      command_markup=command_markup,
-                                                                      command_noop=command_record)))
-        else:
-            raise ValueError('Unknown command record type')
-
     return flask.render_template('batch.html',
-                                 batch=batch,
-                                 commands=command_markups)
+                                 batch=batch)
 
 @app.route('/greet/<name>')
 def greet(name: str):
