@@ -37,16 +37,17 @@ class Runner():
             return CommandNoop(plan.id, plan.command, revision['revid'])
         token = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
-        response = session.post(action='edit',
-                                pageid=page['pageid'],
-                                text=wikitext,
-                                summary=summary,
-                                bot=True,
-                                basetimestamp=revision['timestamp'],
-                                starttimestamp=response['curtimestamp'],
-                                contentformat='text/x-wiki',
-                                contentmodel='wikitext',
-                                token=token,
-                                formatversion=2)
+        response = session.post(**{'action': 'edit',
+                                   'pageid': page['pageid'],
+                                   'text': wikitext,
+                                   'summary': summary,
+                                   'bot': True,
+                                   'basetimestamp': revision['timestamp'],
+                                   'starttimestamp': response['curtimestamp'],
+                                   'contentformat': 'text/x-wiki',
+                                   'contentmodel': 'wikitext',
+                                   'token': token,
+                                   'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
+                                   'formatversion': 2})
         assert response['edit']['oldrevid'] == revision['revid']
         return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])

@@ -24,11 +24,12 @@ def test_run_command():
                                                   RemoveCategoryAction('Not present cat')])
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
-    setup_edit = session.post(action='edit',
-                              title=command.page,
-                              text='Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
-                              summary='setup',
-                              token=csrftoken)
+    setup_edit = session.post(**{'action': 'edit',
+                                 'title': command.page,
+                                 'text': 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
+                                 'summary': 'setup',
+                                 'token': csrftoken,
+                                 'assert': 'user'})
     edit = Runner().run_command(CommandPlan(0, command), session)
 
     assert isinstance(edit, CommandEdit)
@@ -40,10 +41,11 @@ def test_run_command():
                          rvprop=['content'],
                          rvslots=['main'],
                          formatversion=2)['query']['pages'][0]['revisions'][0]['slots']['main']['content']
-    session.post(action='edit',
-                 title=command.page,
-                 text='Test page for the QuickCategories tool.',
-                 summary='teardown',
-                 token=csrftoken)
+    session.post(**{'action': 'edit',
+                    'title': command.page,
+                    'text': 'Test page for the QuickCategories tool.',
+                    'summary': 'teardown',
+                    'token': csrftoken,
+                    'assert': 'user'})
     expected = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert expected == actual
