@@ -1,13 +1,6 @@
 import siteinfo
 
-
-class FakeSession:
-
-    def __init__(self, response):
-        self.response = response
-
-    def get(self, *args, **kwargs):
-        return self.response
+from test_utils import FakeSession
 
 
 def test_category_info_enwiki():

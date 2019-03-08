@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<h1>Batch #{{ batch.id }}</h1>
+<h1>Batch #{{ batch.id }} by <a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ batch.local_user_id }}"><bdi>{{ batch.user_name }}</bdi></a></h1>
 {% for command_record in batch.command_records %}
 <div>
   {{ render_command_record(command_record, batch.domain) }}

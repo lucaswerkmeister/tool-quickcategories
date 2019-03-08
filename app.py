@@ -148,7 +148,7 @@ def new_batch():
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 
-    id = batch_store.store_batch(batch, domain).id
+    id = batch_store.store_batch(batch, session).id
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/<int:id>/')
