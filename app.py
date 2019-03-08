@@ -158,9 +158,9 @@ def batch(id: int):
         return flask.render_template('batch_not_found.html',
                                      id=id), 404
 
-    command_records = batch.command_records[slice_from_args(flask.request.args)]
     return flask.render_template('batch.html',
-                                 batch=batch)
+                                 batch=batch,
+                                 slice=slice_from_args(flask.request.args))
 
 @app.route('/greet/<name>')
 def greet(name: str):
