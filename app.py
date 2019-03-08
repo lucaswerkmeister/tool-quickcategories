@@ -70,6 +70,10 @@ def user_link(user_name: str) -> flask.Markup:
             flask.Markup(r'</a>'))
 
 @app.template_global()
+def user_logged_in() -> bool:
+    return authenticated_session() is not None
+
+@app.template_global()
 def authentication_area() -> flask.Markup:
     if 'oauth' not in app.config:
         return flask.Markup()
@@ -130,9 +134,15 @@ def index():
 def new_batch():
     if not submitted_request_valid():
         return 'CSRF error', 400
+
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
         return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
+
+    session = authenticated_session(domain)
+    if not session:
+        return 'not logged in', 403 # Forbidden; 401 Unauthorized would be inappropriate because we don’t send WWW-Authenticate
+
     try:
         batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''))
     except parse_tpsv.ParseBatchError as e:
