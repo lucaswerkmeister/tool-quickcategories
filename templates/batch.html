@@ -1,6 +1,22 @@
 {% extends "base.html" %}
 {% block main %}
+{% set offset = slice.start %}
+{% set limit = slice.stop - slice.start %}
 <h1>Batch #{{ batch.id }} by <a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ batch.local_user_id }}"><bdi>{{ batch.user_name }}</bdi></a></h1>
+<nav aria-label="command pages">
+  <ul class="pagination">
+    {% if offset > 0 %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=([0, offset-limit] | max), limit=limit) }}">Previous</a></li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Previous</a></li>
+    {% endif %}
+    {% if offset + limit < (batch.command_records | length) %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=offset+limit, limit=limit) }}">Next</a></li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Next</a></li>
+    {% endif %}
+  </ul>
+</nav>
 {% for command_record in batch.command_records[slice] %}
 <div>
   {{ render_command_record(command_record, batch.domain) }}
@@ -9,8 +25,8 @@
 {% if can_run_commands(batch.command_records[slice]) %}
 <form method="post" action="{{ url_for('run_batch_slice', id=batch.id) }}">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-  <input name="offset" type="hidden" value="{{ slice.start }}">
-  <input name="limit" type="hidden" value="{{ slice.stop - slice.start }}">
+  <input name="offset" type="hidden" value="{{ offset }}">
+  <input name="limit" type="hidden" value="{{ limit }}">
   <button class="btn btn-primary">Run these commands</button>
 </form>
 {% endif %}
