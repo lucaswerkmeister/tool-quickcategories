@@ -149,27 +149,32 @@ response_zhwiki = {
 
 def test_category_info_enwiki():
     session = FakeSession(response_enwiki)
+    session.host = 'https://en.wikipedia.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Category', ['Category'])
 
 def test_category_info_dewiki():
     session = FakeSession(response_dewiki)
+    session.host = 'https://de.wikipedia.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Kategorie', ['Kategorie', 'Category'])
 
 def test_category_info_ruwiki():
     session = FakeSession(response_ruwiki)
+    session.host = 'https://ru.wikipedia.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Категория', ['Категория', 'Category', 'К'])
 
 
 def test_comma_separator():
     session = FakeSession(response_zhwiki)
+    session.host = 'https://zh.wikipedia.org'
     comma_separator = siteinfo.comma_separator(session)
     assert comma_separator == '、 '
 
 
 def test_parentheses():
     session = FakeSession(response_zhwiki)
+    session.host = 'https://zh.wikipedia.org'
     parentheses = siteinfo.parentheses(session, 'foo')
     assert parentheses == '（foo）'

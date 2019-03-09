@@ -1,4 +1,6 @@
+import cachetools
 import mwapi # type: ignore
+import threading
 from typing import Dict, List, Tuple
 
 
@@ -41,13 +43,32 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
     return (category_info, messages)
 
 
+siteinfo_cache = cachetools.TTLCache(maxsize=1024, ttl=24*60*60) # type: cachetools.TTLCache[str, _SiteInfo]
+siteinfo_cache_lock = threading.RLock()
+
+
 def category_info(session: mwapi.Session) -> CategoryInfo:
-    return _get_siteinfo(session)[0]
+    with siteinfo_cache_lock:
+        siteinfo = siteinfo_cache.get(session.host)
+        if not siteinfo:
+            siteinfo = _get_siteinfo(session)
+            siteinfo_cache[session.host] = siteinfo
+    return siteinfo[0]
 
 
 def comma_separator(session: mwapi.Session) -> str:
-    return _get_siteinfo(session)[1]['comma-separator']
+    with siteinfo_cache_lock:
+        siteinfo = siteinfo_cache.get(session.host)
+        if not siteinfo:
+            siteinfo = _get_siteinfo(session)
+            siteinfo_cache[session.host] = siteinfo
+    return siteinfo[1]['comma-separator']
 
 
 def parentheses(session: mwapi.Session, content: str) -> str:
-    return _get_siteinfo(session)[1]['parentheses'].replace('$1', content)
+    with siteinfo_cache_lock:
+        siteinfo = siteinfo_cache.get(session.host)
+        if not siteinfo:
+            siteinfo = _get_siteinfo(session)
+            siteinfo_cache[session.host] = siteinfo
+    return siteinfo[1]['parentheses'].replace('$1', content)
