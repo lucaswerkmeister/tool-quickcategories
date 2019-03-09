@@ -9,11 +9,12 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-from typing import List, Optional
+from typing import cast, List, Optional
 import yaml
 
 from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop
 import parse_tpsv
+from runner import Runner
 import store
 
 
@@ -176,7 +177,34 @@ def batch(id: int):
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
-    pass
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    session = authenticated_session(batch.domain)
+    if not session:
+        return 'not logged in', 403
+    local_user_id = session.get(action='query',
+                                meta='userinfo')['query']['userinfo']['id']
+    if local_user_id != batch.local_user_id:
+        return 'may not run this batch', 403
+
+    runner = Runner()
+
+    slice = slice_from_args(flask.request.form)
+    offset = cast(int, slice.start) # start is Optional[int], but slice_from_args always returns full slices
+    limit = cast(int, slice.stop) - offset # similar
+    for index, command_plan in enumerate(batch.command_records[slice]):
+        if not isinstance(command_plan, CommandPlan):
+            continue
+        command_finish = runner.run_command(command_plan, session)
+        batch.command_records[offset+index] = command_finish
+
+    return flask.redirect(flask.url_for('batch',
+                                        id=id,
+                                        offset=offset,
+                                        limit=limit))
 
 @app.route('/greet/<name>')
 def greet(name: str):
