@@ -1,4 +1,5 @@
 import mwapi # type: ignore
+from typing import Dict, List
 
 from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop
 import siteinfo
@@ -10,25 +11,41 @@ class Runner():
         self.session = session
         self.csrf_token = session.get(action='query',
                                       meta='tokens')['query']['tokens']['csrftoken']
+        self.prepared_pages = {} # type: Dict[str, dict]
 
-    def run_command(self, plan: CommandPlan) -> CommandFinish:
+    def prepare_pages(self, titles: List[str]):
+        assert titles
+        assert len(titles) <= 50
         response = self.session.get(action='query',
-                                    titles=[plan.command.page],
+                                    titles=titles,
                                     prop=['revisions'],
                                     rvprop=['ids', 'content', 'contentmodel', 'timestamp'],
                                     rvslots=['main'],
-                                    rvlimit=1,
                                     curtimestamp=True,
                                     formatversion=2)
-        page = response['query']['pages'][0]
-        revision = page['revisions'][0]
-        slot = revision['slots']['main']
-        if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
-            raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], plan.command.page))
-        original_wikitext = slot['content']
+        for page in response['query']['pages']:
+            title = page['title']
+            revision = page['revisions'][0]
+            slot = revision['slots']['main']
+            if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
+                raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], title))
+            original_wikitext = slot['content']
+            self.prepared_pages[title] = {
+                'wikitext': slot['content'],
+                'page_id': page['pageid'],
+                'base_timestamp': revision['timestamp'],
+                'base_revid': revision['revid'],
+                'start_timestamp': response['curtimestamp'],
+            }
+
+    def run_command(self, plan: CommandPlan) -> CommandFinish:
+        title = plan.command.page
+        if title not in self.prepared_pages:
+            self.prepare_pages([title])
+        prepared_page = self.prepared_pages[title]
         category_info = siteinfo.category_info(self.session)
 
-        wikitext, actions = plan.command.apply(original_wikitext, category_info)
+        wikitext, actions = plan.command.apply(prepared_page['wikitext'], category_info)
         summary = ''
         for action, noop in actions:
             action_summary = action.summary(category_info)
@@ -38,19 +55,19 @@ class Runner():
                 summary += siteinfo.comma_separator(self.session)
             summary += action_summary
 
-        if wikitext == original_wikitext:
-            return CommandNoop(plan.id, plan.command, revision['revid'])
+        if wikitext == prepared_page['wikitext']:
+            return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])
         response = self.session.post(**{'action': 'edit',
-                                        'pageid': page['pageid'],
+                                        'pageid': prepared_page['page_id'],
                                         'text': wikitext,
                                         'summary': summary,
                                         'bot': True,
-                                        'basetimestamp': revision['timestamp'],
-                                        'starttimestamp': response['curtimestamp'],
+                                        'basetimestamp': prepared_page['base_timestamp'],
+                                        'starttimestamp': prepared_page['start_timestamp'],
                                         'contentformat': 'text/x-wiki',
                                         'contentmodel': 'wikitext',
                                         'token': self.csrf_token,
                                         'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
                                         'formatversion': 2})
-        assert response['edit']['oldrevid'] == revision['revid']
+        assert response['edit']['oldrevid'] == prepared_page['base_revid']
         return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])

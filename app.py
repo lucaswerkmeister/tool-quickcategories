@@ -9,7 +9,7 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-from typing import cast, List, Optional
+from typing import cast, Dict, List, Optional
 import yaml
 
 from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop
@@ -195,11 +195,16 @@ def run_batch_slice(id: int):
     slice = slice_from_args(flask.request.form)
     offset = cast(int, slice.start) # start is Optional[int], but slice_from_args always returns full slices
     limit = cast(int, slice.stop) - offset # similar
+
+    command_plans = {} # type: Dict[int, CommandPlan]
     for index, command_plan in enumerate(batch.command_records[slice]):
         if not isinstance(command_plan, CommandPlan):
             continue
-        command_finish = runner.run_command(command_plan)
-        batch.command_records[offset+index] = command_finish
+        command_plans[offset+index] = command_plan
+
+    runner.prepare_pages([command_plan.command.page for command_plan in command_plans.values()])
+    for index, command_plan in command_plans.items():
+        batch.command_records[index] = runner.run_command(command_plan)
 
     return flask.redirect(flask.url_for('batch',
                                         id=id,
