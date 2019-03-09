@@ -9,7 +9,7 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-from typing import Optional
+from typing import List, Optional
 import yaml
 
 from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop
@@ -92,6 +92,10 @@ def authentication_area() -> flask.Markup:
             user_link(identity['username']) +
             flask.Markup(r'</span>'))
 
+@app.template_global()
+def can_run_commands(command_records: List[CommandRecord]) -> bool:
+    return flask.g.can_run_commands and any(filter(lambda command_record: isinstance(command_record, CommandPlan), command_records))
+
 @app.template_global() # TODO make domain part of Command and turn this into a template filter?
 def render_command(command: Command, domain: str):
     return flask.Markup(flask.render_template('command.html',
@@ -158,9 +162,21 @@ def batch(id: int):
         return flask.render_template('batch_not_found.html',
                                      id=id), 404
 
+    session = authenticated_session(batch.domain)
+    if session:
+        local_user_id = session.get(action='query',
+                                    meta='userinfo')['query']['userinfo']['id']
+        flask.g.can_run_commands = local_user_id == batch.local_user_id
+    else:
+        flask.g.can_run_commands = False
+
     return flask.render_template('batch.html',
                                  batch=batch,
                                  slice=slice_from_args(flask.request.args))
+
+@app.route('/batch/<int:id>/run_slice', methods=['POST'])
+def run_batch_slice(id: int):
+    pass
 
 @app.route('/greet/<name>')
 def greet(name: str):
