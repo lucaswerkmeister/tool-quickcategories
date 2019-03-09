@@ -30,7 +30,7 @@ def test_run_command():
                                  'summary': 'setup',
                                  'token': csrftoken,
                                  'assert': 'user'})
-    edit = Runner().run_command(CommandPlan(0, command), session)
+    edit = Runner(session).run_command(CommandPlan(0, command))
 
     assert isinstance(edit, CommandEdit)
     assert edit.base_revision == setup_edit['edit']['newrevid']

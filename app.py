@@ -190,7 +190,7 @@ def run_batch_slice(id: int):
     if local_user_id != batch.local_user_id:
         return 'may not run this batch', 403
 
-    runner = Runner()
+    runner = Runner(session)
 
     slice = slice_from_args(flask.request.form)
     offset = cast(int, slice.start) # start is Optional[int], but slice_from_args always returns full slices
@@ -198,7 +198,7 @@ def run_batch_slice(id: int):
     for index, command_plan in enumerate(batch.command_records[slice]):
         if not isinstance(command_plan, CommandPlan):
             continue
-        command_finish = runner.run_command(command_plan, session)
+        command_finish = runner.run_command(command_plan)
         batch.command_records[offset+index] = command_finish
 
     return flask.redirect(flask.url_for('batch',
