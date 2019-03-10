@@ -1,10 +1,11 @@
 import contextlib
+import json
 import mwapi # type: ignore
 import pymysql
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan, CommandRecord
+from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop
 import parse_tpsv
 
 
@@ -53,6 +54,8 @@ class DatabaseStore:
     _BATCH_STATUS_OPEN = 0
 
     _COMMAND_STATUS_PLAN = 0
+    _COMMAND_STATUS_EDIT = 1
+    _COMMAND_STATUS_NOOP = 2
 
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
@@ -141,10 +144,22 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, index.stop - index.start, index.start))
             for id, tpsv, status, outcome in cursor.fetchall():
-                assert status == DatabaseStore._COMMAND_STATUS_PLAN
-                assert outcome is None
-                command_records.append(CommandPlan(id,
-                                                   parse_tpsv.parse_command(tpsv)))
+                if outcome:
+                    outcome = json.loads(outcome)
+                command = parse_tpsv.parse_command(tpsv)
+                if status == DatabaseStore._COMMAND_STATUS_PLAN:
+                    assert outcome is None
+                    command_record = CommandPlan(id, command)
+                elif status == DatabaseStore._COMMAND_STATUS_EDIT:
+                    command_record = CommandEdit(id,
+                                                 command,
+                                                 base_revision=outcome['base_revision'],
+                                                 revision=outcome['revision'])
+                elif status == DatabaseStore._COMMAND_STATUS_NOOP:
+                    command_record = CommandNoop(id,
+                                                 command,
+                                                 revision=outcome['revision'])
+                command_records.append(command_record)
 
         if return_first:
             return command_records[0]
@@ -162,7 +177,28 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
     @overload
     def __setitem__(self, index: slice, value: Iterable[CommandRecord]) -> None: ...
     def __setitem__(self, index, value):
-        raise NotImplementedError('Not implemented yet')
+        if isinstance(index, slice):
+            raise NotImplementedError('Can only set a single command record')
+        if isinstance(value, CommandPlan):
+            raise NotImplementedError('Can only store finished commands')
+        assert isinstance(index, int)
+        assert isinstance(value, CommandFinish)
+
+        if isinstance(value, CommandEdit):
+            status = DatabaseStore._COMMAND_STATUS_EDIT
+            outcome = {'base_revision': value.base_revision, 'revision': value.revision}
+        elif isinstance(value, CommandNoop):
+            status = DatabaseStore._COMMAND_STATUS_NOOP
+            outcome = {'revision': value.revision}
+        else:
+            raise ValueError('Unknown command type')
+
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''UPDATE `command`
+                              SET `command_status` = %s, `command_outcome` = %s
+                              WHERE `command_id` = %s AND `command_batch` = %s''',
+                           (status, json.dumps(outcome), value.id, self.batch_id))
+            connection.commit()
 
     def __delitem__(self, *args, **kwargs):
         raise NotImplementedError('Cannot delete commands from a batch')
