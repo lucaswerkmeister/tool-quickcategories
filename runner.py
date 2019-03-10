@@ -1,5 +1,5 @@
 import mwapi # type: ignore
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop
 import siteinfo
@@ -7,10 +7,11 @@ import siteinfo
 
 class Runner():
 
-    def __init__(self, session: mwapi.Session):
+    def __init__(self, session: mwapi.Session, summary_suffix: Optional[str] = None):
         self.session = session
         self.csrf_token = session.get(action='query',
                                       meta='tokens')['query']['tokens']['csrftoken']
+        self.summary_suffix = summary_suffix
         self.prepared_pages = {} # type: Dict[str, dict]
 
     def prepare_pages(self, titles: List[str]):
@@ -54,6 +55,10 @@ class Runner():
             if summary:
                 summary += siteinfo.comma_separator(self.session)
             summary += action_summary
+
+        if self.summary_suffix:
+            summary += siteinfo.semicolon_separator(self.session)
+            summary += self.summary_suffix
 
         if wikitext == prepared_page['wikitext']:
             return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])

@@ -194,7 +194,12 @@ def run_batch_slice(id: int):
     if local_user_id != batch.local_user_id:
         return 'may not run this batch', 403
 
-    runner = Runner(session)
+    if 'summary_suffix' in app.config:
+        summary_suffix = app.config['summary_suffix'].format(id)
+    else:
+        summary_suffix = None
+
+    runner = Runner(session, summary_suffix)
 
     slice = slice_from_args(flask.request.form)
     offset = cast(int, slice.start) # start is Optional[int], but slice_from_args always returns full slices
