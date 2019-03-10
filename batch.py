@@ -30,8 +30,6 @@ class OpenBatch:
                  global_user_id: int,
                  domain: str,
                  command_records: MutableSequence[CommandRecord]):
-        assert command_records
-        assert any(map(lambda command_record: isinstance(command_record, CommandPlan), command_records))
         self.id = id
         self.user_name = user_name
         self.local_user_id = local_user_id

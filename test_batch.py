@@ -36,13 +36,6 @@ def test_NewBatch_repr():
 openBatch1 = OpenBatch(5, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', [commandPlan1, commandEdit1])
 
 
-def test_OpenBatch_init():
-    with pytest.raises(AssertionError):
-        no_commands = OpenBatch(openBatch1.id, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', [])
-    with pytest.raises(AssertionError):
-        no_plans = OpenBatch(openBatch1.id, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', [commandEdit1])
-    no_finishes = OpenBatch(openBatch1.id, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', [commandPlan1])
-
 def test_OpenBatch_eq_same():
     assert openBatch1 == openBatch1
 
