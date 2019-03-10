@@ -20,7 +20,14 @@ def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
     return user_name, local_user_id, global_user_id, domain
 
 
-class InMemoryStore:
+class BatchStore:
+
+    def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch: ...
+
+    def get_batch(self, id: int) -> Optional[OpenBatch]: ...
+
+
+class InMemoryStore(BatchStore):
 
     def __init__(self):
         self.next_batch_id = 1
@@ -49,7 +56,7 @@ class InMemoryStore:
         return self.batches.get(id)
 
 
-class DatabaseStore:
+class DatabaseStore(BatchStore):
 
     _BATCH_STATUS_OPEN = 0
 
