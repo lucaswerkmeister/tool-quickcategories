@@ -4,6 +4,7 @@ mwapi
 mwoauth
 mwparserfromhell
 mypy
+pymysql
 pytest
 pyyaml
 requests_oauthlib

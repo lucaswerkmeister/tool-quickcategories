@@ -1,4 +1,11 @@
-from store import InMemoryStore
+import contextlib
+import os
+import pymysql
+import pytest
+import random
+import string
+
+from store import InMemoryStore, DatabaseStore
 
 from test_batch import newBatch1
 from test_utils import FakeSession
@@ -48,3 +55,52 @@ def test_InMemoryStore_get_batch():
 
 def test_InMemoryStore_get_batch_None():
     assert InMemoryStore().get_batch(0) is None
+
+
+@contextlib.contextmanager
+def temporary_database():
+    if 'MARIADB_ROOT_PASSWORD' not in os.environ:
+        pytest.skip('MariaDB credentials not provided')
+    connection = pymysql.connect(host='localhost',
+                                 user='root',
+                                 password=os.environ['MARIADB_ROOT_PASSWORD'])
+    database_name = 'quickcategories_test_' + ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(16))
+    user_name = 'quickcategories_test_user_' + ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(16))
+    user_password = 'quickcategories_test_password_' + ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(16))
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('CREATE DATABASE `%s`' % database_name)
+            cursor.execute('GRANT ALL PRIVILEGES ON `%s`.* TO `%s` IDENTIFIED BY %%s' % (database_name, user_name), (user_password,))
+            cursor.execute('USE `%s`' % database_name)
+            with open('tables.sql') as tables:
+                queries = tables.read()
+                # PyMySQL does not support multiple queries in execute(), so we have to split
+                for query in queries.split(';'):
+                    query = query.strip()
+                    if query:
+                        cursor.execute(query)
+            cursor.execute('USE mysql')
+        connection.commit()
+        yield {'host': 'localhost', 'user': user_name, 'password': user_password, 'db': database_name}
+    finally:
+        with connection.cursor() as cursor:
+            cursor.execute('DROP DATABASE IF EXISTS `%s`' % database_name)
+            cursor.execute('DROP USER IF EXISTS `%s`' % user_name)
+            connection.commit()
+        connection.close()
+
+def test_DatabaseStore_store_batch():
+    with temporary_database() as connection_params:
+        store = DatabaseStore(connection_params)
+        open_batch = store.store_batch(newBatch1, fake_session)
+        command2 = open_batch.command_records[1]
+
+        with store._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT * FROM `batch`')
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT * FROM `command`')
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT `command_tpsv` FROM `command` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
+                (command2_tpsv,) = cursor.fetchone()
+                assert command2_tpsv == str(command2.command)
