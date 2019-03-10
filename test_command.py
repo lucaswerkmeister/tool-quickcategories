@@ -16,7 +16,7 @@ def test_Command_apply():
                                      AddCategoryAction('Already present cat'),
                                      RemoveCategoryAction('Removed cat'),
                                      RemoveCategoryAction('Not present cat')])
-    new_wikitext, actions = command.apply(wikitext, ('Category', ['Category']))
+    new_wikitext, actions = command.apply(wikitext, ('Category', ['Category'], 'first-letter'))
     assert new_wikitext == 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert actions == [(command.actions[0], False),
                        (command.actions[1], True),

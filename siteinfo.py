@@ -4,9 +4,10 @@ import threading
 from typing import Dict, List, Tuple
 
 
-CategoryInfo = Tuple[str, List[str]]
-"""The primary name of the category namespace
-and all the names with which a category link may be formed."""
+CategoryInfo = Tuple[str, List[str], str]
+"""The primary name of the category namespace,
+all the names with which a category link may be formed,
+and the case of the category namespace ("first-letter" or "case-sensitive")."""
 
 
 _SiteInfo = Tuple[CategoryInfo, Dict[str, str]]
@@ -25,6 +26,7 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
         if namespace.get('canonical') == 'Category':
             category_namespace_id = namespace['id']
             category_namespace_name = namespace['name']
+            category_namespace_case = namespace['case']
             break
     else:
         raise LookupError('No category namespace returned by MediaWiki API!')
@@ -34,7 +36,7 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
     for namespacealias in response['query']['namespacealiases']:
         if namespacealias['id'] == category_namespace_id:
             category_namespace_names.append(namespacealias['alias'])
-    category_info = (category_namespace_name, category_namespace_names)
+    category_info = (category_namespace_name, category_namespace_names, category_namespace_case)
 
     messages = {}
     for message in response['query']['allmessages']:

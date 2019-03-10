@@ -11,6 +11,7 @@ response_enwiki = {
                 'id': 14,
                 'name': 'Category',
                 'canonical': 'Category',
+                'case': 'first-letter',
             },
             '15': {
                 'id': 15,
@@ -38,7 +39,7 @@ response_enwiki = {
         ],
     },
 }
-response_dewiki = {
+response_dewiktionary = {
     'query': {
         'namespaces': {
             # ...
@@ -46,6 +47,7 @@ response_dewiki = {
                 'id': 14,
                 'name': 'Kategorie',
                 'canonical': 'Category',
+                'case': 'case-sensitive',
             },
             '15': {
                 'id': 15,
@@ -81,6 +83,7 @@ response_ruwiki = {
                 'id': 14,
                 'name': 'Категория',
                 'canonical': 'Category',
+                'case': 'first-letter',
             },
             '15': {
                 'id':15,
@@ -121,6 +124,7 @@ response_zhwiki = {
                 'id': 14,
                 'name': 'Category',
                 'canonical': 'Category',
+                'case': 'first-letter',
             },
             '15': {
                 'id':15,
@@ -167,19 +171,19 @@ def test_category_info_enwiki():
     session = FakeSession(response_enwiki)
     session.host = 'https://en.wikipedia.org'
     category_info = siteinfo.category_info(session)
-    assert category_info == ('Category', ['Category'])
+    assert category_info == ('Category', ['Category'], 'first-letter')
 
-def test_category_info_dewiki():
-    session = FakeSession(response_dewiki)
-    session.host = 'https://de.wikipedia.org'
+def test_category_info_dewiktionary():
+    session = FakeSession(response_dewiktionary)
+    session.host = 'https://de.wiktionary.org'
     category_info = siteinfo.category_info(session)
-    assert category_info == ('Kategorie', ['Kategorie', 'Category'])
+    assert category_info == ('Kategorie', ['Kategorie', 'Category'], 'case-sensitive')
 
 def test_category_info_ruwiki():
     session = FakeSession(response_ruwiki)
     session.host = 'https://ru.wikipedia.org'
     category_info = siteinfo.category_info(session)
-    assert category_info == ('Категория', ['Категория', 'Category', 'К'])
+    assert category_info == ('Категория', ['Категория', 'Category', 'К'], 'first-letter')
 
 
 def test_comma_separator():

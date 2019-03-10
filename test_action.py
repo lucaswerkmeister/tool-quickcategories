@@ -32,6 +32,8 @@ def test_CategoryAction_init_category_namespace(clazz):
     ('end of article\n[[Category:A]]\n[[Category:B]]', 'end of article\n[[Category:A]]\n[[Category:B]]\n[[Category:Test]]'),
     ('some wikitext\n[[Category:Here]]\nmore wikitext', 'some wikitext\n[[Category:Here]]\n[[Category:Test]]\nmore wikitext'),
     ('it is [[Category:Test]] already present', 'it is [[Category:Test]] already present'),
+    ('it is [[Category:test]] already present in lowercase', 'it is [[Category:test]] already present in lowercase'),
+    ('it is [[Category:TEST]] present in different capitalization', 'it is [[Category:TEST]]\n[[Category:Test]] present in different capitalization'),
     ('[[Kategorie:Test]]', '[[Kategorie:Test]]'),
     ('[[K:Test]]', '[[K:Test]]'),
     ('[[Category:Test|sort key]]', '[[Category:Test|sort key]]'),
@@ -43,13 +45,13 @@ def test_CategoryAction_init_category_namespace(clazz):
 ])
 def test_AddCategoryAction_apply(wikitext, expected):
     action = AddCategoryAction('Test')
-    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
+    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
 def test_AddCategoryAction_apply_detects_underscores():
     action = AddCategoryAction('My Test Category')
     wikitext = '[[Category:My_Test_Category]]'
-    assert wikitext == action.apply(wikitext, ('Category', ['Category']))
+    assert wikitext == action.apply(wikitext, ('Category', ['Category'], 'first-letter'))
 
 def test_AddCategoryAction_apply_preserves_underscores():
     action1 = AddCategoryAction('Test Category 1')
@@ -58,8 +60,14 @@ def test_AddCategoryAction_apply_preserves_underscores():
     expected = '[[Category:Test Category 1]]\n[[Category:Test_Category_2]]\n[[Category:Test_Category 3]]'
     actual = ''
     for action in [action1, action2, action3]:
-        actual = action.apply(actual, ('Category', ['Category']))
+        actual = action.apply(actual, ('Category', ['Category'], 'first-letter'))
     assert expected == actual
+
+def test_AddCategoryAction_apply_case_sensitive():
+    action = AddCategoryAction('Test')
+    wikitext = '[[Category:test]]'
+    expected = '[[Category:test]]\n[[Category:Test]]'
+    assert expected == action.apply(wikitext, ('Category', ['Category'], 'case-sensitive'))
 
 def test_AddCategoryAction_summary():
     assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
@@ -91,6 +99,7 @@ def test_AddCategoryAction_repr():
     ('[[Category:Test]]\nbeginning of article', 'beginning of article'),
     ('[[Category:Start]][[Category:Test]][[Category:End]]', '[[Category:Start]][[Category:End]]'),
     ('[[Category:Start]]\n[[Category:Test]]\n[[Category:End]]', '[[Category:Start]]\n[[Category:End]]'),
+    ('[[Category:test]]', ''),
     ('[[Kategorie:Test]]', ''),
     ('[[K:Test]]', ''),
     ('[[Category:Test|sort key]]', ''),
@@ -102,8 +111,13 @@ def test_AddCategoryAction_repr():
 ])
 def test_RemoveCategoryAction_apply(wikitext, expected):
     action = RemoveCategoryAction('Test')
-    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K']))
+    actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
+
+def test_RemoveCategoryAction_apply_case_sensitive():
+    action = RemoveCategoryAction('Test')
+    wikitext = '[[category:test]]'
+    assert wikitext == action.apply(wikitext, ('Category', ['Category'], 'case-sensitive'))
 
 def test_RemoveCategoryAction_summary():
     assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test]]'
