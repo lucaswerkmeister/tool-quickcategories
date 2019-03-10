@@ -1,10 +1,11 @@
 import contextlib
 import mwapi # type: ignore
 import pymysql
-from typing import Generator, List, Optional, Tuple
+from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
 from command import CommandPlan, CommandRecord
+import parse_tpsv
 
 
 def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
@@ -94,3 +95,77 @@ class DatabaseStore:
                          global_user_id,
                          domain,
                          command_plans)
+
+    def get_batch(self, id: int) -> Optional[OpenBatch]:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain`, `batch_status`
+                                  FROM `batch`
+                                  WHERE `batch_id` = %s''', (id,))
+                user_name, local_user_id, global_user_id, domain, status = cursor.fetchone()
+        assert status == DatabaseStore._BATCH_STATUS_OPEN
+        return OpenBatch(id,
+                         user_name,
+                         local_user_id,
+                         global_user_id,
+                         domain,
+                         _DatabaseCommandRecords(id, self))
+
+
+class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
+
+    def __init__(self, batch_id: int, store: DatabaseStore):
+        self.batch_id = batch_id
+        self.store = store
+
+    @overload
+    def __getitem__(self, index: int) -> CommandRecord: ...
+    @overload
+    def __getitem__(self, index: slice) -> List[CommandRecord]: ...
+    def __getitem__(self, index):
+        if isinstance(index, int):
+            index = slice(index, index + 1)
+            return_first = True
+        else:
+            return_first = False
+        assert isinstance(index, slice)
+        assert isinstance(index.start, int)
+        assert isinstance(index.stop, int)
+        assert index.step in [None, 1]
+
+        command_records = []
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `command_id`, `command_tpsv`, `command_status`, `command_outcome`
+                              FROM `command`
+                              WHERE `command_batch` = %s
+                              ORDER BY `command_id` ASC
+                              LIMIT %s OFFSET %s''', (self.batch_id, index.stop - index.start, index.start))
+            for id, tpsv, status, outcome in cursor.fetchall():
+                assert status == DatabaseStore._COMMAND_STATUS_PLAN
+                assert outcome is None
+                command_records.append(CommandPlan(id,
+                                                   parse_tpsv.parse_command(tpsv)))
+
+        if return_first:
+            return command_records[0]
+        else:
+            return command_records
+
+    def __len__(self) -> int:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('SELECT COUNT(*) FROM `command` WHERE `command_batch` = %s', (self.batch_id,))
+            (count,) = cursor.fetchone()
+        return count
+
+    @overload
+    def __setitem__(self, index: int, value: CommandRecord) -> None: ...
+    @overload
+    def __setitem__(self, index: slice, value: Iterable[CommandRecord]) -> None: ...
+    def __setitem__(self, index, value):
+        raise NotImplementedError('Not implemented yet')
+
+    def __delitem__(self, *args, **kwargs):
+        raise NotImplementedError('Cannot delete commands from a batch')
+
+    def insert(self, *args, **kwargs):
+        raise NotImplementedError('Cannot insert commands into a batch')

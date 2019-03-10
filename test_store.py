@@ -104,3 +104,20 @@ def test_DatabaseStore_store_batch():
                 cursor.execute('SELECT `command_tpsv` FROM `command` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
                 (command2_tpsv,) = cursor.fetchone()
                 assert command2_tpsv == str(command2.command)
+
+def test_DatabaseStore_get_batch():
+    with temporary_database() as connection_params:
+        store = DatabaseStore(connection_params)
+        stored_batch = store.store_batch(newBatch1, fake_session)
+        loaded_batch = store.get_batch(stored_batch.id)
+
+        assert loaded_batch.id == stored_batch.id
+        assert loaded_batch.user_name == 'Lucas Werkmeister'
+        assert loaded_batch.local_user_id == 6198807
+        assert loaded_batch.global_user_id == 46054761
+        assert loaded_batch.domain == 'commons.wikimedia.org'
+
+        assert len(loaded_batch.command_records) == 2
+        assert loaded_batch.command_records[0] == stored_batch.command_records[0]
+        assert loaded_batch.command_records[1] == stored_batch.command_records[1]
+        assert loaded_batch.command_records[0:2] == stored_batch.command_records[0:2]

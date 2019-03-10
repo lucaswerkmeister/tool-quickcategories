@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any, List, MutableSequence
 
 from command import Command, CommandRecord, CommandPlan, CommandFinish
 
@@ -29,7 +29,7 @@ class OpenBatch:
                  local_user_id: int,
                  global_user_id: int,
                  domain: str,
-                 command_records: List[CommandRecord]):
+                 command_records: MutableSequence[CommandRecord]):
         assert command_records
         assert any(map(lambda command_record: isinstance(command_record, CommandPlan), command_records))
         self.id = id
