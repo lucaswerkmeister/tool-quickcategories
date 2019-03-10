@@ -210,6 +210,8 @@ def run_batch_slice(id: int):
         if not isinstance(command_plan, CommandPlan):
             continue
         command_plans[offset+index] = command_plan
+        if len(command_plans) >= 50:
+            break
 
     runner.prepare_pages([command_plan.command.page for command_plan in command_plans.values()])
     for index, command_plan in command_plans.items():
