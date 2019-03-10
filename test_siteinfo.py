@@ -28,6 +28,10 @@ response_enwiki = {
                 "content":", ",
             },
             {
+                "name": "semicolon-separator",
+                "content": "; ",
+            },
+            {
                 "name": "parentheses",
                 "content": "($1)",
             },
@@ -57,6 +61,10 @@ response_dewiki = {
             {
                 "name": "comma-separator",
                 "content":", ",
+            },
+            {
+                "name": "semicolon-separator",
+                "content": "; ",
             },
             {
                 "name": "parentheses",
@@ -93,6 +101,10 @@ response_ruwiki = {
             {
                 "name": "comma-separator",
                 "content":", ",
+            },
+            {
+                "name": "semicolon-separator",
+                "content": "; ",
             },
             {
                 "name": "parentheses",
@@ -139,6 +151,10 @@ response_zhwiki = {
                 'content': '、 ',
             },
             {
+                "name": "semicolon-separator",
+                "content": "；",
+            },
+            {
                 'name': 'parentheses',
                 'content': '（$1）',
             },
@@ -171,6 +187,13 @@ def test_comma_separator():
     session.host = 'https://zh.wikipedia.org'
     comma_separator = siteinfo.comma_separator(session)
     assert comma_separator == '、 '
+
+
+def test_semicolon_separator():
+    session = FakeSession(response_zhwiki)
+    session.host = 'https://zh.wikipedia.org'
+    semicolon_separator = siteinfo.semicolon_separator(session)
+    assert semicolon_separator == '；'
 
 
 def test_parentheses():
