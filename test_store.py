@@ -147,3 +147,5 @@ def test_DatabaseStore_update_batch():
         loaded_batch.command_records[1] = command_noop
         command_noop_loaded = loaded_batch.command_records[0]
         assert command_noop == command_noop_loaded
+
+        assert stored_batch.command_records[0:2] == loaded_batch.command_records[0:2]

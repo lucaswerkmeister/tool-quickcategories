@@ -91,20 +91,12 @@ class DatabaseStore(BatchStore):
 
             connection.commit()
 
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT `command_id` FROM `command` WHERE `command_batch` = %s ORDER BY `command_id` ASC', (batch_id,))
-                command_ids = cursor.fetchall()
-
-        command_plans = [] # type: List[CommandRecord]
-        for (command_id, ), command in zip(command_ids, new_batch.commands):
-            command_plans.append(CommandPlan(command_id, command))
-
         return OpenBatch(batch_id,
                          user_name,
                          local_user_id,
                          global_user_id,
                          domain,
-                         command_plans)
+                         _DatabaseCommandRecords(batch_id, self))
 
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         with self._connect() as connection:
