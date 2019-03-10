@@ -33,7 +33,11 @@ except FileNotFoundError:
 if 'oauth' in app.config:
     consumer_token = mwoauth.ConsumerToken(app.config['oauth']['consumer_key'], app.config['oauth']['consumer_secret'])
 
-batch_store = store.InMemoryStore()
+if 'database' in app.config:
+    batch_store = store.DatabaseStore(app.config['database']) # type: store.BatchStore
+else:
+    print('No database configuration, using in-memory store (batches will be lost on every restart)')
+    batch_store = store.InMemoryStore()
 
 
 @app.template_global()
