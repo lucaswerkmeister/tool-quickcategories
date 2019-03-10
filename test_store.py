@@ -123,6 +123,13 @@ def test_DatabaseStore_get_batch():
         assert loaded_batch.command_records[1] == stored_batch.command_records[1]
         assert loaded_batch.command_records[0:2] == stored_batch.command_records[0:2]
 
+def test_DatabaseStore_get_batch_missing():
+    with temporary_database() as connection_params:
+        store = DatabaseStore(connection_params)
+        loaded_batch = store.get_batch(1)
+
+    assert loaded_batch is None
+
 def test_DatabaseStore_update_batch():
     with temporary_database() as connection_params:
         store = DatabaseStore(connection_params)

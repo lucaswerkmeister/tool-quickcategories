@@ -112,7 +112,10 @@ class DatabaseStore(BatchStore):
                 cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain`, `batch_status`
                                   FROM `batch`
                                   WHERE `batch_id` = %s''', (id,))
-                user_name, local_user_id, global_user_id, domain, status = cursor.fetchone()
+                result = cursor.fetchone()
+        if not result:
+            return None
+        user_name, local_user_id, global_user_id, domain, status = result
         assert status == DatabaseStore._BATCH_STATUS_OPEN
         return OpenBatch(id,
                          user_name,
