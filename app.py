@@ -220,43 +220,6 @@ def run_batch_slice(id: int):
                                         offset=offset,
                                         limit=limit))
 
-@app.route('/greet/<name>')
-def greet(name: str):
-    return flask.render_template('greet.html',
-                                 name=name)
-
-@app.route('/praise', methods=['GET', 'POST'])
-def praise():
-    csrf_error = False
-    if flask.request.method == 'POST':
-        if submitted_request_valid():
-            flask.session['praise'] = flask.request.form.get('praise', 'praise missing')
-        else:
-            csrf_error = True
-            flask.g.repeat_form = True
-
-    session = authenticated_session()
-    if session:
-        userinfo = session.get(action='query', meta='userinfo', uiprop='options')['query']['userinfo']
-        name = userinfo['name']
-        gender = userinfo['options']['gender']
-        if gender == 'male':
-            default_praise = 'Praise him with great praise!'
-        elif gender == 'female':
-            default_praise = 'Praise her with great praise!'
-        else:
-            default_praise = 'Praise them with great praise!'
-    else:
-        name = None
-        default_praise = 'You rock!'
-
-    praise = flask.session.get('praise', default_praise)
-
-    return flask.render_template('praise.html',
-                                 name=name,
-                                 praise=praise,
-                                 csrf_error=csrf_error)
-
 @app.route('/login')
 def login():
     redirect, request_token = mwoauth.initiate('https://meta.wikimedia.org/w/index.php', consumer_token, user_agent=user_agent)
