@@ -3,8 +3,10 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit
+from command import Command, CommandPlan, CommandEdit, CommandPageMissing
 from runner import Runner
+
+from test_utils import FakeSession
 
 def test_run_command():
     if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
@@ -49,3 +51,56 @@ def test_run_command():
                     'assert': 'user'})
     expected = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert expected == actual
+
+def test_with_missing_page():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'ns': 0,
+                    'title': 'Missing page',
+                    'missing': True,
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    "name": "comma-separator",
+                    "content":", ",
+                },
+                {
+                    "name": "semicolon-separator",
+                    "content": "; ",
+                },
+                {
+                    "name": "parentheses",
+                    "content": "($1)",
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    runner.prepare_pages(['Missing page'])
+
+    assert runner.prepared_pages['Missing page'] == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_plan = CommandPlan(0, Command('Missing page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_plan)
+
+    assert command_record == CommandPageMissing(command_plan.id, command_plan.command, curtimestamp)

@@ -1,7 +1,7 @@
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop
+from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -123,3 +123,29 @@ def test_CommandNoop_str():
 
 def test_CommandNoop_repr():
     assert eval(repr(commandNoop1)) == commandNoop1
+
+
+commandWithMissingPage = Command('Page that definitely does not exist', command2.actions)
+commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
+
+
+def test_CommandPageMissing_eq_same():
+    assert commandPageMissing1 == commandPageMissing1
+
+def test_CommandPageMissing_eq_equal():
+    assert commandPageMissing1 == CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
+
+def test_CommandPageMissing_eq_different_id():
+    assert commandPageMissing1 != CommandPageMissing(43, commandPageMissing1.command, commandPageMissing1.curtimestamp)
+
+def test_CommandPageMissing_eq_different_command():
+    assert commandPageMissing1 != CommandPageMissing(commandPageMissing1.id, command2, commandPageMissing1.curtimestamp)
+
+def test_CommandPageMissing_eq_different_curtimestamp():
+    assert commandPageMissing1 != CommandPageMissing(commandPageMissing1.id, commandPageMissing1.command, '2019-03-11T23:28:12Z')
+
+def test_CommandPageMissing_str():
+    assert str(commandPageMissing1) == '# ' + str(commandWithMissingPage)
+
+def test_CommandPageMissing_repr():
+    assert eval(repr(commandPageMissing1)) == commandPageMissing1

@@ -1,7 +1,7 @@
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing
 import siteinfo
 
 
@@ -26,6 +26,12 @@ class Runner():
                                     formatversion=2)
         for page in response['query']['pages']:
             title = page['title']
+            if 'missing' in page:
+                self.prepared_pages[title] = {
+                    'missing': True,
+                    'curtimestamp': response['curtimestamp'],
+                }
+                continue
             revision = page['revisions'][0]
             slot = revision['slots']['main']
             if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
@@ -45,6 +51,9 @@ class Runner():
             self.prepare_pages([title])
         prepared_page = self.prepared_pages[title]
         category_info = siteinfo.category_info(self.session)
+
+        if 'missing' in prepared_page:
+            return CommandPageMissing(plan.id, plan.command, curtimestamp=prepared_page['curtimestamp'])
 
         wikitext, actions = plan.command.apply(prepared_page['wikitext'], category_info)
         summary = ''

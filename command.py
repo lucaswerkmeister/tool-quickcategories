@@ -115,3 +115,27 @@ class CommandNoop(CommandSuccess):
             repr(self.id) + ', ' + \
             repr(self.command) + ', ' + \
             repr(self.revision) + ')'
+
+
+class CommandFailure(CommandFinish):
+    """A command that was not successfully run."""
+
+
+class CommandPageMissing(CommandFailure):
+    """A command that failed because the specified page was found to be missing at the time."""
+
+    def __init__(self, id: int, command: Command, curtimestamp: str):
+        super().__init__(id, command)
+        self.curtimestamp = curtimestamp
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandPageMissing and \
+            self.id == value.id and \
+            self.command == value.command and \
+            self.curtimestamp == value.curtimestamp
+
+    def __repr__(self) -> str:
+        return 'CommandPageMissing(' + \
+            repr(self.id) + ', ' + \
+            repr(self.command) + ', ' + \
+            repr(self.curtimestamp) + ')'

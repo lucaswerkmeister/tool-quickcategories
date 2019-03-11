@@ -12,7 +12,7 @@ import toolforge
 from typing import cast, Dict, List, Optional
 import yaml
 
-from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop
+from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing
 import parse_tpsv
 from runner import Runner
 import store
@@ -121,6 +121,10 @@ def render_command_record(command_record: CommandRecord, domain: str):
         command_record_markup = flask.render_template('command_noop.html',
                                                       domain=domain,
                                                       command_noop=command_record)
+    elif isinstance(command_record, CommandPageMissing):
+        command_record_markup = flask.render_template('command_page_missing.html',
+                                                      domain=domain,
+                                                      command_page_missing=command_record)
     else:
         raise ValueError('Unknown command record type')
 
