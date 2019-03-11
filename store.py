@@ -124,6 +124,46 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         self.batch_id = batch_id
         self.store = store
 
+    def _command_record_to_row(self, command_record: CommandRecord) -> Tuple[int, dict]:
+        if isinstance(command_record, CommandEdit):
+            status = DatabaseStore._COMMAND_STATUS_EDIT
+            outcome = {'base_revision': command_record.base_revision, 'revision': command_record.revision} # type: dict
+        elif isinstance(command_record, CommandNoop):
+            status = DatabaseStore._COMMAND_STATUS_NOOP
+            outcome = {'revision': command_record.revision}
+        elif isinstance(command_record, CommandPageMissing):
+            status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
+            outcome = {'curtimestamp': command_record.curtimestamp}
+        else:
+            raise ValueError('Unknown command type')
+
+        return status, outcome
+
+    def _row_to_command_record(self, id: int, tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
+        if outcome:
+            outcome_dict = json.loads(outcome)
+
+        command = parse_tpsv.parse_command(tpsv)
+
+        if status == DatabaseStore._COMMAND_STATUS_PLAN:
+            assert outcome is None
+            return CommandPlan(id, command)
+        elif status == DatabaseStore._COMMAND_STATUS_EDIT:
+            return CommandEdit(id,
+                               command,
+                               base_revision=outcome_dict['base_revision'],
+                               revision=outcome_dict['revision'])
+        elif status == DatabaseStore._COMMAND_STATUS_NOOP:
+            return CommandNoop(id,
+                               command,
+                               revision=outcome_dict['revision'])
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
+            return CommandPageMissing(id,
+                                      command,
+                                      curtimestamp=outcome_dict['curtimestamp'])
+        else:
+            raise ValueError('Unknown command status %d' % status)
+
     @overload
     def __getitem__(self, index: int) -> CommandRecord: ...
     @overload
@@ -147,26 +187,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, index.stop - index.start, index.start))
             for id, tpsv, status, outcome in cursor.fetchall():
-                if outcome:
-                    outcome = json.loads(outcome)
-                command = parse_tpsv.parse_command(tpsv)
-                if status == DatabaseStore._COMMAND_STATUS_PLAN:
-                    assert outcome is None
-                    command_record = CommandPlan(id, command)
-                elif status == DatabaseStore._COMMAND_STATUS_EDIT:
-                    command_record = CommandEdit(id,
-                                                 command,
-                                                 base_revision=outcome['base_revision'],
-                                                 revision=outcome['revision'])
-                elif status == DatabaseStore._COMMAND_STATUS_NOOP:
-                    command_record = CommandNoop(id,
-                                                 command,
-                                                 revision=outcome['revision'])
-                elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
-                    command_record = CommandPageMissing(id,
-                                                        command,
-                                                        curtimestamp=outcome['curtimestamp'])
-                command_records.append(command_record)
+                command_records.append(self._row_to_command_record(id, tpsv, status, outcome))
 
         if return_first:
             return command_records[0]
@@ -191,17 +212,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         assert isinstance(index, int)
         assert isinstance(value, CommandFinish)
 
-        if isinstance(value, CommandEdit):
-            status = DatabaseStore._COMMAND_STATUS_EDIT
-            outcome = {'base_revision': value.base_revision, 'revision': value.revision}
-        elif isinstance(value, CommandNoop):
-            status = DatabaseStore._COMMAND_STATUS_NOOP
-            outcome = {'revision': value.revision}
-        elif isinstance(value, CommandPageMissing):
-            status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
-            outcome = {'curtimestamp': value.curtimestamp}
-        else:
-            raise ValueError('Unknown command type')
+        status, outcome = self._command_record_to_row(value)
 
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `command`
