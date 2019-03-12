@@ -104,3 +104,62 @@ def test_with_missing_page():
     command_record = runner.run_command(command_plan)
 
     assert command_record == CommandPageMissing(command_plan.id, command_plan.command, curtimestamp)
+
+def test_with_missing_page_unnormalized():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'ns': 0,
+                    'title': 'Missing page',
+                    'missing': True,
+                },
+            ],
+            'normalized': [
+                {
+                    'from': 'missing page',
+                    'to': 'Missing page',
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    "name": "comma-separator",
+                    "content":", ",
+                },
+                {
+                    "name": "semicolon-separator",
+                    "content": "; ",
+                },
+                {
+                    "name": "parentheses",
+                    "content": "($1)",
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    runner.prepare_pages(['missing page'])
+
+    assert runner.prepared_pages['missing page'] == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_plan = CommandPlan(0, Command('missing page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_plan)
+
+    assert command_record == CommandPageMissing(command_plan.id, command_plan.command, curtimestamp)

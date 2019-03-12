@@ -17,6 +17,7 @@ class Runner():
     def prepare_pages(self, titles: List[str]):
         assert titles
         assert len(titles) <= 50
+
         response = self.session.get(action='query',
                                     titles=titles,
                                     prop=['revisions'],
@@ -24,6 +25,7 @@ class Runner():
                                     rvslots=['main'],
                                     curtimestamp=True,
                                     formatversion=2)
+
         for page in response['query']['pages']:
             title = page['title']
             if 'missing' in page:
@@ -44,6 +46,9 @@ class Runner():
                 'base_revid': revision['revid'],
                 'start_timestamp': response['curtimestamp'],
             }
+
+        for normalization in response['query'].get('normalized', {}):
+            self.prepared_pages[normalization['from']] = self.prepared_pages[normalization['to']]
 
     def run_command(self, plan: CommandPlan) -> CommandFinish:
         title = plan.command.page
