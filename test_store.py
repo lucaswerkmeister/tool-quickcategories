@@ -1,4 +1,5 @@
 import contextlib
+import json
 import os
 import pymysql
 import pytest
@@ -6,9 +7,10 @@ import random
 import string
 
 from command import CommandEdit, CommandNoop
-from store import InMemoryStore, DatabaseStore
+from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords
 
 from test_batch import newBatch1
+from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1
 from test_utils import FakeSession
 
 
@@ -149,3 +151,23 @@ def test_DatabaseStore_update_batch():
         assert command_noop == command_noop_loaded
 
         assert stored_batch.command_records[0:2] == loaded_batch.command_records[0:2]
+
+
+command_records_and_rows = [
+    # (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)), # not supported for update, but perhaps turn into test for initial store?
+    (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
+    (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
+    (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+]
+
+@pytest.mark.parametrize('command_record, expected_row', command_records_and_rows)
+def test_DatabaseCommandRecords_command_record_to_row(command_record, expected_row):
+    actual_row = _DatabaseCommandRecords(0, DatabaseStore({}))._command_record_to_row(command_record)
+    assert expected_row == actual_row
+
+@pytest.mark.parametrize('expected_command_record, row', command_records_and_rows)
+def test_DatabaseCommandRecords_row_to_command_record(expected_command_record, row):
+    status, outcome = row
+    full_row = expected_command_record.id, str(expected_command_record.command), status, json.dumps(outcome)
+    actual_command_record = _DatabaseCommandRecords(0, DatabaseStore({}))._row_to_command_record(*full_row)
+    assert expected_command_record == actual_command_record
