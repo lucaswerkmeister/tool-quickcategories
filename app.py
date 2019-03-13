@@ -161,6 +161,8 @@ def new_batch():
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 
+    batch.cleanup()
+
     id = batch_store.store_batch(batch, session).id
     return flask.redirect(flask.url_for('batch', id=id))
 

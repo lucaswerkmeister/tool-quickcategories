@@ -10,6 +10,13 @@ from test_command import command1, command2, commandPlan1, commandEdit1
 newBatch1 = NewBatch([command1, command2])
 
 
+def test_NewBatch_cleanup():
+    batch = NewBatch([Command('Page_1_from_URL', [AddCategoryAction('Category_from_URL')]),
+                      Command('Page_2_from_URL', [AddCategoryAction('Category_from_URL')])])
+    batch.cleanup()
+    assert batch == NewBatch([Command('Page 1 from URL', [AddCategoryAction('Category from URL')]),
+                              Command('Page 2 from URL', [AddCategoryAction('Category from URL')])])
+
 def test_NewBatch_eq_same():
     assert newBatch1 == newBatch1
 

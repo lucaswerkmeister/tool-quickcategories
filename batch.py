@@ -9,6 +9,15 @@ class NewBatch:
     def __init__(self, commands: List[Command]):
         self.commands = commands
 
+    def cleanup(self) -> None:
+        """Partially normalize the batch, as a convenience for users.
+
+        This should not be used as a replacement for full
+        normalization via the MediaWiki API.
+        """
+        for command in self.commands:
+            command.cleanup()
+
     def __eq__(self, value: Any) -> bool:
         return type(value) is NewBatch and \
             self.commands == value.commands

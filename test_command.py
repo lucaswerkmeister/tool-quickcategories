@@ -23,6 +23,11 @@ def test_Command_apply():
                        (command.actions[2], False),
                        (command.actions[3], True)]
 
+def test_Command_cleanup():
+    command = Command('Page_from_URL', [AddCategoryAction('Category_from_URL')])
+    command.cleanup()
+    assert command == Command('Page from URL', [AddCategoryAction('Category from URL')])
+
 def test_Command_eq_same():
     assert command1 == command1
 
@@ -35,6 +40,7 @@ def test_Command_eq_different_type():
 
 def test_Command_eq_different_page():
     assert command1 != Command('Page A', command1.actions)
+    assert command1 != Command('Page_1', command1.actions)
 
 def test_Command_eq_different_actions():
     assert command1 != Command(command1.page, [addCategory1])

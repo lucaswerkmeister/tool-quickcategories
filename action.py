@@ -13,6 +13,14 @@ class Action:
     def summary(self, category_info: CategoryInfo) -> str:
         raise NotImplementedError
 
+    def cleanup(self) -> None:
+        """Partially normalize the action, as a convenience for users.
+
+        This should not be used as a replacement for full
+        normalization via the MediaWiki API.
+        """
+        pass
+
 
 class CategoryAction(Action):
     """An action to modify a category in the wikitext of a page."""
@@ -46,6 +54,9 @@ class CategoryAction(Action):
 
     def summary(self, category_info: CategoryInfo) -> str:
         return type(self).symbol + '[[' + category_info[0] + ':' + self.category + ']]'
+
+    def cleanup(self) -> None:
+        self.category = self.category.replace('_', ' ')
 
     def __eq__(self, value: Any) -> bool:
         return type(self) is type(value) and \

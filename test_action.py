@@ -53,6 +53,7 @@ def test_AddCategoryAction_apply_detects_underscores():
     wikitext = '[[Category:My_Test_Category]]'
     assert wikitext == action.apply(wikitext, ('Category', ['Category'], 'first-letter'))
 
+# note: the following test is no longer as relevant since we clean up all new batches to never contain underscores
 def test_AddCategoryAction_apply_preserves_underscores():
     action1 = AddCategoryAction('Test Category 1')
     action2 = AddCategoryAction('Test_Category_2')
@@ -72,6 +73,11 @@ def test_AddCategoryAction_apply_case_sensitive():
 def test_AddCategoryAction_summary():
     assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
 
+def test_AddCategoryAction_cleanup():
+    action = AddCategoryAction('User_input_from_URL')
+    action.cleanup()
+    assert action == AddCategoryAction('User input from URL')
+
 def test_AddCategoryAction_eq_same():
     assert addCategory1 == addCategory1
 
@@ -84,6 +90,9 @@ def test_AddCategoryAction_eq_different_type():
 
 def test_AddCategoryAction_eq_different_category():
     assert addCategory1 != addCategory3
+
+def test_AddCategoryAction_eq_different_category_normalization():
+    assert AddCategoryAction('Foo Bar') != AddCategoryAction('Foo_Bar')
 
 def test_AddCategoryAction_str():
     assert str(addCategory1) == '+Category:Cat 1'
@@ -122,6 +131,11 @@ def test_RemoveCategoryAction_apply_case_sensitive():
 def test_RemoveCategoryAction_summary():
     assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test]]'
 
+def test_RemoveCategoryAction_cleanup():
+    action = RemoveCategoryAction('User_input_from_URL')
+    action.cleanup()
+    assert action == RemoveCategoryAction('User input from URL')
+
 def test_RemoveCategoryAction_eq_same():
     assert removeCategory2 == removeCategory2
 
@@ -134,6 +148,9 @@ def test_RemoveCategoryAction_eq_different_type():
 
 def test_RemoveCategoryAction_eq_different_category():
     assert removeCategory2 != RemoveCategoryAction('Cat 4')
+
+def test_RemoveCategoryAction_eq_different_category_normalization():
+    assert RemoveCategoryAction('Foo Bar') != RemoveCategoryAction('Foo_Bar')
 
 def test_RemoveCategoryAction_str():
     assert str(removeCategory2) == '-Category:Cat 2'

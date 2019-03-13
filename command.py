@@ -25,6 +25,16 @@ class Command:
 
         return wikitext, actions
 
+    def cleanup(self) -> None:
+        """Partially normalize the command, as a convenience for users.
+
+        This should not be used as a replacement for full
+        normalization via the MediaWiki API.
+        """
+        self.page = self.page.replace('_', ' ')
+        for action in self.actions:
+            action.cleanup()
+
     def __eq__(self, value: Any) -> bool:
         return type(value) is Command and \
             self.page == value.page and \
