@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, List, Tuple
 
 from action import Action
@@ -176,3 +177,26 @@ class CommandEditConflict(CommandFailure):
         return 'CommandEditConflict(' + \
             repr(self.id) + ', ' + \
             repr(self.command) + ')'
+
+
+class CommandMaxlagExceeded(CommandFailure):
+    """A command that failed replication lag in the database cluster was too high."""
+
+    def __init__(self, id: int, command: Command, retry_after: datetime.datetime):
+        super().__init__(id, command)
+        self.retry_after = retry_after
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandMaxlagExceeded and \
+            self.id == value.id and \
+            self.command == value.command and \
+            self.retry_after == value.retry_after
+
+    def __repr__(self) -> str:
+        return 'CommandMaxlagExceeded(' + \
+            repr(self.id) + ', ' + \
+            repr(self.command) + ', ' + \
+            repr(self.retry_after) + ')'

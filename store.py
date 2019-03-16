@@ -1,11 +1,12 @@
 import contextlib
+import datetime
 import json
 import mwapi # type: ignore
 import pymysql
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
+from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded
 import parse_tpsv
 
 
@@ -65,6 +66,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_NOOP = 2
     _COMMAND_STATUS_PAGE_MISSING = 129
     _COMMAND_STATUS_EDIT_CONFLICT = 130
+    _COMMAND_STATUS_MAXLAG_EXCEEDED = 131
 
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
@@ -138,6 +140,9 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         elif isinstance(command_record, CommandEditConflict):
             status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
             outcome = {}
+        elif isinstance(command_record, CommandMaxlagExceeded):
+            status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
+            outcome = {'retry_after_utc_timestamp': command_record.retry_after.timestamp()}
         else:
             raise ValueError('Unknown command type')
 
@@ -168,6 +173,11 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict(id,
                                        command)
+        elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
+            return CommandMaxlagExceeded(id,
+                                         command,
+                                         datetime.datetime.fromtimestamp(outcome_dict['retry_after_utc_timestamp'],
+                                                                         tz=datetime.timezone.utc))
         else:
             raise ValueError('Unknown command status %d' % status)
 

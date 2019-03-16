@@ -10,7 +10,7 @@ from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords
 
 from test_batch import newBatch1
-from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1
+from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1
 from test_utils import FakeSession
 
 
@@ -159,6 +159,7 @@ command_records_and_rows = [
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
     (commandEditConflict1, (DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
+    (commandMaxlagExceeded1, (DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842.607831})),
 ]
 
 @pytest.mark.parametrize('command_record, expected_row', command_records_and_rows)
