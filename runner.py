@@ -2,7 +2,7 @@ import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
 import siteinfo
 
 
@@ -99,6 +99,10 @@ class Runner():
                 retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
                 return CommandMaxlagExceeded(plan.id, plan.command, retry_after)
+            elif e.code == 'blocked' or e.code == 'autoblocked':
+                auto = e.code == 'autoblocked'
+                blockinfo = None # the API returns this in a 'blockinfo' member of the 'error' object, but mwapi hides that from us :(
+                return CommandBlocked(plan.id, plan.command, auto, blockinfo)
             else:
                 raise e
         assert response['edit']['oldrevid'] == prepared_page['base_revid']

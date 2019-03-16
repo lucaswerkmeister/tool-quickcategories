@@ -4,7 +4,7 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded
+from command import Command, CommandPlan, CommandEdit, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
 from runner import Runner
 
 from test_utils import FakeSession
@@ -301,3 +301,141 @@ def test_with_maxlag_exceeded():
     assert isinstance(command_record, CommandMaxlagExceeded)
     assert command_record.retry_after.tzinfo == datetime.timezone.utc
     assert 'Main page' in runner.prepared_pages
+
+def test_with_blocked():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'pageid': 58692,
+                        'ns': 0,
+                        'title': 'Main page',
+                        'revisions': [
+                            {
+                                'revid': 195259,
+                                'parentid': 114947,
+                                'timestamp': '2014-02-23T15:14:40Z',
+                                'slots': {
+                                    'main': {
+                                        'contentmodel': 'wikitext',
+                                        'contentformat': 'text/x-wiki',
+                                        'content': 'Unit Testing 1, 2, 3... External link: http://some-fake-site.com/?p=1774943982 Hit me with a captcha...',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        "name": "comma-separator",
+                        "content":", ",
+                    },
+                    {
+                        "name": "semicolon-separator",
+                        "content": "; ",
+                    },
+                    {
+                        "name": "parentheses",
+                        "content": "($1)",
+                    },
+                ],
+            },
+        },
+        mwapi.errors.APIError('blocked', 'You have been blocked from editing.', None)
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    runner.prepare_pages(['Main page'])
+
+    assert 'Main page' in runner.prepared_pages
+
+    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_plan)
+
+    assert isinstance(command_record, CommandBlocked)
+    assert not command_record.auto
+    # would be nice to assert command_record.blockinfo once Runner can record it
+
+def test_with_autoblocked():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'pageid': 58692,
+                        'ns': 0,
+                        'title': 'Main page',
+                        'revisions': [
+                            {
+                                'revid': 195259,
+                                'parentid': 114947,
+                                'timestamp': '2014-02-23T15:14:40Z',
+                                'slots': {
+                                    'main': {
+                                        'contentmodel': 'wikitext',
+                                        'contentformat': 'text/x-wiki',
+                                        'content': 'Unit Testing 1, 2, 3... External link: http://some-fake-site.com/?p=1774943982 Hit me with a captcha...',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        "name": "comma-separator",
+                        "content":", ",
+                    },
+                    {
+                        "name": "semicolon-separator",
+                        "content": "; ",
+                    },
+                    {
+                        "name": "parentheses",
+                        "content": "($1)",
+                    },
+                ],
+            },
+        },
+        mwapi.errors.APIError('autoblocked', 'Your IP address has been blocked automatically, because it was used by a blocked user.', None)
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    runner.prepare_pages(['Main page'])
+
+    assert 'Main page' in runner.prepared_pages
+
+    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_plan)
+
+    assert isinstance(command_record, CommandBlocked)
+    assert command_record.auto
+    # would be nice to assert command_record.blockinfo once Runner can record it
