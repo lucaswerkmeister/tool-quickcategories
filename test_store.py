@@ -10,7 +10,7 @@ from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords
 
 from test_batch import newBatch1
-from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1
+from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1
 from test_utils import FakeSession
 
 
@@ -158,6 +158,7 @@ command_records_and_rows = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+    (commandEditConflict1, (DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
 ]
 
 @pytest.mark.parametrize('command_record, expected_row', command_records_and_rows)

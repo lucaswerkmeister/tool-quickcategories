@@ -149,3 +149,17 @@ class CommandPageMissing(CommandFailure):
             repr(self.id) + ', ' + \
             repr(self.command) + ', ' + \
             repr(self.curtimestamp) + ')'
+
+
+class CommandEditConflict(CommandFailure):
+    """A command that failed due to an edit conflict."""
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandEditConflict and \
+            self.id == value.id and \
+            self.command == value.command
+
+    def __repr__(self) -> str:
+        return 'CommandEditConflict(' + \
+            repr(self.id) + ', ' + \
+            repr(self.command) + ')'

@@ -5,7 +5,7 @@ import pymysql
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing
+from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
 import parse_tpsv
 
 
@@ -64,6 +64,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_EDIT = 1
     _COMMAND_STATUS_NOOP = 2
     _COMMAND_STATUS_PAGE_MISSING = 129
+    _COMMAND_STATUS_EDIT_CONFLICT = 130
 
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
@@ -134,6 +135,9 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         elif isinstance(command_record, CommandPageMissing):
             status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
             outcome = {'curtimestamp': command_record.curtimestamp}
+        elif isinstance(command_record, CommandEditConflict):
+            status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
+            outcome = {}
         else:
             raise ValueError('Unknown command type')
 
@@ -161,6 +165,9 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
             return CommandPageMissing(id,
                                       command,
                                       curtimestamp=outcome_dict['curtimestamp'])
+        elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
+            return CommandEditConflict(id,
+                                       command)
         else:
             raise ValueError('Unknown command status %d' % status)
 

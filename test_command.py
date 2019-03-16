@@ -1,7 +1,7 @@
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing
+from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -155,3 +155,25 @@ def test_CommandPageMissing_str():
 
 def test_CommandPageMissing_repr():
     assert eval(repr(commandPageMissing1)) == commandPageMissing1
+
+
+commandEditConflict1 = CommandEditConflict(42, command1)
+
+
+def test_CommandEditConflict_eq_same():
+    assert commandEditConflict1 == commandEditConflict1
+
+def test_CommandEditConflict_eq_equal():
+    assert commandEditConflict1 == CommandEditConflict(42, command1)
+
+def test_CommandEditConflict_eq_different_id():
+    assert commandEditConflict1 != CommandEditConflict(43, commandEditConflict1.command)
+
+def test_CommandEditConflict_eq_different_command():
+    assert commandEditConflict1 != CommandEditConflict(commandEditConflict1.id, command2)
+
+def test_CommandEditConflict_str():
+    assert str(commandEditConflict1) == '# ' + str(command1)
+
+def test_CommandEditConflict_repr():
+    assert eval(repr(commandEditConflict1)) == commandEditConflict1
