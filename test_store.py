@@ -7,7 +7,7 @@ import random
 import string
 
 from command import CommandEdit, CommandNoop
-from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords
+from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords, _StringTableStore
 
 from test_batch import newBatch1
 from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
@@ -177,3 +177,41 @@ def test_DatabaseCommandRecords_row_to_command_record(expected_command_record, r
     full_row = expected_command_record.id, str(expected_command_record.command), status, json.dumps(outcome)
     actual_command_record = _DatabaseCommandRecords(0, DatabaseStore({}))._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
+
+
+@pytest.mark.parametrize('string, expected_hash', [
+    # all hashes obtained in MariaDB via SELECT CAST(CONV(SUBSTRING(SHA2(**string**, 256), 1, 8), 16, 10) AS unsigned int);
+    ('', 3820012610),
+    ('test.wikipedia.org', 3277830609),
+    ('äöü', 3157433791),
+    ('☺', 3752208785),
+    ('🤔', 1622577385),
+])
+def test_StringTableStore_hash(string, expected_hash):
+    store = _StringTableStore('', '', '', '')
+
+    actual_hash = store._hash(string)
+
+    assert expected_hash == actual_hash
+
+def test_StringTableStore_acquire_id_database():
+    with temporary_database() as connection_params:
+        connection = pymysql.connect(**connection_params)
+        try:
+            store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+
+            store.acquire_id(connection, 'test.wikipedia.org')
+
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT domain_name FROM domain WHERE domain_hash = 3277830609')
+                result = cursor.fetchone()
+                assert result == ('test.wikipedia.org',)
+
+            store.acquire_id(connection, 'test.wikipedia.org')
+
+            with connection.cursor() as cursor:
+                cursor.execute('SELECT COUNT(*) FROM domain')
+                result = cursor.fetchone()
+                assert result == (1,)
+        finally:
+            connection.close()

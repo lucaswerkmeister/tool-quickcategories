@@ -1,5 +1,6 @@
 import contextlib
 import datetime
+import hashlib
 import json
 import mwapi # type: ignore
 import pymysql
@@ -73,6 +74,7 @@ class DatabaseStore(BatchStore):
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
         self.connection_params = connection_params
+        self.domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
 
     @contextlib.contextmanager
     def _connect(self) -> Generator[pymysql.connections.Connection, None, None]:
@@ -86,9 +88,10 @@ class DatabaseStore(BatchStore):
         user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
 
         with self._connect() as connection:
+            domain_id = self.domain_store.acquire_id(connection, domain)
             with connection.cursor() as cursor:
-                cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain`, `batch_status`) VALUES (%s, %s, %s, %s, %s)',
-                               (user_name, local_user_id, global_user_id, domain, DatabaseStore._BATCH_STATUS_OPEN))
+                cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain_id`, `batch_status`) VALUES (%s, %s, %s, %s, %s)',
+                               (user_name, local_user_id, global_user_id, domain_id, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
@@ -107,8 +110,9 @@ class DatabaseStore(BatchStore):
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain`, `batch_status`
+                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_status`
                                   FROM `batch`
+                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
         if not result:
@@ -260,3 +264,48 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
 
     def insert(self, *args, **kwargs):
         raise NotImplementedError('Cannot insert commands into a batch')
+
+
+class _StringTableStore:
+    """Encapsulates access to a string that has been extracted into a separate table.
+
+    The separate table is expected to have three columns:
+    an automatically incrementing ID,
+    an unsigned integer hash (the first four bytes of the SHA2-256 hash of the string),
+    and the string itself."""
+
+    def __init__(self,
+                 table_name: str,
+                 id_column_name: str,
+                 hash_column_name: str,
+                 string_column_name: str):
+        self.table_name = table_name
+        self.id_column_name = id_column_name
+        self.hash_column_name = hash_column_name
+        self.string_column_name = string_column_name
+
+    def _hash(self, string: str) -> int:
+        hex = hashlib.sha256(string.encode('utf8')).hexdigest()
+        return int(hex[:8], base=16)
+
+    def acquire_id(self, connection: pymysql.connections.Connection, string: str) -> int:
+        hash = self._hash(string)
+
+        with connection.cursor() as cursor:
+            cursor.execute('''SELECT `%s`
+                              FROM `%s`
+                              WHERE `%s` = %%s
+                              FOR UPDATE''' % (self.id_column_name, self.table_name, self.hash_column_name),
+                           (hash,))
+            result = cursor.fetchone()
+        if result:
+            connection.commit() # finish the FOR UPDATE
+            return result[0]
+
+        with connection.cursor() as cursor:
+            cursor.execute('''INSERT INTO `%s` (`%s`, `%s`)
+                              VALUES (%%s, %%s)''' % (self.table_name, self.string_column_name, self.hash_column_name),
+                           (string, hash))
+            string_id = cursor.lastrowid
+        connection.commit()
+        return string_id
