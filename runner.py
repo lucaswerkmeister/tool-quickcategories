@@ -1,7 +1,8 @@
+import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded
 import siteinfo
 
 
@@ -88,11 +89,16 @@ class Runner():
                                             'contentmodel': 'wikitext',
                                             'token': self.csrf_token,
                                             'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
+                                            'maxlag': 5,
                                             'formatversion': 2})
         except mwapi.errors.APIError as e:
             if e.code == 'editconflict':
                 del self.prepared_pages[title] # this must be outdated now
                 return CommandEditConflict(plan.id, plan.command)
+            elif e.code == 'maxlag':
+                retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
+                retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
+                return CommandMaxlagExceeded(plan.id, plan.command, retry_after)
             else:
                 raise e
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
