@@ -1,7 +1,7 @@
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
 import siteinfo
 
 
@@ -76,17 +76,24 @@ class Runner():
 
         if wikitext == prepared_page['wikitext']:
             return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])
-        response = self.session.post(**{'action': 'edit',
-                                        'pageid': prepared_page['page_id'],
-                                        'text': wikitext,
-                                        'summary': summary,
-                                        'bot': True,
-                                        'basetimestamp': prepared_page['base_timestamp'],
-                                        'starttimestamp': prepared_page['start_timestamp'],
-                                        'contentformat': 'text/x-wiki',
-                                        'contentmodel': 'wikitext',
-                                        'token': self.csrf_token,
-                                        'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
-                                        'formatversion': 2})
+        try:
+            response = self.session.post(**{'action': 'edit',
+                                            'pageid': prepared_page['page_id'],
+                                            'text': wikitext,
+                                            'summary': summary,
+                                            'bot': True,
+                                            'basetimestamp': prepared_page['base_timestamp'],
+                                            'starttimestamp': prepared_page['start_timestamp'],
+                                            'contentformat': 'text/x-wiki',
+                                            'contentmodel': 'wikitext',
+                                            'token': self.csrf_token,
+                                            'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
+                                            'formatversion': 2})
+        except mwapi.errors.APIError as e:
+            if e.code == 'editconflict':
+                del self.prepared_pages[title] # this must be outdated now
+                return CommandEditConflict(plan.id, plan.command)
+            else:
+                raise e
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
         return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])
