@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 from action import Action
 from siteinfo import CategoryInfo
@@ -218,3 +218,35 @@ class CommandMaxlagExceeded(CommandFailure):
             repr(self.id) + ', ' + \
             repr(self.command) + ', ' + \
             repr(self.retry_after) + ')'
+
+
+class CommandBlocked(CommandFailure):
+    """A command that failed because the user or IP address was blocked."""
+
+    def __init__(self, id: int, command: Command, auto: bool, blockinfo: Optional[dict]):
+        super().__init__(id, command)
+        self.auto = auto
+        self.blockinfo = blockinfo
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
+        # we could perhaps continue the batch if the block is partial
+        # (that is, if self.blockinfo['blockpartial'] is True),
+        # but for now I’d rather not
+        return False
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandBlocked and \
+            self.id == value.id and \
+            self.command == value.command and \
+            self.auto == value.auto and \
+            self.blockinfo == value.blockinfo
+
+    def __repr__(self) -> str:
+        return 'CommandBlocked(' + \
+            repr(self.id) + ', ' + \
+            repr(self.command) + ', ' + \
+            'auto=' + repr(self.auto) + ', ' + \
+            'blockinfo=' + repr(self.blockinfo) + ')'

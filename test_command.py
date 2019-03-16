@@ -2,7 +2,7 @@ import datetime
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded
+from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -221,3 +221,47 @@ def test_CommandMaxlagExceeded_str():
 
 def test_CommandMaxlagExceeded_repr():
     assert eval(repr(commandMaxlagExceeded1)) == commandMaxlagExceeded1
+
+
+blockinfo = {
+    'blockedby': 'Lucas Werkmeister',
+    'blockedbyid': 1,
+    'blockedtimestamp': '2019-03-16T17:44:22Z',
+    'blockexpiry': 'indefinite',
+    'blockid': 1,
+    'blockpartial': False,
+    'blockreason': 'my custom reason',
+}
+commandBlocked1 = CommandBlocked(42, command1, False, blockinfo)
+commandBlocked2 = CommandBlocked(42, command1, False, None)
+
+
+def test_CommandBlocked_can_retry_immediately():
+    assert not commandBlocked1.can_retry_immediately()
+
+def test_CommandBlocked_can_continue_batch():
+    assert not commandBlocked1.can_continue_batch()
+
+def test_CommandBlocked_eq_same():
+    assert commandBlocked1 == commandBlocked1
+
+def test_CommandBlocked_eq_equal():
+    assert commandBlocked1 == CommandBlocked(42, command1, False, blockinfo)
+
+def test_CommandBlocked_eq_different_id():
+    assert commandBlocked1 != CommandBlocked(43, commandBlocked1.command, commandBlocked1.auto, commandBlocked1.blockinfo)
+
+def test_CommandBlocked_eq_different_command():
+    assert commandBlocked1 != CommandBlocked(commandBlocked1.id, command2, commandBlocked1.auto, commandBlocked1.blockinfo)
+
+def test_CommandBlocked_eq_different_auto():
+    assert commandBlocked1 != CommandBlocked(commandBlocked1.id, commandBlocked1.command, True, blockinfo)
+
+def test_CommandBlocked_eq_different_blockinfo():
+    assert commandBlocked1 != CommandBlocked(commandBlocked1.id, commandBlocked1.command, commandBlocked1.auto, None)
+
+def test_CommandBlocked_str():
+    assert str(commandBlocked1) == '# ' + str(command1)
+
+def test_CommandBlocked_repr():
+    assert eval(repr(commandBlocked1)) == commandBlocked1
