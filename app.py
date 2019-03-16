@@ -12,7 +12,7 @@ import toolforge
 from typing import cast, Dict, List, Optional
 import yaml
 
-from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict
+from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict
 import parse_tpsv
 from runner import Runner
 import store
@@ -225,7 +225,13 @@ def run_batch_slice(id: int):
 
     runner.prepare_pages([command_plan.command.page for command_plan in command_plans.values()])
     for index, command_plan in command_plans.items():
-        batch.command_records[index] = runner.run_command(command_plan)
+        for attempt in range(5):
+            command_record = runner.run_command(command_plan)
+            if isinstance(command_record, CommandFailure) and command_record.can_retry_immediately():
+                continue
+            else:
+                break
+        batch.command_records[index] = command_record
 
     return flask.redirect(flask.url_for('batch',
                                         id=id,
