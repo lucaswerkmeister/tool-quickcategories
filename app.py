@@ -12,7 +12,7 @@ import toolforge
 from typing import cast, Dict, List, Optional
 import yaml
 
-from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
+from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
 import store
@@ -135,6 +135,10 @@ def render_command_record(command_record: CommandRecord, domain: str):
                                                       command_maxlag_exceeded=command_record)
     elif isinstance(command_record, CommandBlocked):
         command_record_markup = flask.render_template('command_blocked.html',
+                                                      domain=domain,
+                                                      command_blocked=command_record)
+    elif isinstance(command_record, CommandWikiReadOnly):
+        command_record_markup = flask.render_template('command_wiki_read_only.html',
                                                       domain=domain,
                                                       command_blocked=command_record)
     else:

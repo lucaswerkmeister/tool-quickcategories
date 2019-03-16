@@ -6,7 +6,7 @@ import pymysql
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
+from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
 
@@ -68,6 +68,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_EDIT_CONFLICT = 130
     _COMMAND_STATUS_MAXLAG_EXCEEDED = 131
     _COMMAND_STATUS_BLOCKED = 132
+    _COMMAND_STATUS_WIKI_READ_ONLY = 133
 
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
@@ -147,6 +148,9 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         elif isinstance(command_record, CommandBlocked):
             status = DatabaseStore._COMMAND_STATUS_BLOCKED
             outcome = {'auto': command_record.auto, 'blockinfo': command_record.blockinfo}
+        elif isinstance(command_record, CommandWikiReadOnly):
+            status = DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY
+            outcome = {'reason': command_record.reason}
         else:
             raise ValueError('Unknown command type')
 
@@ -187,6 +191,10 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
                                   command,
                                   auto=outcome_dict['auto'],
                                   blockinfo=outcome_dict['blockinfo'])
+        elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+            return CommandWikiReadOnly(id,
+                                       command,
+                                       outcome_dict['reason'])
         else:
             raise ValueError('Unknown command status %d' % status)
 

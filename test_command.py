@@ -2,7 +2,7 @@ import datetime
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
+from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -265,3 +265,35 @@ def test_CommandBlocked_str():
 
 def test_CommandBlocked_repr():
     assert eval(repr(commandBlocked1)) == commandBlocked1
+
+
+commandWikiReadOnly1 = CommandWikiReadOnly(42, command1, 'maintenance')
+commandWikiReadOnly2 = CommandWikiReadOnly(42, command1, None)
+
+
+def test_CommandWikiReadOnly_can_retry_immediately():
+    assert not commandWikiReadOnly1.can_retry_immediately()
+
+def test_CommandWikiReadOnly_can_continue_batch():
+    assert not commandWikiReadOnly1.can_continue_batch()
+
+def test_CommandWikiReadOnly_eq_same():
+    assert commandWikiReadOnly1 == commandWikiReadOnly1
+
+def test_CommandWikiReadOnly_eq_equal():
+    assert commandWikiReadOnly1 == CommandWikiReadOnly(42, command1, 'maintenance')
+
+def test_CommandWikiReadOnly_eq_different_id():
+    assert commandWikiReadOnly1 != CommandWikiReadOnly(43, commandWikiReadOnly1.command, commandWikiReadOnly1.reason)
+
+def test_CommandWikiReadOnly_eq_different_command():
+    assert commandWikiReadOnly1 != CommandWikiReadOnly(commandWikiReadOnly1.id, command2, commandWikiReadOnly1.reason)
+
+def test_CommandWikiReadOnly_eq_different_reason():
+    assert commandWikiReadOnly1 != CommandWikiReadOnly(commandWikiReadOnly1.id, commandWikiReadOnly1.command, None)
+
+def test_CommandWikiReadOnly_str():
+    assert str(commandWikiReadOnly1) == '# ' + str(command1)
+
+def test_CommandWikiReadOnly_repr():
+    assert eval(repr(commandWikiReadOnly1)) == commandWikiReadOnly1
