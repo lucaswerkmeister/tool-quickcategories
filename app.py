@@ -236,6 +236,8 @@ def run_batch_slice(id: int):
             else:
                 break
         batch.command_records[index] = command_record
+        if isinstance(command_record, CommandFailure) and not command_record.can_continue_batch():
+            break
 
     return flask.redirect(flask.url_for('batch',
                                         id=id,

@@ -138,6 +138,15 @@ class CommandFailure(CommandFinish):
         so this should not be used if the failure resulted in any actions on the wiki."""
         ...
 
+    def can_continue_batch(self) -> bool:
+        """Whether it is okay to continue with other commands in this batch.
+
+        If the failure only affects this command, we can proceed with the batch as usual;
+        if other commands are likely to fail for the same reason,
+        or we should back off for some other reason,
+        the batch should be suspended for a time."""
+        ...
+
 
 class CommandPageMissing(CommandFailure):
     """A command that failed because the specified page was found to be missing at the time."""
@@ -148,6 +157,9 @@ class CommandPageMissing(CommandFailure):
 
     def can_retry_immediately(self) -> bool:
         return False
+
+    def can_continue_batch(self) -> bool:
+        return True
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandPageMissing and \
@@ -166,6 +178,9 @@ class CommandEditConflict(CommandFailure):
     """A command that failed due to an edit conflict."""
 
     def can_retry_immediately(self) -> bool:
+        return True
+
+    def can_continue_batch(self) -> bool:
         return True
 
     def __eq__(self, value: Any) -> bool:
@@ -187,6 +202,9 @@ class CommandMaxlagExceeded(CommandFailure):
         self.retry_after = retry_after
 
     def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
         return False
 
     def __eq__(self, value: Any) -> bool:

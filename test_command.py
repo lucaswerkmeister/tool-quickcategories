@@ -139,6 +139,9 @@ commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11
 def test_CommandPageMissing_can_retry_immediately():
     assert not commandPageMissing1.can_retry_immediately()
 
+def test_CommandPageMissing_can_continue_batch():
+    assert commandPageMissing1.can_continue_batch()
+
 def test_CommandPageMissing_eq_same():
     assert commandPageMissing1 == commandPageMissing1
 
@@ -167,6 +170,9 @@ commandEditConflict1 = CommandEditConflict(42, command1)
 def test_CommandEditConflict_can_retry_immediately():
     assert commandEditConflict1.can_retry_immediately()
 
+def test_CommandEditConflict_can_continue_batch():
+    assert commandEditConflict1.can_continue_batch()
+
 def test_CommandEditConflict_eq_same():
     assert commandEditConflict1 == commandEditConflict1
 
@@ -191,6 +197,9 @@ commandMaxlagExceeded1 = CommandMaxlagExceeded(42, command1, datetime.datetime(2
 
 def test_CommandMaxlagExceeded_can_retry_immediately():
     assert not commandMaxlagExceeded1.can_retry_immediately()
+
+def test_CommandMaxlagExceeded_can_continue_batch():
+    assert not commandMaxlagExceeded1.can_continue_batch()
 
 def test_CommandMaxlagExceeded_eq_same():
     assert commandMaxlagExceeded1 == commandMaxlagExceeded1
