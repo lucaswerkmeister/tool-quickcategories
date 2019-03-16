@@ -130,6 +130,13 @@ class CommandNoop(CommandSuccess):
 class CommandFailure(CommandFinish):
     """A command that was not successfully run."""
 
+    def can_retry_immediately(self) -> bool:
+        """Whether it is okay to retry running this command immediately.
+
+        In case of an immediate retry, no permanent record of the failure is kept,
+        so this should not be used if the failure resulted in any actions on the wiki."""
+        ...
+
 
 class CommandPageMissing(CommandFailure):
     """A command that failed because the specified page was found to be missing at the time."""
@@ -137,6 +144,9 @@ class CommandPageMissing(CommandFailure):
     def __init__(self, id: int, command: Command, curtimestamp: str):
         super().__init__(id, command)
         self.curtimestamp = curtimestamp
+
+    def can_retry_immediately(self) -> bool:
+        return False
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandPageMissing and \
@@ -153,6 +163,9 @@ class CommandPageMissing(CommandFailure):
 
 class CommandEditConflict(CommandFailure):
     """A command that failed due to an edit conflict."""
+
+    def can_retry_immediately(self) -> bool:
+        return True
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandEditConflict and \

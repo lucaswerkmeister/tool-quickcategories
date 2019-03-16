@@ -135,6 +135,9 @@ commandWithMissingPage = Command('Page that definitely does not exist', command2
 commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
 
 
+def test_CommandPageMissing_can_retry_immediately():
+    assert not commandPageMissing1.can_retry_immediately()
+
 def test_CommandPageMissing_eq_same():
     assert commandPageMissing1 == commandPageMissing1
 
@@ -159,6 +162,9 @@ def test_CommandPageMissing_repr():
 
 commandEditConflict1 = CommandEditConflict(42, command1)
 
+
+def test_CommandEditConflict_can_retry_immediately():
+    assert commandEditConflict1.can_retry_immediately()
 
 def test_CommandEditConflict_eq_same():
     assert commandEditConflict1 == commandEditConflict1
