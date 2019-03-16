@@ -1,9 +1,12 @@
+import cachetools
 import contextlib
 import datetime
 import hashlib
 import json
 import mwapi # type: ignore
+import operator
 import pymysql
+import threading
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
@@ -272,7 +275,11 @@ class _StringTableStore:
     The separate table is expected to have three columns:
     an automatically incrementing ID,
     an unsigned integer hash (the first four bytes of the SHA2-256 hash of the string),
-    and the string itself."""
+    and the string itself.
+
+    IDs for the least recently used strings are cached,
+    but to look up the string for an ID,
+    callers should use a plain SQL JOIN for now."""
 
     def __init__(self,
                  table_name: str,
@@ -283,11 +290,14 @@ class _StringTableStore:
         self.id_column_name = id_column_name
         self.hash_column_name = hash_column_name
         self.string_column_name = string_column_name
+        self._cache = cachetools.LRUCache(maxsize=1024) # type: cachetools.LRUCache[str, int]
+        self._cache_lock = threading.RLock()
 
     def _hash(self, string: str) -> int:
         hex = hashlib.sha256(string.encode('utf8')).hexdigest()
         return int(hex[:8], base=16)
 
+    @cachetools.cachedmethod(operator.attrgetter('_cache'), key=lambda connection, string: string, lock=operator.attrgetter('_cache_lock'))
     def acquire_id(self, connection: pymysql.connections.Connection, string: str) -> int:
         hash = self._hash(string)
 

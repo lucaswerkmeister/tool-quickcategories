@@ -207,6 +207,9 @@ def test_StringTableStore_acquire_id_database():
                 result = cursor.fetchone()
                 assert result == ('test.wikipedia.org',)
 
+            with store._cache_lock:
+                store._cache.clear()
+
             store.acquire_id(connection, 'test.wikipedia.org')
 
             with connection.cursor() as cursor:
@@ -215,3 +218,11 @@ def test_StringTableStore_acquire_id_database():
                 assert result == (1,)
         finally:
             connection.close()
+
+def test_StringTableStore_acquire_id_cached():
+    store = _StringTableStore('', '', '', '')
+
+    with store._cache_lock:
+        store._cache['test.wikipedia.org'] = 1
+
+    assert store.acquire_id(None, 'test.wikipedia.org') == 1
