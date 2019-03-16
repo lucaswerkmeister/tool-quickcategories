@@ -2,7 +2,7 @@ import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked
+from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import siteinfo
 
 
@@ -103,6 +103,9 @@ class Runner():
                 auto = e.code == 'autoblocked'
                 blockinfo = None # the API returns this in a 'blockinfo' member of the 'error' object, but mwapi hides that from us :(
                 return CommandBlocked(plan.id, plan.command, auto, blockinfo)
+            elif e.code == 'readonly':
+                reason = None # the API returns this in a 'readonlyreason' member of the 'error' object, but mwapi hides that from us :(
+                return CommandWikiReadOnly(plan.id, plan.command, reason)
             else:
                 raise e
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
