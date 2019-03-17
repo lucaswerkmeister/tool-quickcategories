@@ -1,7 +1,7 @@
 import datetime
 from typing import Any, List, MutableSequence
 
-from command import Command, CommandRecord, CommandPlan, CommandFinish
+from command import Command, CommandRecord
 
 
 class NewBatch:

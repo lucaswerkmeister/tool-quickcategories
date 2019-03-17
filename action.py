@@ -1,5 +1,5 @@
 import mwparserfromhell # type: ignore
-from typing import Any, List, Tuple
+from typing import Any
 
 from siteinfo import CategoryInfo
 

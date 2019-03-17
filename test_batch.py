@@ -1,9 +1,8 @@
 import datetime
-import pytest
 
-from action import AddCategoryAction, RemoveCategoryAction
+from action import AddCategoryAction, RemoveCategoryAction # NOQA “unused” import RemoveCategoryAction needed for eval(repr) test
 from batch import NewBatch, OpenBatch
-from command import Command, CommandPlan, CommandEdit
+from command import Command, CommandPlan, CommandEdit # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
 
 from test_command import command1, command2, commandPlan1, commandEdit1
 

@@ -12,7 +12,7 @@ from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords, _StringTableStore
 
 from test_batch import newBatch1
-from test_command import commandPlan1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
+from test_command import commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
 from test_utils import FakeSession
 
 

@@ -1,6 +1,6 @@
 """Functions to parse batches from tab/pipe-separated values syntax."""
 
-from typing import Dict, List
+from typing import List
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
 from batch import NewBatch

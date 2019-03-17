@@ -7,7 +7,7 @@ import mwapi # type: ignore
 import operator
 import pymysql
 import threading
-from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Sequence, Tuple, Union, overload
+from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Sequence, Tuple, overload
 
 from batch import NewBatch, OpenBatch
 from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
