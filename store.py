@@ -252,7 +252,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
     def __getitem__(self, index: int) -> CommandRecord: ...
     @overload
     def __getitem__(self, index: slice) -> List[CommandRecord]: ...
-    def __getitem__(self, index):
+    def __getitem__(self, index): # NOQA
         if isinstance(index, int):
             index = slice(index, index + 1)
             return_first = True
@@ -289,7 +289,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
     def __setitem__(self, index: int, value: CommandRecord) -> None: ...
     @overload
     def __setitem__(self, index: slice, value: Iterable[CommandRecord]) -> None: ...
-    def __setitem__(self, index, value):
+    def __setitem__(self, index, value): # NOQA
         if isinstance(index, slice):
             raise NotImplementedError('Can only set a single command record')
         if isinstance(value, CommandPlan):
