@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import datetime
 import flask # type: ignore
+import humanize
 import mwapi # type: ignore
 import mwoauth # type: ignore
 import os
@@ -145,6 +147,17 @@ def render_command_record(command_record: CommandRecord, domain: str):
         raise ValueError('Unknown command record type')
 
     return flask.Markup(command_record_markup)
+
+@app.template_filter()
+def render_datetime(dt: datetime.datetime) -> flask.Markup:
+    naive_dt = dt.astimezone().replace(tzinfo=None) # humanize doesn’t support timezones :(
+    return (flask.Markup(r'<time datetime="') +
+            flask.Markup.escape(dt.isoformat()) +
+            flask.Markup(r'" title="') +
+            flask.Markup.escape(dt.isoformat()) +
+            flask.Markup(r'">') +
+            flask.Markup.escape(humanize.naturaltime(naive_dt)) +
+            flask.Markup(r'</time>'))
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:

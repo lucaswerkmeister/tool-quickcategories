@@ -3,6 +3,10 @@
 {% set offset = slice.start %}
 {% set limit = slice.stop - slice.start %}
 <h1>Batch #{{ batch.id }} by <a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ batch.local_user_id }}"><bdi>{{ batch.user_name }}</bdi></a></h1>
+<p>
+  Created {{ batch.created | render_datetime }},
+  last updated {{ batch.last_updated | render_datetime }}.
+</p>
 <nav aria-label="command pages">
   <ul class="pagination">
     {% if offset > 0 %}

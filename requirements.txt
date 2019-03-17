@@ -1,5 +1,6 @@
 cachetools
 flask
+humanize
 mwapi
 mwoauth
 mwparserfromhell
