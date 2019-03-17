@@ -14,8 +14,8 @@ def test_run_command():
         pytest.skip('MediaWiki credentials not provided')
     session = mwapi.Session('https://test.wikipedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
     lgtoken = session.get(action='query',
-                         meta='tokens',
-                         type=['login'])['query']['tokens']['logintoken']
+                          meta='tokens',
+                          type=['login'])['query']['tokens']['logintoken']
     session.post(action='login',
                  lgname=os.environ['MW_USERNAME'],
                  lgpassword=os.environ['MW_PASSWORD'],
