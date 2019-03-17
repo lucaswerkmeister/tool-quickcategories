@@ -133,14 +133,17 @@ class DatabaseStore(BatchStore):
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
         if not result:
             return None
-        user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
+        return self._result_to_batch(result)
+
+    def _result_to_batch(self, result: tuple) -> OpenBatch:
+        id, user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
         assert status == DatabaseStore._BATCH_STATUS_OPEN
         created = self._utc_timestamp_to_datetime(created_utc_timestamp)
         last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
