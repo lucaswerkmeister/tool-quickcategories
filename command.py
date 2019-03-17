@@ -95,7 +95,6 @@ class CommandEdit(CommandSuccess):
         self.base_revision = base_revision
         self.revision = revision
 
-
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandEdit and \
             self.id == value.id and \

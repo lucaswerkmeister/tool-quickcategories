@@ -310,7 +310,7 @@ def slice_from_args(args: dict) -> slice:
 
 
 def full_url(endpoint: str, **kwargs) -> str:
-    scheme=flask.request.headers.get('X-Forwarded-Proto', 'http')
+    scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     return flask.url_for(endpoint, _external=True, _scheme=scheme, **kwargs)
 
 def submitted_request_valid() -> bool:

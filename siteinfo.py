@@ -30,7 +30,7 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
             break
     else:
         raise LookupError('No category namespace returned by MediaWiki API!')
-    category_namespace_names  = [category_namespace_name]
+    category_namespace_names = [category_namespace_name]
     if category_namespace_name != 'Category':
         category_namespace_names.append('Category')
     for namespacealias in response['query']['namespacealiases']:
