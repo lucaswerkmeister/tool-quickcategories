@@ -26,7 +26,7 @@ def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
 
 
 def _now() -> datetime.datetime:
-    return datetime.datetime.now(tz=datetime.timezone.utc)
+    return datetime.datetime.now(tz=datetime.timezone.utc).replace(microsecond=0)
 
 
 class BatchStore:
