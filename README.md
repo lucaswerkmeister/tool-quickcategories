@@ -45,6 +45,22 @@ FLASK_APP=app.py FLASK_ENV=development flask run
 
 If you want, you can do this inside some virtualenv too.
 
+## Contributing
+
+To send a patch, you can use any of the following methods:
+
+* [Submit a pull request on GitHub.](https://github.com/lucaswerkmeister/tool-quickcategories)
+* Use `git send-email`.
+  (Send the patch(es) to the email address from the Git commit history.)
+* Upload the changes to a repository of your own and use `git request-pull` (same email address).
+* Upload a diff on [GitHub Gist](https://gist.github.com/)
+  and send the link to the tool’s maintainer(s) via email, Twitter, on-wiki message, or whatever.
+* [Create a Diff on Phabricator.](https://phabricator.wikimedia.org/differential/diff/create/)
+  Make sure to add @LucasWerkmeister as subscriber.
+
+They’re listed in the maintainer(s)’ order of preference, from most to least preferred,
+but feel free to use any of these methods as it best suits you.
+
 ## License
 
 The code in this repository is released under the AGPL v3, as provided in the `LICENSE` file.
