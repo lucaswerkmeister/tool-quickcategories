@@ -26,7 +26,7 @@ response_enwiki = {
         'allmessages': [
             {
                 "name": "comma-separator",
-                "content":", ",
+                "content": ", ",
             },
             {
                 "name": "semicolon-separator",
@@ -62,7 +62,7 @@ response_dewiktionary = {
         'allmessages': [
             {
                 "name": "comma-separator",
-                "content":", ",
+                "content": ", ",
             },
             {
                 "name": "semicolon-separator",
@@ -86,7 +86,7 @@ response_ruwiki = {
                 'case': 'first-letter',
             },
             '15': {
-                'id':15,
+                'id': 15,
                 'name': 'Обсуждение категории',
                 'canonical': 'Category talk',
             },
@@ -103,7 +103,7 @@ response_ruwiki = {
         'allmessages': [
             {
                 "name": "comma-separator",
-                "content":", ",
+                "content": ", ",
             },
             {
                 "name": "semicolon-separator",
@@ -127,7 +127,7 @@ response_zhwiki = {
                 'case': 'first-letter',
             },
             '15': {
-                'id':15,
+                'id': 15,
                 'name': 'Category talk',
                 'canonical': 'Category talk',
             },

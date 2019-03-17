@@ -78,7 +78,7 @@ def test_with_missing_page():
             'allmessages': [
                 {
                     "name": "comma-separator",
-                    "content":", ",
+                    "content": ", ",
                 },
                 {
                     "name": "semicolon-separator",
@@ -137,7 +137,7 @@ def test_with_missing_page_unnormalized():
             'allmessages': [
                 {
                     "name": "comma-separator",
-                    "content":", ",
+                    "content": ", ",
                 },
                 {
                     "name": "semicolon-separator",
@@ -205,7 +205,7 @@ def test_with_edit_conflict():
                 'allmessages': [
                     {
                         "name": "comma-separator",
-                        "content":", ",
+                        "content": ", ",
                     },
                     {
                         "name": "semicolon-separator",
@@ -273,7 +273,7 @@ def test_with_maxlag_exceeded():
                 'allmessages': [
                     {
                         "name": "comma-separator",
-                        "content":", ",
+                        "content": ", ",
                     },
                     {
                         "name": "semicolon-separator",
@@ -342,7 +342,7 @@ def test_with_blocked():
                 'allmessages': [
                     {
                         "name": "comma-separator",
-                        "content":", ",
+                        "content": ", ",
                     },
                     {
                         "name": "semicolon-separator",
@@ -411,7 +411,7 @@ def test_with_autoblocked():
                 'allmessages': [
                     {
                         "name": "comma-separator",
-                        "content":", ",
+                        "content": ", ",
                     },
                     {
                         "name": "semicolon-separator",
@@ -480,7 +480,7 @@ def test_with_readonly():
                 'allmessages': [
                     {
                         "name": "comma-separator",
-                        "content":", ",
+                        "content": ", ",
                     },
                     {
                         "name": "semicolon-separator",
