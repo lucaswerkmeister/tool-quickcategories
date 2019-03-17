@@ -29,6 +29,9 @@ def test_Command_cleanup():
     command.cleanup()
     assert command == Command('Page from URL', [AddCategoryAction('Category from URL')])
 
+def test_Command_actions_tpsv():
+    assert command1.actions_tpsv() == '+Category:Cat 1|-Category:Cat 2'
+
 def test_Command_eq_same():
     assert command1 == command1
 

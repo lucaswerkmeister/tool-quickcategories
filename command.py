@@ -36,13 +36,16 @@ class Command:
         for action in self.actions:
             action.cleanup()
 
+    def actions_tpsv(self) -> str:
+        return '|'.join([str(action) for action in self.actions])
+
     def __eq__(self, value: Any) -> bool:
         return type(value) is Command and \
             self.page == value.page and \
             self.actions == value.actions
 
     def __str__(self) -> str:
-        return self.page + '|' + '|'.join([str(action) for action in self.actions])
+        return self.page + '|' + self.actions_tpsv()
 
     def __repr__(self) -> str:
         return 'Command(' + repr(self.page) + ', ' + repr(self.actions) + ')'
