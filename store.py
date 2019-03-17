@@ -169,7 +169,7 @@ class DatabaseStore(BatchStore):
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   ORDER BY `batch_id` DESC
-                                  LIMIT 10''');
+                                  LIMIT 10''')
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
 
 
