@@ -1,3 +1,4 @@
+import datetime
 from typing import Any, List, MutableSequence
 
 from command import Command, CommandRecord, CommandPlan, CommandFinish
@@ -38,12 +39,16 @@ class OpenBatch:
                  local_user_id: int,
                  global_user_id: int,
                  domain: str,
+                 created: datetime.datetime,
+                 last_updated: datetime.datetime,
                  command_records: MutableSequence[CommandRecord]):
         self.id = id
         self.user_name = user_name
         self.local_user_id = local_user_id
         self.global_user_id = global_user_id
         self.domain = domain
+        self.created = created
+        self.last_updated = last_updated
         self.command_records = command_records
 
     def __eq__(self, value: Any) -> bool:
@@ -53,6 +58,8 @@ class OpenBatch:
             self.local_user_id == value.local_user_id and \
             self.global_user_id == value.global_user_id and \
             self.domain == value.domain and \
+            self.created == value.created and \
+            self.last_updated == value.last_updated and \
             self.command_records == value.command_records
 
     def __str__(self) -> str:
@@ -67,4 +74,6 @@ class OpenBatch:
             repr(self.local_user_id) + ', ' + \
             repr(self.global_user_id) + ', ' + \
             repr(self.domain) + ', ' + \
+            repr(self.created) + ', ' + \
+            repr(self.last_updated) + ', ' + \
             repr(self.command_records) + ')'

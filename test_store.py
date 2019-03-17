@@ -154,6 +154,10 @@ def test_DatabaseStore_update_batch():
 
         assert stored_batch.command_records[0:2] == loaded_batch.command_records[0:2]
 
+        # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
+        reloaded_batch = store.get_batch(stored_batch.id)
+        assert reloaded_batch.last_updated > reloaded_batch.created
+
 def test_DatabaseStore_datetime_to_utc_timestamp():
     store = DatabaseStore({})
     dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)

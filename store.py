@@ -25,6 +25,10 @@ def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
     return user_name, local_user_id, global_user_id, domain
 
 
+def _now() -> datetime.datetime:
+    return datetime.datetime.now(tz=datetime.timezone.utc)
+
+
 class BatchStore:
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch: ...
@@ -46,12 +50,15 @@ class InMemoryStore(BatchStore):
             self.next_command_id += 1
 
         user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        created = _now()
 
         open_batch = OpenBatch(self.next_batch_id,
                                user_name,
                                local_user_id,
                                global_user_id,
                                domain,
+                               created,
+                               created,
                                command_plans)
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
@@ -98,12 +105,14 @@ class DatabaseStore(BatchStore):
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        created = _now()
+        created_utc_timestamp = self._datetime_to_utc_timestamp(created)
 
         with self._connect() as connection:
             domain_id = self.domain_store.acquire_id(connection, domain)
             with connection.cursor() as cursor:
-                cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain_id`, `batch_status`) VALUES (%s, %s, %s, %s, %s)',
-                               (user_name, local_user_id, global_user_id, domain_id, DatabaseStore._BATCH_STATUS_OPEN))
+                cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain_id`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                               (user_name, local_user_id, global_user_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
@@ -117,25 +126,31 @@ class DatabaseStore(BatchStore):
                          local_user_id,
                          global_user_id,
                          domain,
+                         created,
+                         created,
                          _DatabaseCommandRecords(batch_id, self))
 
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_status`
+                cursor.execute('''SELECT `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
         if not result:
             return None
-        user_name, local_user_id, global_user_id, domain, status = result
+        user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
         assert status == DatabaseStore._BATCH_STATUS_OPEN
+        created = self._utc_timestamp_to_datetime(created_utc_timestamp)
+        last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
         return OpenBatch(id,
                          user_name,
                          local_user_id,
                          global_user_id,
                          domain,
+                         created,
+                         last_updated,
                          _DatabaseCommandRecords(id, self))
 
 
@@ -264,12 +279,17 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         assert isinstance(value, CommandFinish)
 
         status, outcome = self._command_record_to_row(value)
+        last_updated = _now()
+        last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
 
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `command`
                               SET `command_status` = %s, `command_outcome` = %s
                               WHERE `command_id` = %s AND `command_batch` = %s''',
                            (status, json.dumps(outcome), value.id, self.batch_id))
+            cursor.execute('''UPDATE `batch`
+                              SET `batch_last_updated_utc_timestamp` = %s
+                              WHERE `batch_id` = %s''', (last_updated_utc_timestamp, self.batch_id))
             connection.commit()
 
     def __delitem__(self, *args, **kwargs):
