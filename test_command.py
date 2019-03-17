@@ -40,7 +40,7 @@ def test_Command_eq_equal():
 
 def test_Command_eq_different_type():
     assert command1 != addCategory1
-    assert command1 != None
+    assert command1 is not None
 
 def test_Command_eq_different_page():
     assert command1 != Command('Page A', command1.actions)
