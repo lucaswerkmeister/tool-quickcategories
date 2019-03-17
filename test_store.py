@@ -177,13 +177,14 @@ def test_DatabaseStore_get_latest_batches():
 
 def test_DatabaseStore_datetime_to_utc_timestamp():
     store = DatabaseStore({})
-    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
-    assert store._datetime_to_utc_timestamp(dt) == 1552829008.251638
+    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, tzinfo=datetime.timezone.utc)
+    assert store._datetime_to_utc_timestamp(dt) == 1552829008
 
 @pytest.mark.parametrize('dt', [
     datetime.datetime.now(),
     datetime.datetime.utcnow(),
     datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=1))),
+    datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
 ])
 def test_DatabaseStore_datetime_to_utc_timestamp_invalid_timezone(dt):
     store = DatabaseStore({})
@@ -192,8 +193,8 @@ def test_DatabaseStore_datetime_to_utc_timestamp_invalid_timezone(dt):
 
 def test_DatabaseStore_utc_timestamp_to_datetime():
     store = DatabaseStore({})
-    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
-    assert store._utc_timestamp_to_datetime(1552829008.251638) == dt
+    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, tzinfo=datetime.timezone.utc)
+    assert store._utc_timestamp_to_datetime(1552829008) == dt
 
 
 command_records_and_rows = [
@@ -202,7 +203,7 @@ command_records_and_rows = [
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
     (commandEditConflict1, (DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
-    (commandMaxlagExceeded1, (DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842.607831})),
+    (commandMaxlagExceeded1, (DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842})),
     (commandBlocked1, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': blockinfo})),
     (commandBlocked2, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
     (commandWikiReadOnly1, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance'})),

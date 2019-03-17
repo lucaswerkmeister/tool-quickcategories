@@ -100,11 +100,12 @@ class DatabaseStore(BatchStore):
         finally:
             connection.close()
 
-    def _datetime_to_utc_timestamp(self, dt: datetime.datetime) -> float:
+    def _datetime_to_utc_timestamp(self, dt: datetime.datetime) -> int:
         assert dt.tzinfo == datetime.timezone.utc
-        return dt.timestamp()
+        assert dt.microsecond == 0
+        return int(dt.timestamp())
 
-    def _utc_timestamp_to_datetime(self, timestamp: float) -> datetime.datetime:
+    def _utc_timestamp_to_datetime(self, timestamp: int) -> datetime.datetime:
         return datetime.datetime.fromtimestamp(timestamp,
                                                tz=datetime.timezone.utc)
 

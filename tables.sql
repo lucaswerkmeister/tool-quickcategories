@@ -4,8 +4,8 @@ CREATE TABLE batch (
   batch_local_user_id int unsigned NOT NULL,
   batch_global_user_id int unsigned NOT NULL,
   batch_domain_id int unsigned NOT NULL,
-  batch_created_utc_timestamp double unsigned NOT NULL,
-  batch_last_updated_utc_timestamp double unsigned NOT NULL,
+  batch_created_utc_timestamp int unsigned NOT NULL,
+  batch_last_updated_utc_timestamp int unsigned NOT NULL,
   batch_status int unsigned NOT NULL
 )
 CHARACTER SET = 'utf8mb4'

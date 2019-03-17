@@ -98,6 +98,7 @@ class Runner():
             elif e.code == 'maxlag':
                 retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
+                retry_after = retry_after.replace(microsecond=0)
                 return CommandMaxlagExceeded(plan.id, plan.command, retry_after)
             elif e.code == 'blocked' or e.code == 'autoblocked':
                 auto = e.code == 'autoblocked'

@@ -195,7 +195,7 @@ def test_CommandEditConflict_repr():
     assert eval(repr(commandEditConflict1)) == commandEditConflict1
 
 
-commandMaxlagExceeded1 = CommandMaxlagExceeded(42, command1, datetime.datetime(2019, 3, 16, 15, 24, 2, 607831, tzinfo=datetime.timezone.utc))
+commandMaxlagExceeded1 = CommandMaxlagExceeded(42, command1, datetime.datetime(2019, 3, 16, 15, 24, 2, tzinfo=datetime.timezone.utc))
 
 
 def test_CommandMaxlagExceeded_can_retry_immediately():
@@ -208,7 +208,7 @@ def test_CommandMaxlagExceeded_eq_same():
     assert commandMaxlagExceeded1 == commandMaxlagExceeded1
 
 def test_CommandMaxlagExceeded_eq_equal():
-    assert commandMaxlagExceeded1 == CommandMaxlagExceeded(42, command1, datetime.datetime(2019, 3, 16, 15, 24, 2, 607831, tzinfo=datetime.timezone.utc))
+    assert commandMaxlagExceeded1 == CommandMaxlagExceeded(42, command1, datetime.datetime(2019, 3, 16, 15, 24, 2, tzinfo=datetime.timezone.utc))
 
 def test_CommandMaxlagExceeded_eq_different_id():
     assert commandMaxlagExceeded1 != CommandMaxlagExceeded(43, commandMaxlagExceeded1.command, commandMaxlagExceeded1.retry_after)
@@ -217,7 +217,7 @@ def test_CommandMaxlagExceeded_eq_different_command():
     assert commandMaxlagExceeded1 != CommandMaxlagExceeded(commandMaxlagExceeded1.id, command2, commandMaxlagExceeded1.retry_after)
 
 def test_CommandMaxlagExceeded_eq_different_retry_after():
-    assert commandMaxlagExceeded1 != CommandMaxlagExceeded(commandMaxlagExceeded1.id, commandMaxlagExceeded1.command, datetime.datetime(2019, 3, 16, 15, 24, 2, 607831, tzinfo=datetime.timezone.max))
+    assert commandMaxlagExceeded1 != CommandMaxlagExceeded(commandMaxlagExceeded1.id, commandMaxlagExceeded1.command, datetime.datetime(2019, 3, 16, 15, 24, 2, tzinfo=datetime.timezone.max))
 
 def test_CommandMaxlagExceeded_str():
     assert str(commandMaxlagExceeded1) == '# ' + str(command1)
