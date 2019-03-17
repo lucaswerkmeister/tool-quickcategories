@@ -12,7 +12,8 @@ COLLATE = 'utf8mb4_bin';
 CREATE TABLE command (
   command_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
   command_batch int unsigned NOT NULL,
-  command_tpsv text NOT NULL,
+  command_page text NOT NULL,
+  command_actions_id int unsigned NOT NULL,
   command_status int unsigned NOT NULL,
   command_outcome text
 )
@@ -30,3 +31,13 @@ CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
 
 CREATE INDEX domain_hash ON domain (domain_hash);
+
+CREATE TABLE actions (
+  actions_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  actions_hash int unsigned NOT NULL, -- first four bytes of the SHA2-256 hash of the actions_tpsv
+  actions_tpsv text NOT NULL
+)
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_bin';
+
+CREATE INDEX actions_hash ON actions (actions_hash);

@@ -10,7 +10,7 @@ import threading
 from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
-from command import CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
 
@@ -78,6 +78,7 @@ class DatabaseStore(BatchStore):
         connection_params.setdefault('charset', 'utf8mb4')
         self.connection_params = connection_params
         self.domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        self.actions_store = _StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
 
     @contextlib.contextmanager
     def _connect(self) -> Generator[pymysql.connections.Connection, None, None]:
@@ -98,8 +99,8 @@ class DatabaseStore(BatchStore):
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
-                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_tpsv`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, NULL)',
-                                   [(batch_id, str(command), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
+                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page`, `command_actions_id`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, NULL)',
+                                   [(batch_id, command.page, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
 
             connection.commit()
 
@@ -163,11 +164,12 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
 
         return status, outcome
 
-    def _row_to_command_record(self, id: int, tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
+    def _row_to_command_record(self, id: int, page: str, actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
         if outcome:
             outcome_dict = json.loads(outcome)
 
-        command = parse_tpsv.parse_command(tpsv)
+        command = Command(page,
+                          [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
 
         if status == DatabaseStore._COMMAND_STATUS_PLAN:
             assert outcome is None
@@ -222,13 +224,14 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
 
         command_records = []
         with self.store._connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''SELECT `command_id`, `command_tpsv`, `command_status`, `command_outcome`
+            cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
                               FROM `command`
+                              JOIN `actions` ON `command_actions_id` = `actions_id`
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, index.stop - index.start, index.start))
-            for id, tpsv, status, outcome in cursor.fetchall():
-                command_records.append(self._row_to_command_record(id, tpsv, status, outcome))
+            for id, page, actions_tpsv, status, outcome in cursor.fetchall():
+                command_records.append(self._row_to_command_record(id, page, actions_tpsv, status, outcome))
 
         if return_first:
             return command_records[0]
