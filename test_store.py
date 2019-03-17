@@ -6,6 +6,7 @@ import pymysql
 import pytest
 import random
 import string
+import time
 
 from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords, _StringTableStore
@@ -156,6 +157,7 @@ def test_DatabaseStore_update_batch():
         assert command_edit == command_edit_loaded
 
         command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
+        time.sleep(1) # make sure that this update increases last_updated
         loaded_batch.command_records[1] = command_noop
         command_noop_loaded = loaded_batch.command_records[0]
         assert command_noop == command_noop_loaded
