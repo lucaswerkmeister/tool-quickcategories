@@ -105,13 +105,13 @@ def can_run_commands(command_records: List[CommandRecord]) -> bool:
     return flask.g.can_run_commands and any(filter(lambda command_record: isinstance(command_record, CommandPlan), command_records))
 
 @app.template_global() # TODO make domain part of Command and turn this into a template filter?
-def render_command(command: Command, domain: str):
+def render_command(command: Command, domain: str) -> flask.Markup:
     return flask.Markup(flask.render_template('command.html',
                                               domain=domain,
                                               command=command))
 
 @app.template_global() # TODO also turn into a template filter?
-def render_command_record(command_record: CommandRecord, domain: str):
+def render_command_record(command_record: CommandRecord, domain: str) -> flask.Markup:
     if isinstance(command_record, CommandPlan):
         command_record_markup = flask.render_template('command_plan.html',
                                                       domain=domain,
