@@ -165,7 +165,7 @@ def render_batch_user(batch: OpenBatch) -> flask.Markup:
     return (flask.Markup(r'<a href="https://') +
             flask.Markup.escape(batch.domain) +
             flask.Markup(r'/wiki/Special:Redirect/user/') +
-            flask.Markup.escape(batch.local_user_id) +
+            flask.Markup.escape(str(batch.local_user_id)) +
             flask.Markup(r'"><bdi>') +
             flask.Markup.escape(batch.user_name) +
             flask.Markup(r'</bdi></a>'))
