@@ -7,7 +7,7 @@ import mwapi # type: ignore
 import operator
 import pymysql
 import threading
-from typing import Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
+from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
 from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -297,6 +297,11 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
 
     def insert(self, *args, **kwargs):
         raise NotImplementedError('Cannot insert commands into a batch')
+
+    def __eq__(self, value: Any) -> bool:
+        # limited test to avoid overly expensive full comparison
+        return type(value) is _DatabaseCommandRecords and \
+            self.batch_id == value.batch_id
 
 
 class _StringTableStore:
