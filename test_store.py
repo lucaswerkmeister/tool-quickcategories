@@ -60,6 +60,14 @@ def test_InMemoryStore_get_batch():
 def test_InMemoryStore_get_batch_None():
     assert InMemoryStore().get_batch(0) is None
 
+def test_InMemoryStore_get_latest_batches():
+    store = InMemoryStore()
+    open_batches = []
+    for i in range(25):
+        open_batches.append(store.store_batch(newBatch1, fake_session))
+    open_batches.reverse()
+    assert open_batches[:10] == store.get_latest_batches()
+
 
 @contextlib.contextmanager
 def temporary_database():
@@ -157,6 +165,15 @@ def test_DatabaseStore_update_batch():
         # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
         reloaded_batch = store.get_batch(stored_batch.id)
         assert reloaded_batch.last_updated > reloaded_batch.created
+
+def test_DatabaseStore_get_latest_batches():
+    with temporary_database() as connection_params:
+        store = DatabaseStore(connection_params)
+        open_batches = []
+        for i in range(25):
+            open_batches.append(store.store_batch(newBatch1, fake_session))
+        open_batches.reverse()
+        assert open_batches[:10] == store.get_latest_batches()
 
 def test_DatabaseStore_datetime_to_utc_timestamp():
     store = DatabaseStore({})

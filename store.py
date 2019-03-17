@@ -7,7 +7,7 @@ import mwapi # type: ignore
 import operator
 import pymysql
 import threading
-from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Tuple, Union, overload
+from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Sequence, Tuple, Union, overload
 
 from batch import NewBatch, OpenBatch
 from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -34,6 +34,8 @@ class BatchStore:
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch: ...
 
     def get_batch(self, id: int) -> Optional[OpenBatch]: ...
+
+    def get_latest_batches(self) -> Sequence[OpenBatch]: ...
 
 
 class InMemoryStore(BatchStore):
@@ -66,6 +68,9 @@ class InMemoryStore(BatchStore):
 
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         return self.batches.get(id)
+
+    def get_latest_batches(self) -> Sequence[OpenBatch]:
+        return [self.batches[id] for id in sorted(self.batches.keys(), reverse=True)[:10]]
 
 
 class DatabaseStore(BatchStore):
@@ -155,6 +160,16 @@ class DatabaseStore(BatchStore):
                          created,
                          last_updated,
                          _DatabaseCommandRecords(id, self))
+
+    def get_latest_batches(self) -> Sequence[OpenBatch]:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                                  FROM `batch`
+                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
+                                  ORDER BY `batch_id` DESC
+                                  LIMIT 10''');
+                return [self._result_to_batch(result) for result in cursor.fetchall()]
 
 
 class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
