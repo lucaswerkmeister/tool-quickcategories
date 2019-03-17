@@ -39,7 +39,6 @@ class Runner():
             slot = revision['slots']['main']
             if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
                 raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], title))
-            original_wikitext = slot['content']
             self.prepared_pages[title] = {
                 'wikitext': slot['content'],
                 'page_id': page['pageid'],
