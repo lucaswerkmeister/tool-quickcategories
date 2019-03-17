@@ -170,7 +170,7 @@ def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.
 
 @app.route('/')
 def index():
-    return flask.render_template('index.html')
+    return flask.render_template('index.html', latest_batches=batch_store.get_latest_batches())
 
 @app.route('/batch', methods=['POST'])
 def new_batch():

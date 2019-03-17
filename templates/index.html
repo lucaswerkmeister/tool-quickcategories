@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>QuickCategories</h1>
-<form method="post" action="batch">
+<form method="post" action="batch" class="mb-3">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <div class="form-group">
     <label for="domain">Wiki domain</label>
@@ -41,4 +41,27 @@
   </span>
   {% endif %}
 </form>
+{% if latest_batches %}
+<h2>Latest batches</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">batch ID</th>
+      <th scope="col">by</th>
+      <th scope="col">created</th>
+      <th scope="col">last updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for batch in latest_batches %}
+    <tr>
+      <th scope="row"><a href="{{ url_for('batch', id=batch.id) }}">{{ batch.id }}</a></th>
+      <td><a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ batch.local_user_id }}"><bdi>{{ batch.user_name }}</bdi></a></td>
+      <td>{{ batch.created | render_datetime }}</td>
+      <td>{{ batch.last_updated | render_datetime }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
 {% endblock %}
