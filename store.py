@@ -88,6 +88,14 @@ class DatabaseStore(BatchStore):
         finally:
             connection.close()
 
+    def _datetime_to_utc_timestamp(self, dt: datetime.datetime) -> float:
+        assert dt.tzinfo == datetime.timezone.utc
+        return dt.timestamp()
+
+    def _utc_timestamp_to_datetime(self, timestamp: float) -> datetime.datetime:
+        return datetime.datetime.fromtimestamp(timestamp,
+                                               tz=datetime.timezone.utc)
+
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
 
@@ -152,7 +160,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
             outcome = {}
         elif isinstance(command_record, CommandMaxlagExceeded):
             status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
-            outcome = {'retry_after_utc_timestamp': command_record.retry_after.timestamp()}
+            outcome = {'retry_after_utc_timestamp': self.store._datetime_to_utc_timestamp(command_record.retry_after)}
         elif isinstance(command_record, CommandBlocked):
             status = DatabaseStore._COMMAND_STATUS_BLOCKED
             outcome = {'auto': command_record.auto, 'blockinfo': command_record.blockinfo}
@@ -193,8 +201,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
             return CommandMaxlagExceeded(id,
                                          command,
-                                         datetime.datetime.fromtimestamp(outcome_dict['retry_after_utc_timestamp'],
-                                                                         tz=datetime.timezone.utc))
+                                         self.store._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
         elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
             return CommandBlocked(id,
                                   command,

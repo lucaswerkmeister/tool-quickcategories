@@ -1,4 +1,5 @@
 import contextlib
+import datetime
 import json
 import os
 import pymysql
@@ -152,6 +153,26 @@ def test_DatabaseStore_update_batch():
         assert command_noop == command_noop_loaded
 
         assert stored_batch.command_records[0:2] == loaded_batch.command_records[0:2]
+
+def test_DatabaseStore_datetime_to_utc_timestamp():
+    store = DatabaseStore({})
+    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
+    assert store._datetime_to_utc_timestamp(dt) == 1552829008.251638
+
+@pytest.mark.parametrize('dt', [
+    datetime.datetime.now(),
+    datetime.datetime.utcnow(),
+    datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=1))),
+])
+def test_DatabaseStore_datetime_to_utc_timestamp_invalid_timezone(dt):
+    store = DatabaseStore({})
+    with pytest.raises(AssertionError):
+        store._datetime_to_utc_timestamp(dt)
+
+def test_DatabaseStore_utc_timestamp_to_datetime():
+    store = DatabaseStore({})
+    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
+    assert store._utc_timestamp_to_datetime(1552829008.251638) == dt
 
 
 command_records_and_rows = [
