@@ -25,16 +25,16 @@ response_enwiki = {
         ],
         'allmessages': [
             {
-                "name": "comma-separator",
-                "content": ", ",
+                'name': 'comma-separator',
+                'content': ', ',
             },
             {
-                "name": "semicolon-separator",
-                "content": "; ",
+                'name': 'semicolon-separator',
+                'content': '; ',
             },
             {
-                "name": "parentheses",
-                "content": "($1)",
+                'name': 'parentheses',
+                'content': '($1)',
             },
         ],
     },
@@ -61,16 +61,16 @@ response_dewiktionary = {
         ],
         'allmessages': [
             {
-                "name": "comma-separator",
-                "content": ", ",
+                'name': 'comma-separator',
+                'content': ', ',
             },
             {
-                "name": "semicolon-separator",
-                "content": "; ",
+                'name': 'semicolon-separator',
+                'content': '; ',
             },
             {
-                "name": "parentheses",
-                "content": "($1)",
+                'name': 'parentheses',
+                'content': '($1)',
             },
         ],
     },
@@ -102,16 +102,16 @@ response_ruwiki = {
         ],
         'allmessages': [
             {
-                "name": "comma-separator",
-                "content": ", ",
+                'name': 'comma-separator',
+                'content': ', ',
             },
             {
-                "name": "semicolon-separator",
-                "content": "; ",
+                'name': 'semicolon-separator',
+                'content': '; ',
             },
             {
-                "name": "parentheses",
-                "content": "($1)",
+                'name': 'parentheses',
+                'content': '($1)',
             },
         ],
     },
@@ -155,8 +155,8 @@ response_zhwiki = {
                 'content': '、 ',
             },
             {
-                "name": "semicolon-separator",
-                "content": "；",
+                'name': 'semicolon-separator',
+                'content': '；',
             },
             {
                 'name': 'parentheses',

@@ -77,16 +77,16 @@ def test_with_missing_page():
             'namespacealiases': [],
             'allmessages': [
                 {
-                    "name": "comma-separator",
-                    "content": ", ",
+                    'name': 'comma-separator',
+                    'content': ', ',
                 },
                 {
-                    "name": "semicolon-separator",
-                    "content": "; ",
+                    'name': 'semicolon-separator',
+                    'content': '; ',
                 },
                 {
-                    "name": "parentheses",
-                    "content": "($1)",
+                    'name': 'parentheses',
+                    'content': '($1)',
                 },
             ],
         },
@@ -136,16 +136,16 @@ def test_with_missing_page_unnormalized():
             'namespacealiases': [],
             'allmessages': [
                 {
-                    "name": "comma-separator",
-                    "content": ", ",
+                    'name': 'comma-separator',
+                    'content': ', ',
                 },
                 {
-                    "name": "semicolon-separator",
-                    "content": "; ",
+                    'name': 'semicolon-separator',
+                    'content': '; ',
                 },
                 {
-                    "name": "parentheses",
-                    "content": "($1)",
+                    'name': 'parentheses',
+                    'content': '($1)',
                 },
             ],
         },
@@ -204,16 +204,16 @@ def test_with_edit_conflict():
                 'namespacealiases': [],
                 'allmessages': [
                     {
-                        "name": "comma-separator",
-                        "content": ", ",
+                        'name': 'comma-separator',
+                        'content': ', ',
                     },
                     {
-                        "name": "semicolon-separator",
-                        "content": "; ",
+                        'name': 'semicolon-separator',
+                        'content': '; ',
                     },
                     {
-                        "name": "parentheses",
-                        "content": "($1)",
+                        'name': 'parentheses',
+                        'content': '($1)',
                     },
                 ],
             },
@@ -272,16 +272,16 @@ def test_with_maxlag_exceeded():
                 'namespacealiases': [],
                 'allmessages': [
                     {
-                        "name": "comma-separator",
-                        "content": ", ",
+                        'name': 'comma-separator',
+                        'content': ', ',
                     },
                     {
-                        "name": "semicolon-separator",
-                        "content": "; ",
+                        'name': 'semicolon-separator',
+                        'content': '; ',
                     },
                     {
-                        "name": "parentheses",
-                        "content": "($1)",
+                        'name': 'parentheses',
+                        'content': '($1)',
                     },
                 ],
             },
@@ -341,16 +341,16 @@ def test_with_blocked():
                 'namespacealiases': [],
                 'allmessages': [
                     {
-                        "name": "comma-separator",
-                        "content": ", ",
+                        'name': 'comma-separator',
+                        'content': ', ',
                     },
                     {
-                        "name": "semicolon-separator",
-                        "content": "; ",
+                        'name': 'semicolon-separator',
+                        'content': '; ',
                     },
                     {
-                        "name": "parentheses",
-                        "content": "($1)",
+                        'name': 'parentheses',
+                        'content': '($1)',
                     },
                 ],
             },
@@ -410,16 +410,16 @@ def test_with_autoblocked():
                 'namespacealiases': [],
                 'allmessages': [
                     {
-                        "name": "comma-separator",
-                        "content": ", ",
+                        'name': 'comma-separator',
+                        'content': ', ',
                     },
                     {
-                        "name": "semicolon-separator",
-                        "content": "; ",
+                        'name': 'semicolon-separator',
+                        'content': '; ',
                     },
                     {
-                        "name": "parentheses",
-                        "content": "($1)",
+                        'name': 'parentheses',
+                        'content': '($1)',
                     },
                 ],
             },
@@ -479,16 +479,16 @@ def test_with_readonly():
                 'namespacealiases': [],
                 'allmessages': [
                     {
-                        "name": "comma-separator",
-                        "content": ", ",
+                        'name': 'comma-separator',
+                        'content': ', ',
                     },
                     {
-                        "name": "semicolon-separator",
-                        "content": "; ",
+                        'name': 'semicolon-separator',
+                        'content': '; ',
                     },
                     {
-                        "name": "parentheses",
-                        "content": "($1)",
+                        'name': 'parentheses',
+                        'content': '($1)',
                     },
                 ],
             },
