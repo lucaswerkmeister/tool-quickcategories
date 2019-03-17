@@ -2,7 +2,7 @@
 {% block main %}
 {% set offset = slice.start %}
 {% set limit = slice.stop - slice.start %}
-<h1>Batch #{{ batch.id }} by <a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ batch.local_user_id }}"><bdi>{{ batch.user_name }}</bdi></a></h1>
+<h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
 <p>
   Created {{ batch.created | render_datetime }},
   last updated {{ batch.last_updated | render_datetime }}.

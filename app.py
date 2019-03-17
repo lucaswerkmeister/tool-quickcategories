@@ -14,6 +14,7 @@ import toolforge
 from typing import cast, Dict, List, Optional
 import yaml
 
+from batch import OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
@@ -158,6 +159,16 @@ def render_datetime(dt: datetime.datetime) -> flask.Markup:
             flask.Markup(r'">') +
             flask.Markup.escape(humanize.naturaltime(naive_dt)) +
             flask.Markup(r'</time>'))
+
+@app.template_global()
+def render_batch_user(batch: OpenBatch) -> flask.Markup:
+    return (flask.Markup(r'<a href="https://') +
+            flask.Markup.escape(batch.domain) +
+            flask.Markup(r'/wiki/Special:Redirect/user/') +
+            flask.Markup.escape(batch.local_user_id) +
+            flask.Markup(r'"><bdi>') +
+            flask.Markup.escape(batch.user_name) +
+            flask.Markup(r'</bdi></a>'))
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
