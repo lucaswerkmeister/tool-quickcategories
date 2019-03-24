@@ -9,7 +9,7 @@ import string
 import time
 
 from command import CommandEdit, CommandNoop
-from store import InMemoryStore, DatabaseStore, _DatabaseCommandRecords, _StringTableStore
+from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
 
 from test_batch import newBatch1
 from test_command import commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
@@ -38,7 +38,8 @@ fake_session.host = 'https://commons.wikimedia.org'
 def test_InMemoryStore_store_batch_command_ids():
     open_batch = InMemoryStore().store_batch(newBatch1, fake_session)
     assert len(open_batch.command_records) == 2
-    assert open_batch.command_records[0].id != open_batch.command_records[1].id
+    [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+    assert command_record_1.id != command_record_2.id
 
 def test_InMemoryStore_store_batch_batch_ids():
     store = InMemoryStore()
@@ -213,15 +214,15 @@ command_records_and_rows = [
 ]
 
 @pytest.mark.parametrize('command_record, expected_row', command_records_and_rows)
-def test_DatabaseCommandRecords_command_record_to_row(command_record, expected_row):
-    actual_row = _DatabaseCommandRecords(0, DatabaseStore({}))._command_record_to_row(command_record)
+def test_BatchCommandRecordsDatabase_command_record_to_row(command_record, expected_row):
+    actual_row = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._command_record_to_row(command_record)
     assert expected_row == actual_row
 
 @pytest.mark.parametrize('expected_command_record, row', command_records_and_rows)
-def test_DatabaseCommandRecords_row_to_command_record(expected_command_record, row):
+def test_BatchCommandRecordsDatabase_row_to_command_record(expected_command_record, row):
     status, outcome = row
     full_row = expected_command_record.id, expected_command_record.command.page, expected_command_record.command.actions_tpsv(), status, json.dumps(outcome)
-    actual_command_record = _DatabaseCommandRecords(0, DatabaseStore({}))._row_to_command_record(*full_row)
+    actual_command_record = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 
 

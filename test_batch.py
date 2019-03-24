@@ -1,7 +1,7 @@
 import datetime
 
 from action import AddCategoryAction, RemoveCategoryAction # NOQA “unused” import RemoveCategoryAction needed for eval(repr) test
-from batch import NewBatch, OpenBatch
+from batch import NewBatch, OpenBatch, BatchCommandRecordsList
 from command import Command, CommandPlan, CommandEdit # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
 
 from test_command import command1, command2, commandPlan1, commandEdit1
@@ -42,14 +42,15 @@ def test_NewBatch_repr():
 
 datetime1 = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
 datetime2 = datetime.datetime(2019, 3, 17, 13, 48, 16, 844848, tzinfo=datetime.timezone.utc)
-openBatch1 = OpenBatch(5, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', datetime1, datetime2, [commandPlan1, commandEdit1])
+batchCommandRecords1 = BatchCommandRecordsList([commandPlan1, commandEdit1])
+openBatch1 = OpenBatch(5, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', datetime1, datetime2, batchCommandRecords1)
 
 
 def test_OpenBatch_eq_same():
     assert openBatch1 == openBatch1
 
 def test_OpenBatch_eq_equal():
-    assert openBatch1 == OpenBatch(5, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', datetime1, datetime2, [commandPlan1, commandEdit1])
+    assert openBatch1 == OpenBatch(5, 'Lucas Werkmeister', 6198807, 46054761, 'commons.wikimedia.org', datetime1, datetime2, batchCommandRecords1)
 
 def test_OpenBatch_eq_different_type():
     assert openBatch1 != newBatch1
@@ -77,15 +78,10 @@ def test_OpenBatch_eq_different_last_updated():
     assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.user_name, openBatch1.local_user_id, openBatch1.global_user_id, openBatch1.domain, openBatch1.created, datetime1, openBatch1.command_records)
 
 def test_OpenBatch_eq_different_command_records():
-    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.user_name, openBatch1.local_user_id, openBatch1.global_user_id, openBatch1.domain, openBatch1.created, openBatch1.last_updated, [commandPlan1])
+    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.user_name, openBatch1.local_user_id, openBatch1.global_user_id, openBatch1.domain, openBatch1.created, openBatch1.last_updated, BatchCommandRecordsList([commandPlan1]))
 
 def test_OpenBatch_str():
-    assert str(openBatch1) == '''
-# Lucas Werkmeister
-# commons.wikimedia.org
-Page 1|+Category:Cat 1|-Category:Cat 2
-# Page 2|+Category:Cat 3
-'''.strip()
+    assert str(openBatch1) == '''batch #5 on commons.wikimedia.org by Lucas Werkmeister'''
 
 def test_OpenBatch_repr():
     assert eval(repr(openBatch1)) == openBatch1

@@ -1,7 +1,5 @@
 {% extends "base.html" %}
 {% block main %}
-{% set offset = slice.start %}
-{% set limit = slice.stop - slice.start %}
 <h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
 <p>
   Created {{ batch.created | render_datetime }},
@@ -21,12 +19,13 @@
     {% endif %}
   </ul>
 </nav>
-{% for command_record in batch.command_records[slice] %}
+{% set command_records = batch.command_records.get_slice(offset, limit) %}
+{% for command_record in command_records %}
 <div>
   {{ render_command_record(command_record, batch.domain) }}
 </div>
 {% endfor %}
-{% if can_run_commands(batch.command_records[slice]) %}
+{% if can_run_commands(command_records) %}
 <form method="post" action="{{ url_for('run_batch_slice', id=batch.id) }}">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <input name="offset" type="hidden" value="{{ offset }}">

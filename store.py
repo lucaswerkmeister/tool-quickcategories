@@ -7,9 +7,9 @@ import mwapi # type: ignore
 import operator
 import pymysql
 import threading
-from typing import Any, Generator, Iterable, List, MutableSequence, Optional, Sequence, Tuple, overload
+from typing import Any, Generator, List, Optional, Sequence, Tuple
 
-from batch import NewBatch, OpenBatch
+from batch import NewBatch, OpenBatch, BatchCommandRecords, BatchCommandRecordsList
 from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
@@ -61,7 +61,7 @@ class InMemoryStore(BatchStore):
                                domain,
                                created,
                                created,
-                               command_plans)
+                               BatchCommandRecordsList(command_plans))
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
         return open_batch
@@ -134,7 +134,7 @@ class DatabaseStore(BatchStore):
                          domain,
                          created,
                          created,
-                         _DatabaseCommandRecords(batch_id, self))
+                         _BatchCommandRecordsDatabase(batch_id, self))
 
     def get_batch(self, id: int) -> Optional[OpenBatch]:
         with self._connect() as connection:
@@ -160,7 +160,7 @@ class DatabaseStore(BatchStore):
                          domain,
                          created,
                          last_updated,
-                         _DatabaseCommandRecords(id, self))
+                         _BatchCommandRecordsDatabase(id, self))
 
     def get_latest_batches(self) -> Sequence[OpenBatch]:
         with self._connect() as connection:
@@ -173,7 +173,7 @@ class DatabaseStore(BatchStore):
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
 
 
-class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
+class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     def __init__(self, batch_id: int, store: DatabaseStore):
         self.batch_id = batch_id
@@ -248,21 +248,7 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
         else:
             raise ValueError('Unknown command status %d' % status)
 
-    @overload
-    def __getitem__(self, index: int) -> CommandRecord: ...
-    @overload
-    def __getitem__(self, index: slice) -> List[CommandRecord]: ...
-    def __getitem__(self, index): # NOQA
-        if isinstance(index, int):
-            index = slice(index, index + 1)
-            return_first = True
-        else:
-            return_first = False
-        assert isinstance(index, slice)
-        assert isinstance(index.start, int)
-        assert isinstance(index.stop, int)
-        assert index.step in [None, 1]
-
+    def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         command_records = []
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
@@ -270,14 +256,10 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
                               JOIN `actions` ON `command_actions_id` = `actions_id`
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC
-                              LIMIT %s OFFSET %s''', (self.batch_id, index.stop - index.start, index.start))
+                              LIMIT %s OFFSET %s''', (self.batch_id, limit, offset))
             for id, page, actions_tpsv, status, outcome in cursor.fetchall():
                 command_records.append(self._row_to_command_record(id, page, actions_tpsv, status, outcome))
-
-        if return_first:
-            return command_records[0]
-        else:
-            return command_records
+        return command_records
 
     def __len__(self) -> int:
         with self.store._connect() as connection, connection.cursor() as cursor:
@@ -285,19 +267,8 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
             (count,) = cursor.fetchone()
         return count
 
-    @overload
-    def __setitem__(self, index: int, value: CommandRecord) -> None: ...
-    @overload
-    def __setitem__(self, index: slice, value: Iterable[CommandRecord]) -> None: ...
-    def __setitem__(self, index, value): # NOQA
-        if isinstance(index, slice):
-            raise NotImplementedError('Can only set a single command record')
-        if isinstance(value, CommandPlan):
-            raise NotImplementedError('Can only store finished commands')
-        assert isinstance(index, int)
-        assert isinstance(value, CommandFinish)
-
-        status, outcome = self._command_record_to_row(value)
+    def store_finish(self, command_finish: CommandFinish) -> None:
+        status, outcome = self._command_record_to_row(command_finish)
         last_updated = _now()
         last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
 
@@ -305,21 +276,15 @@ class _DatabaseCommandRecords(MutableSequence[CommandRecord]):
             cursor.execute('''UPDATE `command`
                               SET `command_status` = %s, `command_outcome` = %s
                               WHERE `command_id` = %s AND `command_batch` = %s''',
-                           (status, json.dumps(outcome), value.id, self.batch_id))
+                           (status, json.dumps(outcome), command_finish.id, self.batch_id))
             cursor.execute('''UPDATE `batch`
                               SET `batch_last_updated_utc_timestamp` = %s
                               WHERE `batch_id` = %s''', (last_updated_utc_timestamp, self.batch_id))
             connection.commit()
 
-    def __delitem__(self, *args, **kwargs):
-        raise NotImplementedError('Cannot delete commands from a batch')
-
-    def insert(self, *args, **kwargs):
-        raise NotImplementedError('Cannot insert commands into a batch')
-
     def __eq__(self, value: Any) -> bool:
         # limited test to avoid overly expensive full comparison
-        return type(value) is _DatabaseCommandRecords and \
+        return type(value) is _BatchCommandRecordsDatabase and \
             self.batch_id == value.batch_id
 
 

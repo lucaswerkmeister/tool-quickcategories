@@ -11,7 +11,7 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-from typing import cast, Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import yaml
 
 from batch import OpenBatch
@@ -221,9 +221,12 @@ def batch(id: int):
     else:
         flask.g.can_run_commands = False
 
+    offset, limit = slice_from_args(flask.request.args)
+
     return flask.render_template('batch.html',
                                  batch=batch,
-                                 slice=slice_from_args(flask.request.args))
+                                 offset=offset,
+                                 limit=limit)
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
@@ -247,12 +250,10 @@ def run_batch_slice(id: int):
 
     runner = Runner(session, summary_suffix)
 
-    slice = slice_from_args(flask.request.form)
-    offset = cast(int, slice.start) # start is Optional[int], but slice_from_args always returns full slices
-    limit = cast(int, slice.stop) - offset # similar
+    offset, limit = slice_from_args(flask.request.args)
 
     command_plans = {} # type: Dict[int, CommandPlan]
-    for index, command_plan in enumerate(batch.command_records[slice]):
+    for index, command_plan in enumerate(batch.command_records.get_slice(offset, limit)):
         if not isinstance(command_plan, CommandPlan):
             continue
         command_plans[offset+index] = command_plan
@@ -262,13 +263,13 @@ def run_batch_slice(id: int):
     runner.prepare_pages([command_plan.command.page for command_plan in command_plans.values()])
     for index, command_plan in command_plans.items():
         for attempt in range(5):
-            command_record = runner.run_command(command_plan)
-            if isinstance(command_record, CommandFailure) and command_record.can_retry_immediately():
+            command_finish = runner.run_command(command_plan)
+            if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
                 continue
             else:
                 break
-        batch.command_records[index] = command_record
-        if isinstance(command_record, CommandFailure) and not command_record.can_continue_batch():
+        batch.command_records.store_finish(command_finish)
+        if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
             break
 
     return flask.redirect(flask.url_for('batch',
@@ -293,7 +294,7 @@ def oauth_callback():
 def is_wikimedia_domain(domain: str) -> bool:
     return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org', domain) is not None
 
-def slice_from_args(args: dict) -> slice:
+def slice_from_args(args: dict) -> Tuple[int, int]:
     try:
         offset = int(args['offset'])
     except (KeyError, ValueError):
@@ -306,7 +307,7 @@ def slice_from_args(args: dict) -> slice:
         limit = 50
     limit = max(1, min(500, limit))
 
-    return slice(offset, offset+limit)
+    return offset, limit
 
 
 def full_url(endpoint: str, **kwargs) -> str:
