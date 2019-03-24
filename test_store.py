@@ -107,7 +107,7 @@ def test_DatabaseStore_store_batch():
     with temporary_database() as connection_params:
         store = DatabaseStore(connection_params)
         open_batch = store.store_batch(newBatch1, fake_session)
-        command2 = open_batch.command_records[1]
+        command2 = open_batch.command_records.get_slice(1, 1)[0]
 
         with store._connect() as connection:
             with connection.cursor() as cursor:
@@ -133,9 +133,7 @@ def test_DatabaseStore_get_batch():
         assert loaded_batch.domain == 'commons.wikimedia.org'
 
         assert len(loaded_batch.command_records) == 2
-        assert loaded_batch.command_records[0] == stored_batch.command_records[0]
-        assert loaded_batch.command_records[1] == stored_batch.command_records[1]
-        assert loaded_batch.command_records[0:2] == stored_batch.command_records[0:2]
+        assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
 
 def test_DatabaseStore_get_batch_missing():
     with temporary_database() as connection_params:
@@ -150,20 +148,20 @@ def test_DatabaseStore_update_batch():
         stored_batch = store.store_batch(newBatch1, fake_session)
         loaded_batch = store.get_batch(stored_batch.id)
 
-        [command_plan_1, command_plan_2] = loaded_batch.command_records[0:2]
+        [command_plan_1, command_plan_2] = loaded_batch.command_records.get_slice(0, 2)
 
         command_edit = CommandEdit(command_plan_1.id, command_plan_1.command, 1234, 1235)
-        loaded_batch.command_records[0] = command_edit
-        command_edit_loaded = loaded_batch.command_records[0]
+        loaded_batch.command_records.store_finish(command_edit)
+        command_edit_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
         assert command_edit == command_edit_loaded
 
         command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
         time.sleep(1) # make sure that this update increases last_updated
-        loaded_batch.command_records[1] = command_noop
-        command_noop_loaded = loaded_batch.command_records[0]
+        loaded_batch.command_records.store_finish(command_noop)
+        command_noop_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
         assert command_noop == command_noop_loaded
 
-        assert stored_batch.command_records[0:2] == loaded_batch.command_records[0:2]
+        assert stored_batch.command_records.get_slice(0, 2) == loaded_batch.command_records.get_slice(0, 2)
 
         # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
         reloaded_batch = store.get_batch(stored_batch.id)
