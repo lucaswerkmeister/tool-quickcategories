@@ -12,7 +12,7 @@ from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
 
 from test_batch import newBatch1
-from test_command import commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
+from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
 from test_utils import FakeSession
 
 
@@ -200,9 +200,11 @@ def test_DatabaseStore_utc_timestamp_to_datetime():
     assert store._utc_timestamp_to_datetime(1552829008) == dt
 
 
-command_records_and_rows = [
-    # (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)), # not supported for update, but perhaps turn into test for initial store?
-    # (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)), # not supported for update, but perhaps turn into test for make_plans_pending?
+command_unfinishes_and_rows = [
+    (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
+    (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
+]
+command_finishes_and_rows = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
@@ -214,15 +216,16 @@ command_records_and_rows = [
     (commandWikiReadOnly2, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
 ]
 
-@pytest.mark.parametrize('command_record, expected_row', command_records_and_rows)
-def test_BatchCommandRecordsDatabase_command_record_to_row(command_record, expected_row):
-    actual_row = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._command_record_to_row(command_record)
+@pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
+def test_BatchCommandRecordsDatabase_command_finish_to_row(command_finish, expected_row):
+    actual_row = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._command_finish_to_row(command_finish)
     assert expected_row == actual_row
 
-@pytest.mark.parametrize('expected_command_record, row', command_records_and_rows)
+@pytest.mark.parametrize('expected_command_record, row', command_unfinishes_and_rows + command_finishes_and_rows)
 def test_BatchCommandRecordsDatabase_row_to_command_record(expected_command_record, row):
     status, outcome = row
-    full_row = expected_command_record.id, expected_command_record.command.page, expected_command_record.command.actions_tpsv(), status, json.dumps(outcome)
+    outcome_json = json.dumps(outcome) if outcome else None
+    full_row = expected_command_record.id, expected_command_record.command.page, expected_command_record.command.actions_tpsv(), status, outcome_json
     actual_command_record = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 

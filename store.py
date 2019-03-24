@@ -181,28 +181,28 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         self.batch_id = batch_id
         self.store = store
 
-    def _command_record_to_row(self, command_record: CommandRecord) -> Tuple[int, dict]:
-        if isinstance(command_record, CommandEdit):
+    def _command_finish_to_row(self, command_finish: CommandFinish) -> Tuple[int, dict]:
+        if isinstance(command_finish, CommandEdit):
             status = DatabaseStore._COMMAND_STATUS_EDIT
-            outcome = {'base_revision': command_record.base_revision, 'revision': command_record.revision} # type: dict
-        elif isinstance(command_record, CommandNoop):
+            outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision} # type: dict
+        elif isinstance(command_finish, CommandNoop):
             status = DatabaseStore._COMMAND_STATUS_NOOP
-            outcome = {'revision': command_record.revision}
-        elif isinstance(command_record, CommandPageMissing):
+            outcome = {'revision': command_finish.revision}
+        elif isinstance(command_finish, CommandPageMissing):
             status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
-            outcome = {'curtimestamp': command_record.curtimestamp}
-        elif isinstance(command_record, CommandEditConflict):
+            outcome = {'curtimestamp': command_finish.curtimestamp}
+        elif isinstance(command_finish, CommandEditConflict):
             status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
             outcome = {}
-        elif isinstance(command_record, CommandMaxlagExceeded):
+        elif isinstance(command_finish, CommandMaxlagExceeded):
             status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
-            outcome = {'retry_after_utc_timestamp': self.store._datetime_to_utc_timestamp(command_record.retry_after)}
-        elif isinstance(command_record, CommandBlocked):
+            outcome = {'retry_after_utc_timestamp': self.store._datetime_to_utc_timestamp(command_finish.retry_after)}
+        elif isinstance(command_finish, CommandBlocked):
             status = DatabaseStore._COMMAND_STATUS_BLOCKED
-            outcome = {'auto': command_record.auto, 'blockinfo': command_record.blockinfo}
-        elif isinstance(command_record, CommandWikiReadOnly):
+            outcome = {'auto': command_finish.auto, 'blockinfo': command_finish.blockinfo}
+        elif isinstance(command_finish, CommandWikiReadOnly):
             status = DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY
-            outcome = {'reason': command_record.reason}
+            outcome = {'reason': command_finish.reason}
         else:
             raise ValueError('Unknown command type')
 
@@ -323,7 +323,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         return command_records
 
     def store_finish(self, command_finish: CommandFinish) -> None:
-        status, outcome = self._command_record_to_row(command_finish)
+        status, outcome = self._command_finish_to_row(command_finish)
         last_updated = _now()
         last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
 
