@@ -108,5 +108,10 @@ class Runner():
                 return CommandWikiReadOnly(plan.id, plan.command, reason)
             else:
                 raise e
+
+        if 'nochange' in response['edit']:
+            return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])
+
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
+        # TODO update prepared_page?
         return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])

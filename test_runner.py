@@ -4,7 +4,7 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from runner import Runner
 
 from test_utils import FakeSession
@@ -52,6 +52,78 @@ def test_run_command():
                     'assert': 'user'})
     expected = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert expected == actual
+
+def test_with_nochange():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'pageid': 58692,
+                        'ns': 0,
+                        'title': 'Main page',
+                        'revisions': [
+                            {
+                                'revid': 195259,
+                                'parentid': 114947,
+                                'timestamp': '2014-02-23T15:14:40Z',
+                                'slots': {
+                                    'main': {
+                                        'contentmodel': 'wikitext',
+                                        'contentformat': 'text/x-wiki',
+                                        'content': 'Unit Testing 1, 2, 3... External link: http://some-fake-site.com/?p=1774943982 Hit me with a captcha...',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        'name': 'comma-separator',
+                        'content': ', ',
+                    },
+                    {
+                        'name': 'semicolon-separator',
+                        'content': '; ',
+                    },
+                    {
+                        'name': 'parentheses',
+                        'content': '($1)',
+                    },
+                ],
+            },
+        },
+        {
+            'edit': {
+                'result': 'Success',
+                'pageid': 58692,
+                'title': 'Main page',
+                'contentmodel': 'wikitext',
+                'nochange': ''
+            }
+        }
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_plan)
+
+    assert isinstance(command_record, CommandNoop)
+    assert command_record.revision == 195259
 
 def test_with_missing_page():
     curtimestamp = '2019-03-11T23:33:30Z'
