@@ -4,7 +4,7 @@ import os
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from runner import Runner
 
 from test_utils import FakeSession
@@ -33,7 +33,7 @@ def test_run_command():
                                  'summary': 'setup',
                                  'token': csrftoken,
                                  'assert': 'user'})
-    edit = Runner(session).run_command(CommandPlan(0, command))
+    edit = Runner(session).run_command(CommandPending(0, command))
 
     assert isinstance(edit, CommandEdit)
     assert edit.base_revision == setup_edit['edit']['newrevid']
@@ -119,8 +119,8 @@ def test_with_nochange():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandNoop)
     assert command_record.revision == 195259
@@ -173,10 +173,10 @@ def test_with_missing_page():
         'curtimestamp': curtimestamp,
     }
 
-    command_plan = CommandPlan(0, Command('Missing page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Missing page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
-    assert command_record == CommandPageMissing(command_plan.id, command_plan.command, curtimestamp)
+    assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
 def test_with_missing_page_unnormalized():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -232,10 +232,10 @@ def test_with_missing_page_unnormalized():
         'curtimestamp': curtimestamp,
     }
 
-    command_plan = CommandPlan(0, Command('missing page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('missing page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
-    assert command_record == CommandPageMissing(command_plan.id, command_plan.command, curtimestamp)
+    assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
 def test_with_edit_conflict():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -299,10 +299,10 @@ def test_with_edit_conflict():
 
     assert 'Main page' in runner.prepared_pages
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
-    assert command_record == CommandEditConflict(command_plan.id, command_plan.command)
+    assert command_record == CommandEditConflict(command_pending.id, command_pending.command)
     assert 'Main page' not in runner.prepared_pages
 
 def test_with_maxlag_exceeded():
@@ -367,8 +367,8 @@ def test_with_maxlag_exceeded():
 
     assert 'Main page' in runner.prepared_pages
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandMaxlagExceeded)
     assert command_record.retry_after.tzinfo == datetime.timezone.utc
@@ -436,8 +436,8 @@ def test_with_blocked():
 
     assert 'Main page' in runner.prepared_pages
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandBlocked)
     assert not command_record.auto
@@ -505,8 +505,8 @@ def test_with_autoblocked():
 
     assert 'Main page' in runner.prepared_pages
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandBlocked)
     assert command_record.auto
@@ -574,8 +574,8 @@ def test_with_readonly():
 
     assert 'Main page' in runner.prepared_pages
 
-    command_plan = CommandPlan(0, Command('Main page', [AddCategoryAction('Added cat')]))
-    command_record = runner.run_command(command_plan)
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandWikiReadOnly)
     # would be nice to assert command_record.reason once Runner can record it

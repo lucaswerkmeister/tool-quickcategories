@@ -2,7 +2,7 @@ import datetime
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -65,6 +65,9 @@ def test_CommandPlan_eq_same():
 def test_CommandPlan_eq_equal():
     assert commandPlan1 == CommandPlan(commandPlan1.id, commandPlan1.command)
 
+def test_CommandPlan_eq_different_type():
+    assert commandPlan1 != commandPending1
+
 def test_CommandPlan_eq_different_id():
     assert commandPlan1 != CommandPlan(43, commandPlan1.command)
 
@@ -76,6 +79,31 @@ def test_CommandPlan_str():
 
 def test_CommandPlan_repr():
     assert eval(repr(commandPlan1)) == commandPlan1
+
+
+commandPending1 = CommandPending(42, command1)
+
+
+def test_CommandPending_eq_same():
+    assert commandPending1 == commandPending1
+
+def test_CommandPending_eq_equal():
+    assert commandPending1 == CommandPending(commandPending1.id, commandPending1.command)
+
+def test_CommandPending_eq_different_type():
+    assert commandPending1 != commandPlan1
+
+def test_CommandPending_eq_different_id():
+    assert commandPending1 != CommandPending(43, commandPending1.command)
+
+def test_CommandPending_eq_different_command():
+    assert commandPending1 != CommandPending(commandPending1.id, command2)
+
+def test_CommandPending_str():
+    assert str(commandPending1) == str(command1)
+
+def test_CommandPending_repr():
+    assert eval(repr(commandPending1)) == commandPending1
 
 
 commandEdit1 = CommandEdit(42, command2, 1234, 1235)

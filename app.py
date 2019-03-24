@@ -11,11 +11,11 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 import yaml
 
 from batch import OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
 import store
@@ -116,6 +116,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
         command_record_markup = flask.render_template('command_plan.html',
                                                       domain=domain,
                                                       command_plan=command_record)
+    elif isinstance(command_record, CommandPending):
+        command_record_markup = flask.render_template('command_pending.html',
+                                                      domain=domain,
+                                                      command_pending=command_record)
     elif isinstance(command_record, CommandEdit):
         command_record_markup = flask.render_template('command_edit.html',
                                                       domain=domain,
@@ -251,19 +255,12 @@ def run_batch_slice(id: int):
     runner = Runner(session, summary_suffix)
 
     offset, limit = slice_from_args(flask.request.args)
+    command_pendings = batch.command_records.make_plans_pending(offset, limit)
 
-    command_plans = {} # type: Dict[int, CommandPlan]
-    for index, command_plan in enumerate(batch.command_records.get_slice(offset, limit)):
-        if not isinstance(command_plan, CommandPlan):
-            continue
-        command_plans[offset+index] = command_plan
-        if len(command_plans) >= 50:
-            break
-
-    runner.prepare_pages([command_plan.command.page for command_plan in command_plans.values()])
-    for index, command_plan in command_plans.items():
+    runner.prepare_pages([command_pending.command.page for command_pending in command_pendings])
+    for command_pending in command_pendings:
         for attempt in range(5):
-            command_finish = runner.run_command(command_plan)
+            command_finish = runner.run_command(command_pending)
             if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
                 continue
             else:

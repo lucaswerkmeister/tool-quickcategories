@@ -202,6 +202,7 @@ def test_DatabaseStore_utc_timestamp_to_datetime():
 
 command_records_and_rows = [
     # (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)), # not supported for update, but perhaps turn into test for initial store?
+    # (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)), # not supported for update, but perhaps turn into test for make_plans_pending?
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),

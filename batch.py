@@ -1,7 +1,7 @@
 import datetime
 from typing import Any, List
 
-from command import Command, CommandRecord, CommandFinish
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandFinish
 
 
 class NewBatch:
@@ -82,6 +82,8 @@ class BatchCommandRecords:
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]: ...
 
+    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]: ...
+
     def store_finish(self, command_finish: CommandFinish) -> None: ...
 
     def __len__(self) -> int: ...
@@ -95,6 +97,16 @@ class BatchCommandRecordsList(BatchCommandRecords):
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         return self.command_records[offset:offset+limit]
+
+    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
+        command_pendings = []
+        for index, command_plan in enumerate(self.command_records[offset:offset+limit]):
+            if not isinstance(command_plan, CommandPlan):
+                continue
+            command_pending = CommandPending(command_plan.id, command_plan.command)
+            self.command_records[index] = command_pending
+            command_pendings.append(command_pending)
+        return command_pendings
 
     def store_finish(self, command_finish: CommandFinish):
         for index, command_record in enumerate(self.command_records):

@@ -2,7 +2,7 @@ import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPlan, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import siteinfo
 
 
@@ -50,17 +50,17 @@ class Runner():
         for normalization in response['query'].get('normalized', {}):
             self.prepared_pages[normalization['from']] = self.prepared_pages[normalization['to']]
 
-    def run_command(self, plan: CommandPlan) -> CommandFinish:
-        title = plan.command.page
+    def run_command(self, command_pending: CommandPending) -> CommandFinish:
+        title = command_pending.command.page
         if title not in self.prepared_pages:
             self.prepare_pages([title])
         prepared_page = self.prepared_pages[title]
         category_info = siteinfo.category_info(self.session)
 
         if 'missing' in prepared_page:
-            return CommandPageMissing(plan.id, plan.command, curtimestamp=prepared_page['curtimestamp'])
+            return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=prepared_page['curtimestamp'])
 
-        wikitext, actions = plan.command.apply(prepared_page['wikitext'], category_info)
+        wikitext, actions = command_pending.command.apply(prepared_page['wikitext'], category_info)
         summary = ''
         for action, noop in actions:
             action_summary = action.summary(category_info)
@@ -75,7 +75,7 @@ class Runner():
             summary += self.summary_suffix
 
         if wikitext == prepared_page['wikitext']:
-            return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])
+            return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
         try:
             response = self.session.post(**{'action': 'edit',
                                             'pageid': prepared_page['page_id'],
@@ -93,25 +93,25 @@ class Runner():
         except mwapi.errors.APIError as e:
             if e.code == 'editconflict':
                 del self.prepared_pages[title] # this must be outdated now
-                return CommandEditConflict(plan.id, plan.command)
+                return CommandEditConflict(command_pending.id, command_pending.command)
             elif e.code == 'maxlag':
                 retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
                 retry_after = retry_after.replace(microsecond=0)
-                return CommandMaxlagExceeded(plan.id, plan.command, retry_after)
+                return CommandMaxlagExceeded(command_pending.id, command_pending.command, retry_after)
             elif e.code == 'blocked' or e.code == 'autoblocked':
                 auto = e.code == 'autoblocked'
                 blockinfo = None # the API returns this in a 'blockinfo' member of the 'error' object, but mwapi hides that from us :(
-                return CommandBlocked(plan.id, plan.command, auto, blockinfo)
+                return CommandBlocked(command_pending.id, command_pending.command, auto, blockinfo)
             elif e.code == 'readonly':
                 reason = None # the API returns this in a 'readonlyreason' member of the 'error' object, but mwapi hides that from us :(
-                return CommandWikiReadOnly(plan.id, plan.command, reason)
+                return CommandWikiReadOnly(command_pending.id, command_pending.command, reason)
             else:
                 raise e
 
         if 'nochange' in response['edit']:
-            return CommandNoop(plan.id, plan.command, prepared_page['base_revid'])
+            return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
 
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
         # TODO update prepared_page?
-        return CommandEdit(plan.id, plan.command, response['edit']['oldrevid'], response['edit']['newrevid'])
+        return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])

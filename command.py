@@ -74,6 +74,21 @@ class CommandPlan(CommandRecord):
         return 'CommandPlan(' + repr(self.id) + ', ' + repr(self.command) + ')'
 
 
+class CommandPending(CommandRecord):
+    """A command that is about to be run or currently running."""
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandPending and \
+            self.id == value.id and \
+            self.command == value.command
+
+    def __str__(self) -> str:
+        return str(self.command)
+
+    def __repr__(self) -> str:
+        return 'CommandPending(' + repr(self.id) + ', ' + repr(self.command) + ')'
+
+
 class CommandFinish(CommandRecord):
     """A command that was intended to be run at some point
     and should now no longer be run."""

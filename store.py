@@ -2,6 +2,7 @@ import cachetools
 import contextlib
 import datetime
 import hashlib
+import itertools
 import json
 import mwapi # type: ignore
 import operator
@@ -10,7 +11,7 @@ import threading
 from typing import Any, Generator, List, Optional, Sequence, Tuple
 
 from batch import NewBatch, OpenBatch, BatchCommandRecords, BatchCommandRecordsList
-from command import Command, CommandPlan, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
 
@@ -80,6 +81,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_PLAN = 0
     _COMMAND_STATUS_EDIT = 1
     _COMMAND_STATUS_NOOP = 2
+    _COMMAND_STATUS_PENDING = 16
     _COMMAND_STATUS_PAGE_MISSING = 129
     _COMMAND_STATUS_EDIT_CONFLICT = 130
     _COMMAND_STATUS_MAXLAG_EXCEEDED = 131
@@ -225,6 +227,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             return CommandNoop(id,
                                command,
                                revision=outcome_dict['revision'])
+        elif status == DatabaseStore._COMMAND_STATUS_PENDING:
+            assert outcome is None
+            return CommandPending(id, command)
         elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
             return CommandPageMissing(id,
                                       command,
@@ -266,6 +271,56 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             cursor.execute('SELECT COUNT(*) FROM `command` WHERE `command_batch` = %s', (self.batch_id,))
             (count,) = cursor.fetchone()
         return count
+
+    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
+        with self.store._connect() as connection:
+            command_ids = [] # List[int]
+
+            with connection.cursor() as cursor:
+                # the extra subquery layer below is necessary to work around a MySQL/MariaDB restriction;
+                # based on https://stackoverflow.com/a/24777566/1420237
+                cursor.execute('''SELECT `command_id`
+                                  FROM `command`
+                                  WHERE `command_id` IN ( SELECT * FROM (
+                                    SELECT `command_id`
+                                    FROM `command`
+                                    WHERE `command_batch` = %s
+                                    ORDER BY `command_id` ASC
+                                    LIMIT %s OFFSET %s
+                                  ) AS temporary_table)
+                                  AND `command_status` = %s
+                                  ORDER BY `command_id` ASC
+                                  FOR UPDATE''', (self.batch_id, limit, offset, DatabaseStore._COMMAND_STATUS_PLAN))
+                for (command_id,) in cursor.fetchall():
+                    command_ids.append(command_id)
+
+            if not command_ids:
+                connection.commit() # finish the FOR UPDATE
+                return []
+
+            with connection.cursor() as cursor:
+                cursor.executemany('''UPDATE `command`
+                                      SET `command_status` = %s
+                                      WHERE `command_id` = %s AND `command_batch` = %s''',
+                                   zip(itertools.repeat(DatabaseStore._COMMAND_STATUS_PENDING),
+                                       command_ids,
+                                       itertools.repeat(self.batch_id)))
+            connection.commit()
+
+            command_records = []
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
+                                  FROM `command`
+                                  JOIN `actions` ON `command_actions_id` = `actions_id`
+                                  WHERE `command_id` IN (%s)''' % ', '.join(['%s'] * len(command_ids)),
+                               command_ids)
+            for id, page, actions_tpsv, status, outcome in cursor.fetchall():
+                assert status == DatabaseStore._COMMAND_STATUS_PENDING
+                assert outcome is None
+                command_record = self._row_to_command_record(id, page, actions_tpsv, status, outcome)
+                assert isinstance(command_record, CommandPending)
+                command_records.append(command_record)
+        return command_records
 
     def store_finish(self, command_finish: CommandFinish) -> None:
         status, outcome = self._command_record_to_row(command_finish)
