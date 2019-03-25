@@ -108,7 +108,7 @@ class BatchCommandRecordsList(BatchCommandRecords):
             command_pendings.append(command_pending)
         return command_pendings
 
-    def store_finish(self, command_finish: CommandFinish):
+    def store_finish(self, command_finish: CommandFinish) -> None:
         for index, command_record in enumerate(self.command_records):
             if command_record.id == command_finish.id:
                 self.command_records[index] = command_finish
