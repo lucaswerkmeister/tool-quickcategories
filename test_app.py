@@ -1,4 +1,4 @@
-import pytest
+import pytest # type: ignore
 
 import app as quickcategories
 

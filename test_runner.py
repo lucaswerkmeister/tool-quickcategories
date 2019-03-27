@@ -1,7 +1,7 @@
 import datetime
-import mwapi
+import mwapi # type: ignore
 import os
-import pytest
+import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly

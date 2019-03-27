@@ -3,13 +3,14 @@ import datetime
 import json
 import os
 import pymysql
-import pytest
+import pytest # type: ignore
 import random
 import string
 import time
+from typing import List, Optional, Tuple
 
 from batch import OpenBatch, ClosedBatch
-from command import CommandEdit, CommandNoop
+from command import CommandRecord, CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
 
 from test_batch import newBatch1
@@ -221,7 +222,7 @@ def test_DatabaseStore_utc_timestamp_to_datetime():
 command_unfinishes_and_rows = [
     (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
     (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
-]
+] # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
 command_finishes_and_rows = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
@@ -232,7 +233,7 @@ command_finishes_and_rows = [
     (commandBlocked2, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
     (commandWikiReadOnly1, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance'})),
     (commandWikiReadOnly2, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
-]
+] # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
 def test_BatchCommandRecordsDatabase_command_finish_to_row(command_finish, expected_row):
