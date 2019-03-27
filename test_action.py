@@ -86,7 +86,6 @@ def test_AddCategoryAction_eq_equal():
 
 def test_AddCategoryAction_eq_different_type():
     assert addCategory1 != RemoveCategoryAction(addCategory1.category)
-    assert addCategory1 is not None
 
 def test_AddCategoryAction_eq_different_category():
     assert addCategory1 != addCategory3
@@ -144,7 +143,6 @@ def test_RemoveCategoryAction_eq_equal():
 
 def test_RemoveCategoryAction_eq_different_type():
     assert removeCategory2 != AddCategoryAction(removeCategory2.category)
-    assert removeCategory2 is not None
 
 def test_RemoveCategoryAction_eq_different_category():
     assert removeCategory2 != RemoveCategoryAction('Cat 4')

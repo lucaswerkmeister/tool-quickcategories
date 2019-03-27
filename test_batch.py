@@ -25,7 +25,6 @@ def test_NewBatch_eq_equal():
 
 def test_NewBatch_eq_different_type():
     assert newBatch1 != command1
-    assert newBatch1 is not None
 
 def test_NewBatch_eq_different_commands():
     assert newBatch1 != NewBatch([command1])
@@ -56,7 +55,6 @@ def test_OpenBatch_eq_equal():
 def test_OpenBatch_eq_different_type():
     assert openBatch1 != newBatch1
     assert openBatch1 != closedBatch1
-    assert openBatch1 is not None
 
 def test_OpenBatch_eq_different_id():
     assert openBatch1 != OpenBatch(6, openBatch1.user_name, openBatch1.local_user_id, openBatch1.global_user_id, openBatch1.domain, openBatch1.created, openBatch1.last_updated, openBatch1.command_records)
@@ -98,7 +96,6 @@ def test_ClosedBatch_eq_equal():
 def test_ClosedBatch_eq_different_type():
     assert closedBatch1 != newBatch1
     assert closedBatch1 != openBatch1
-    assert closedBatch1 is not None
 
 def test_ClosedBatch_eq_different_id():
     assert closedBatch1 != ClosedBatch(6, closedBatch1.user_name, closedBatch1.local_user_id, closedBatch1.global_user_id, closedBatch1.domain, closedBatch1.created, closedBatch1.last_updated, closedBatch1.command_records)
