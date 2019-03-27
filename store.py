@@ -8,9 +8,9 @@ import mwapi # type: ignore
 import operator
 import pymysql
 import threading
-from typing import Any, Generator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
-from batch import NewBatch, OpenBatch, BatchCommandRecords, BatchCommandRecordsList
+from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchCommandRecordsList
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
@@ -34,9 +34,9 @@ class BatchStore:
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch: ...
 
-    def get_batch(self, id: int) -> Optional[OpenBatch]: ...
+    def get_batch(self, id: int) -> Optional[StoredBatch]: ...
 
-    def get_latest_batches(self) -> Sequence[OpenBatch]: ...
+    def get_latest_batches(self) -> Sequence[StoredBatch]: ...
 
 
 class InMemoryStore(BatchStore):
@@ -44,7 +44,7 @@ class InMemoryStore(BatchStore):
     def __init__(self):
         self.next_batch_id = 1
         self.next_command_id = 1
-        self.batches = {}
+        self.batches = {} # type: Dict[int, StoredBatch]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         command_plans = [] # type: List[CommandRecord]
@@ -67,16 +67,33 @@ class InMemoryStore(BatchStore):
         self.batches[open_batch.id] = open_batch
         return open_batch
 
-    def get_batch(self, id: int) -> Optional[OpenBatch]:
-        return self.batches.get(id)
+    def get_batch(self, id: int) -> Optional[StoredBatch]:
+        stored_batch = self.batches.get(id)
+        if stored_batch is None:
+            return None
 
-    def get_latest_batches(self) -> Sequence[OpenBatch]:
-        return [self.batches[id] for id in sorted(self.batches.keys(), reverse=True)[:10]]
+        command_records = cast(BatchCommandRecordsList, stored_batch.command_records).command_records
+        if isinstance(stored_batch, OpenBatch) and \
+           all(map(lambda command_record: isinstance(command_record, CommandFinish), command_records)):
+            stored_batch = ClosedBatch(stored_batch.id,
+                                       stored_batch.user_name,
+                                       stored_batch.local_user_id,
+                                       stored_batch.global_user_id,
+                                       stored_batch.domain,
+                                       stored_batch.created,
+                                       stored_batch.last_updated,
+                                       stored_batch.command_records)
+            self.batches[id] = stored_batch
+        return stored_batch
+
+    def get_latest_batches(self) -> Sequence[StoredBatch]:
+        return [cast(StoredBatch, self.get_batch(id)) for id in sorted(self.batches.keys(), reverse=True)[:10]]
 
 
 class DatabaseStore(BatchStore):
 
     _BATCH_STATUS_OPEN = 0
+    _BATCH_STATUS_CLOSED = 128
 
     _COMMAND_STATUS_PLAN = 0
     _COMMAND_STATUS_EDIT = 1
@@ -138,7 +155,7 @@ class DatabaseStore(BatchStore):
                          created,
                          _BatchCommandRecordsDatabase(batch_id, self))
 
-    def get_batch(self, id: int) -> Optional[OpenBatch]:
+    def get_batch(self, id: int) -> Optional[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
@@ -150,21 +167,32 @@ class DatabaseStore(BatchStore):
             return None
         return self._result_to_batch(result)
 
-    def _result_to_batch(self, result: tuple) -> OpenBatch:
+    def _result_to_batch(self, result: tuple) -> StoredBatch:
         id, user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
-        assert status == DatabaseStore._BATCH_STATUS_OPEN
         created = self._utc_timestamp_to_datetime(created_utc_timestamp)
         last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
-        return OpenBatch(id,
-                         user_name,
-                         local_user_id,
-                         global_user_id,
-                         domain,
-                         created,
-                         last_updated,
-                         _BatchCommandRecordsDatabase(id, self))
+        if status == DatabaseStore._BATCH_STATUS_OPEN:
+            return OpenBatch(id,
+                             user_name,
+                             local_user_id,
+                             global_user_id,
+                             domain,
+                             created,
+                             last_updated,
+                             _BatchCommandRecordsDatabase(id, self))
+        elif status == DatabaseStore._BATCH_STATUS_CLOSED:
+            return ClosedBatch(id,
+                               user_name,
+                               local_user_id,
+                               global_user_id,
+                               domain,
+                               created,
+                               last_updated,
+                               _BatchCommandRecordsDatabase(id, self))
+        else:
+            raise ValueError('Unknown batch type')
 
-    def get_latest_batches(self) -> Sequence[OpenBatch]:
+    def get_latest_batches(self) -> Sequence[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
@@ -336,6 +364,18 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               SET `batch_last_updated_utc_timestamp` = %s
                               WHERE `batch_id` = %s''', (last_updated_utc_timestamp, self.batch_id))
             connection.commit()
+            cursor.execute('''SELECT 1
+                              FROM `command`
+                              WHERE `command_batch` = %s
+                              AND `command_status` IN (%s, %s)
+                              LIMIT 1''',
+                           (self.batch_id, DatabaseStore._COMMAND_STATUS_PLAN, DatabaseStore._COMMAND_STATUS_PENDING))
+            if not cursor.fetchone():
+                cursor.execute('''UPDATE `batch`
+                                  SET `batch_status` = %s
+                                  WHERE `batch_id` = %s''',
+                               (DatabaseStore._BATCH_STATUS_CLOSED, self.batch_id))
+                connection.commit()
 
     def __eq__(self, value: Any) -> bool:
         # limited test to avoid overly expensive full comparison

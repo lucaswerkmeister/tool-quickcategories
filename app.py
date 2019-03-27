@@ -14,7 +14,7 @@ import toolforge
 from typing import List, Optional, Tuple
 import yaml
 
-from batch import OpenBatch
+from batch import StoredBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
@@ -165,7 +165,7 @@ def render_datetime(dt: datetime.datetime) -> flask.Markup:
             flask.Markup(r'</time>'))
 
 @app.template_global()
-def render_batch_user(batch: OpenBatch) -> flask.Markup:
+def render_batch_user(batch: StoredBatch) -> flask.Markup:
     return (flask.Markup(r'<a href="https://') +
             flask.Markup.escape(batch.domain) +
             flask.Markup(r'/wiki/Special:Redirect/user/') +

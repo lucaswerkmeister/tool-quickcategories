@@ -30,8 +30,8 @@ class NewBatch:
         return 'NewBatch(' + repr(self.commands) + ')'
 
 
-class OpenBatch:
-    """A list of commands to be performed for one user that has been registered but not completed yet."""
+class StoredBatch:
+    """A list of commands to be performed for one user that has been registered."""
 
     def __init__(self,
                  id: int,
@@ -51,6 +51,10 @@ class OpenBatch:
         self.last_updated = last_updated
         self.command_records = command_records
 
+
+class OpenBatch(StoredBatch):
+    """A list of commands to be performed for one user that has been registered but not completed yet."""
+
     def __eq__(self, value: Any) -> bool:
         return type(value) is OpenBatch and \
             self.id == value.id and \
@@ -67,6 +71,35 @@ class OpenBatch:
 
     def __repr__(self) -> str:
         return 'OpenBatch(' + \
+            repr(self.id) + ', ' + \
+            repr(self.user_name) + ', ' + \
+            repr(self.local_user_id) + ', ' + \
+            repr(self.global_user_id) + ', ' + \
+            repr(self.domain) + ', ' + \
+            repr(self.created) + ', ' + \
+            repr(self.last_updated) + ', ' + \
+            repr(self.command_records) + ')'
+
+
+class ClosedBatch(StoredBatch):
+    """A list of commands that were performed for one user."""
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is ClosedBatch and \
+            self.id == value.id and \
+            self.user_name == value.user_name and \
+            self.local_user_id == value.local_user_id and \
+            self.global_user_id == value.global_user_id and \
+            self.domain == value.domain and \
+            self.created == value.created and \
+            self.last_updated == value.last_updated and \
+            self.command_records == value.command_records
+
+    def __str__(self) -> str:
+        return 'batch #%d on %s by %s' % (self.id, self.domain, self.user_name)
+
+    def __repr__(self) -> str:
+        return 'ClosedBatch(' + \
             repr(self.id) + ', ' + \
             repr(self.user_name) + ', ' + \
             repr(self.local_user_id) + ', ' + \

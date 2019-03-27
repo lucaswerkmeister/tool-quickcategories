@@ -8,6 +8,7 @@ import random
 import string
 import time
 
+from batch import OpenBatch, ClosedBatch
 from command import CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
 
@@ -69,6 +70,15 @@ def test_InMemoryStore_get_latest_batches():
         open_batches.append(store.store_batch(newBatch1, fake_session))
     open_batches.reverse()
     assert open_batches[:10] == store.get_latest_batches()
+
+def test_InMemoryStore_closes_batch():
+    store = InMemoryStore()
+    open_batch = store.store_batch(newBatch1, fake_session)
+    [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+    open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
+    assert type(store.get_batch(open_batch.id)) is OpenBatch
+    open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
+    assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
 
 @contextlib.contextmanager
@@ -166,6 +176,16 @@ def test_DatabaseStore_update_batch():
         # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
         reloaded_batch = store.get_batch(stored_batch.id)
         assert reloaded_batch.last_updated > reloaded_batch.created
+
+def test_DatabaseStore_closes_batch():
+    with temporary_database() as connection_params:
+        store = DatabaseStore(connection_params)
+        open_batch = store.store_batch(newBatch1, fake_session)
+        [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+        open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
+        assert type(store.get_batch(open_batch.id)) is OpenBatch
+        open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
+        assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
 def test_DatabaseStore_get_latest_batches():
     with temporary_database() as connection_params:

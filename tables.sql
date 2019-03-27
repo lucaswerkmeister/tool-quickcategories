@@ -22,7 +22,7 @@ CREATE TABLE command (
 CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
 
-CREATE INDEX command_batch ON command (command_batch);
+CREATE INDEX command_batch_status ON command (command_batch, command_status);
 
 CREATE TABLE domain (
   domain_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
