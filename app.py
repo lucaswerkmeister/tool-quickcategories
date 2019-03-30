@@ -254,7 +254,7 @@ def run_batch_slice(id: int):
 
     runner = Runner(session, summary_suffix)
 
-    offset, limit = slice_from_args(flask.request.args)
+    offset, limit = slice_from_args(flask.request.form)
     command_pendings = batch.command_records.make_plans_pending(offset, limit)
 
     runner.prepare_pages([command_pending.command.page for command_pending in command_pendings])
