@@ -2,6 +2,7 @@
 {% block main %}
 <h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
 <p>
+  Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
   Created {{ batch.created | render_datetime }},
   last updated {{ batch.last_updated | render_datetime }}.
 </p>
