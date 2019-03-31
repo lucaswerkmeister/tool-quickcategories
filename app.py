@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import flask # type: ignore
+import flask
 import humanize
 import mwapi # type: ignore
 import mwoauth # type: ignore
