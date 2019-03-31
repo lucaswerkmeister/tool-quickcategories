@@ -5,6 +5,7 @@ import hashlib
 import itertools
 import json
 import mwapi # type: ignore
+import mwoauth # type: ignore
 import operator
 import pymysql
 import requests_oauthlib # type: ignore
@@ -42,6 +43,8 @@ class BatchStore:
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None: ...
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None: ...
+
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]: ...
 
 
 class InMemoryStore(BatchStore):
@@ -109,6 +112,20 @@ class InMemoryStore(BatchStore):
             stopped_backgrounds.append((started, started_session, stopped, session))
             self.stopped_backgrounds[batch.id] = stopped_backgrounds
             del self.started_backgrounds[batch.id]
+
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
+        batch_ids_by_last_updated = sorted(self.started_backgrounds, key=lambda id: self.batches[id].last_updated)
+        if not batch_ids_by_last_updated:
+            return None
+        batch = self.batches[batch_ids_by_last_updated[0]]
+        assert isinstance(batch, OpenBatch)
+        assert isinstance(batch.command_records, BatchCommandRecordsList)
+        for index, command_plan in enumerate(batch.command_records.command_records):
+            if not isinstance(command_plan, CommandPlan):
+                continue
+            command_pending = CommandPending(command_plan.id, command_plan.command)
+            batch.command_records.command_records[index] = command_pending
+        return batch, command_pending, self.started_backgrounds[batch.id][1]
 
 
 class DatabaseStore(BatchStore):
@@ -268,6 +285,48 @@ class DatabaseStore(BatchStore):
             connection.commit()
             if cursor.rowcount > 1:
                 raise RuntimeError('Should have stopped at most 1 background operation, actually affected %d!' % cursor.rowcount)
+
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
+                                  FROM `batch`
+                                  JOIN `background` ON `background_batch` = `batch_id`
+                                  JOIN `command` ON `command_batch` = `batch_id`
+                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
+                                  JOIN `actions` ON `command_actions_id` = `actions_id`
+                                  WHERE `background_stopped_utc_timestamp` IS NULL
+                                  AND `command_status` = %s
+                                  ORDER BY `batch_last_updated_utc_timestamp` ASC, `command_id` ASC
+                                  LIMIT 1
+                                  FOR UPDATE''',
+                               (DatabaseStore._COMMAND_STATUS_PLAN))
+                result = cursor.fetchone()
+            if not result:
+                connection.commit() # finish the FOR UPDATE
+                return None
+
+            with connection.cursor() as cursor:
+                cursor.execute('''UPDATE `command`
+                                  SET `command_status` = %s
+                                  WHERE `command_id` = %s AND `command_batch` = %s''',
+                               (DatabaseStore._COMMAND_STATUS_PENDING, result[9], result[0]))
+            connection.commit()
+
+        auth_data = json.loads(result[8])
+        auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
+                                        resource_owner_key=auth_data['resource_owner_key'], resource_owner_secret=auth_data['resource_owner_secret'])
+        session = mwapi.Session(host='https://'+result[4], auth=auth, user_agent=user_agent)
+        command_pending = _BatchCommandRecordsDatabase(result[0], self)._row_to_command_record(result[9],
+                                                                                               result[10],
+                                                                                               result[11],
+                                                                                               DatabaseStore._COMMAND_STATUS_PENDING,
+                                                                                               outcome=None)
+        batch = self._result_to_batch(result[0:8])
+
+        assert isinstance(batch, OpenBatch), "must be open since at least one command is still pending"
+        assert isinstance(command_pending, CommandPending), "must be pending since we just set that status"
+        return batch, command_pending, session
 
 
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
