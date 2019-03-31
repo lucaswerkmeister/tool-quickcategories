@@ -104,7 +104,6 @@ def temporary_database():
                     query = query.strip()
                     if query:
                         cursor.execute(query)
-            cursor.execute('USE mysql')
         connection.commit()
         yield {'host': 'localhost', 'user': user_name, 'password': user_password, 'db': database_name}
     finally:
@@ -121,10 +120,6 @@ def test_DatabaseStore_store_batch():
         command2 = open_batch.command_records.get_slice(1, 1)[0]
 
         with store._connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT * FROM `batch`')
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT * FROM `command`')
             with connection.cursor() as cursor:
                 cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions_id` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
                 command2_page, command2_actions_tpsv = cursor.fetchone()
