@@ -81,6 +81,8 @@ def test_InMemoryStore_closes_batch():
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
+# TODO add tests for InMemoryStore start_background + stop_background
+
 
 @pytest.fixture(scope="module")
 def fresh_database_connection_params():
@@ -226,6 +228,91 @@ def test_DatabaseStore_utc_timestamp_to_datetime():
     store = DatabaseStore({})
     dt = datetime.datetime(2019, 3, 17, 13, 23, 28, tzinfo=datetime.timezone.utc)
     assert store._utc_timestamp_to_datetime(1552829008) == dt
+
+def test_DatabaseStore_start_background_inserts_row(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_started_user_name`, `background_auth` FROM `background`')
+        assert cursor.rowcount == 1
+        user_name, auth = cursor.fetchone()
+        assert user_name == 'Lucas Werkmeister'
+        assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
+                                    'resource_owner_secret': 'fake resource owner secret'}
+
+def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
+        assert cursor.rowcount == 1
+        background_id, background_started_utc_timestamp = cursor.fetchone()
+    store.start_background(open_batch, fake_session) # should be no-op
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
+        assert cursor.rowcount == 1
+        assert (background_id, background_started_utc_timestamp) == cursor.fetchone()
+
+def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    store.stop_background(open_batch, fake_session)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        assert cursor.rowcount == 1
+        auth, stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        assert stopped_utc_timestamp > 0
+        assert stopped_user_name == 'Lucas Werkmeister'
+        assert auth is None
+
+def test_DatabaseStore_stop_background_without_session(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    store.stop_background(open_batch)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        assert cursor.rowcount == 1
+        stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        assert stopped_utc_timestamp > 0
+        assert stopped_user_name is None
+
+def test_DatabaseStore_stop_background_noop(store):
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.stop_background(open_batch)
+    # no error
+
+def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id` FROM `background`')
+        connection.commit()
+    with pytest.raises(RuntimeError, match='Should have stopped at most 1 background operation, actually affected 2!'):
+        store.stop_background(open_batch)
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT 1 FROM `background` WHERE `background_stopped_utc_timestamp` IS NOT NULL')
+        assert cursor.rowcount == 2
+        cursor.execute('SELECT 1 FROM `background` WHERE `background_stopped_utc_timestamp` IS NULL')
+        assert cursor.rowcount == 0
+
+def test_DatabaseStore_closing_batch_stops_background(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    store.start_background(open_batch, fake_session)
+    [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+    open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
+    open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
+    with store._connect() as connection, connection.cursor() as cursor:
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        assert cursor.rowcount == 1
+        stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        assert stopped_utc_timestamp > 0
+        assert stopped_user_name is None
 
 
 command_unfinishes_and_rows = [

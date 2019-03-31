@@ -7,6 +7,7 @@ import json
 import mwapi # type: ignore
 import operator
 import pymysql
+import requests_oauthlib # type: ignore
 import threading
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
@@ -38,6 +39,10 @@ class BatchStore:
 
     def get_latest_batches(self) -> Sequence[StoredBatch]: ...
 
+    def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None: ...
+
+    def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None: ...
+
 
 class InMemoryStore(BatchStore):
 
@@ -45,6 +50,8 @@ class InMemoryStore(BatchStore):
         self.next_batch_id = 1
         self.next_command_id = 1
         self.batches = {} # type: Dict[int, StoredBatch]
+        self.started_backgrounds = {} # type: Dict[int, Tuple[datetime.datetime, mwapi.Session]]
+        self.stopped_backgrounds = {} # type: Dict[int, List[Tuple[datetime.datetime, mwapi.Session, datetime.datetime, Optional[mwapi.Session]]]]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = _now()
@@ -88,6 +95,20 @@ class InMemoryStore(BatchStore):
 
     def get_latest_batches(self) -> Sequence[StoredBatch]:
         return [cast(StoredBatch, self.get_batch(id)) for id in sorted(self.batches.keys(), reverse=True)[:10]]
+
+    def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
+        started = _now()
+        if batch.id not in self.started_backgrounds:
+            self.started_backgrounds[batch.id] = (started, session)
+
+    def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
+        stopped = _now()
+        if batch.id in self.started_backgrounds:
+            started, started_session = self.started_backgrounds[batch.id]
+            stopped_backgrounds = self.stopped_backgrounds.get(batch.id, [])
+            stopped_backgrounds.append((started, started_session, stopped, session))
+            self.stopped_backgrounds[batch.id] = stopped_backgrounds
+            del self.started_backgrounds[batch.id]
 
 
 class DatabaseStore(BatchStore):
@@ -201,6 +222,52 @@ class DatabaseStore(BatchStore):
                                   ORDER BY `batch_id` DESC
                                   LIMIT 10''')
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
+
+    def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
+        started = _now()
+        started_utc_timestamp = self._datetime_to_utc_timestamp(started)
+        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT 1
+                              FROM `background`
+                              WHERE `background_batch` = %s
+                              AND `background_stopped_utc_timestamp` IS NULL
+                              FOR UPDATE''',
+                           (batch.id,))
+            if cursor.fetchone():
+                connection.commit() # finish the FOR UPDATE
+                return
+
+            assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
+            auth = {'resource_owner_key': session.session.auth.client.resource_owner_key,
+                    'resource_owner_secret': session.session.auth.client.resource_owner_secret}
+
+            cursor.execute('''INSERT INTO `background`
+                              (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`)
+                              VALUES (%s, %s, %s, %s, %s, %s)''',
+                           (batch.id, json.dumps(auth), started_utc_timestamp, user_name, local_user_id, global_user_id))
+            connection.commit()
+
+    def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
+        self._stop_background_by_id(batch.id, session)
+
+    def _stop_background_by_id(self, batch_id: int, session: Optional[mwapi.Session] = None) -> None:
+        stopped = _now()
+        stopped_utc_timestamp = self._datetime_to_utc_timestamp(stopped)
+        if session:
+            user_name, local_user_id, global_user_id, domain = _metadata_from_session(session) # type: Tuple[Optional[str], Optional[int], Optional[int], str]
+        else:
+            user_name, local_user_id, global_user_id = None, None, None
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''UPDATE `background`
+                              SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_user_name` = %s, `background_stopped_local_user_id` = %s, `background_stopped_global_user_id` = %s
+                              WHERE `background_batch` = %s
+                              AND `background_stopped_utc_timestamp` IS NULL''',
+                           (stopped_utc_timestamp, user_name, local_user_id, global_user_id, batch_id))
+            connection.commit()
+            if cursor.rowcount > 1:
+                raise RuntimeError('Should have stopped at most 1 background operation, actually affected %d!' % cursor.rowcount)
 
 
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
@@ -371,11 +438,13 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               LIMIT 1''',
                            (self.batch_id, DatabaseStore._COMMAND_STATUS_PLAN, DatabaseStore._COMMAND_STATUS_PENDING))
             if not cursor.fetchone():
+                # close the batch
                 cursor.execute('''UPDATE `batch`
                                   SET `batch_status` = %s
                                   WHERE `batch_id` = %s''',
                                (DatabaseStore._BATCH_STATUS_CLOSED, self.batch_id))
                 connection.commit()
+                self.store._stop_background_by_id(self.batch_id)
 
     def __eq__(self, value: Any) -> bool:
         # limited test to avoid overly expensive full comparison

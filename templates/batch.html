@@ -1,11 +1,17 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
-<p class="lead">
-  Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
-  Created {{ batch.created | render_datetime }},
-  last updated {{ batch.last_updated | render_datetime }}.
-</p>
+<form method="post">
+  <p class="lead">
+    Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
+    Created {{ batch.created | render_datetime }},
+    last updated {{ batch.last_updated | render_datetime }}.
+    {% if can_stop_background() %}
+    <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+    <button class="btn btn-danger" formaction="{{ url_for('stop_batch_background', id=batch.id) }}">Stop batch running in background</button>
+    {% endif %}
+  </p>
+</form>
 <nav aria-label="command pages">
   <ul class="pagination">
     {% if offset > 0 %}
@@ -32,6 +38,9 @@
   <input name="offset" type="hidden" value="{{ offset }}">
   <input name="limit" type="hidden" value="{{ limit }}">
   <button class="btn btn-primary">Run these commands</button>
+  {% if can_start_background() %}
+  <button class="btn btn-secondary" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run whole batch in background</button>
+  {% endif %}
 </form>
 {% endif %}
 {% endblock %}

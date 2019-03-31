@@ -14,7 +14,7 @@ import toolforge
 from typing import List, Optional, Tuple
 import yaml
 
-from batch import StoredBatch
+from batch import StoredBatch, OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
@@ -103,6 +103,14 @@ def authentication_area() -> flask.Markup:
 @app.template_global()
 def can_run_commands(command_records: List[CommandRecord]) -> bool:
     return flask.g.can_run_commands and any(filter(lambda command_record: isinstance(command_record, CommandPlan), command_records))
+
+@app.template_global()
+def can_start_background() -> bool:
+    return flask.g.can_start_background
+
+@app.template_global()
+def can_stop_background() -> bool:
+    return flask.g.can_stop_background
 
 @app.template_global() # TODO make domain part of Command and turn this into a template filter?
 def render_command(command: Command, domain: str) -> flask.Markup:
@@ -219,11 +227,19 @@ def batch(id: int):
 
     session = authenticated_session(batch.domain)
     if session:
-        local_user_id = session.get(action='query',
-                                    meta='userinfo')['query']['userinfo']['id']
+        userinfo = session.get(action='query',
+                               meta='userinfo',
+                               uiprop=['groups'])['query']['userinfo']
+        local_user_id = userinfo['id']
         flask.g.can_run_commands = local_user_id == batch.local_user_id
+        flask.g.can_start_background = flask.g.can_run_commands and \
+            'autoconfirmed' in userinfo['groups']
+        flask.g.can_stop_background = flask.g.can_start_background or \
+            'sysop' in userinfo['groups']
     else:
         flask.g.can_run_commands = False
+        flask.g.can_start_background = False
+        flask.g.can_stop_background = False
 
     offset, limit = slice_from_args(flask.request.args)
 
@@ -269,6 +285,60 @@ def run_batch_slice(id: int):
         if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
             break
 
+    return flask.redirect(flask.url_for('batch',
+                                        id=id,
+                                        offset=offset,
+                                        limit=limit))
+
+@app.route('/batch/<int:id>/start_background', methods=['POST'])
+def start_batch_background(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+    if not isinstance(batch, OpenBatch):
+        return 'not an open batch', 400
+
+    session = authenticated_session(batch.domain)
+    if not session:
+        return 'not logged in', 403
+    userinfo = session.get(action='query',
+                           meta='userinfo',
+                           uiprop=['groups'])['query']['userinfo']
+    local_user_id = userinfo['id']
+    if local_user_id != batch.local_user_id or \
+       'autoconfirmed' not in userinfo['groups']:
+        return 'may not start this batch in background', 403
+
+    batch_store.start_background(batch, session)
+
+    offset, limit = slice_from_args(flask.request.form)
+    return flask.redirect(flask.url_for('batch',
+                                        id=id,
+                                        offset=offset,
+                                        limit=limit))
+
+@app.route('/batch/<int:id>/stop_background', methods=['POST'])
+def stop_batch_background(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    session = authenticated_session(batch.domain)
+    if not session:
+        return 'not logged in', 403
+    userinfo = session.get(action='query',
+                           meta='userinfo',
+                           uiprop=['groups'])['query']['userinfo']
+    local_user_id = userinfo['id']
+    if local_user_id != batch.local_user_id and \
+       'sysop' not in userinfo['groups']:
+        return 'may not stop this batch in background', 403
+
+    batch_store.stop_background(batch, session)
+
+    offset, limit = slice_from_args(flask.request.form)
     return flask.redirect(flask.url_for('batch',
                                         id=id,
                                         offset=offset,
