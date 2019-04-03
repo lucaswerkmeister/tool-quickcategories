@@ -111,7 +111,7 @@ class ClosedBatch(StoredBatch):
 
 
 class BatchCommandRecords:
-    """Accessor for the CommandRecords of an OpenBatch."""
+    """Accessor for the CommandRecords of a StoredBatch."""
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]: ...
 
