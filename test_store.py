@@ -1,4 +1,3 @@
-import contextlib
 import datetime
 import json
 import os
@@ -82,8 +81,8 @@ def test_InMemoryStore_closes_batch():
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
 
-@contextlib.contextmanager
-def temporary_database():
+@pytest.fixture
+def database_connection_params():
     if 'MARIADB_ROOT_PASSWORD' not in os.environ:
         pytest.skip('MariaDB credentials not provided')
     connection = pymysql.connect(host='localhost',
@@ -113,84 +112,77 @@ def temporary_database():
             connection.commit()
         connection.close()
 
-def test_DatabaseStore_store_batch():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        open_batch = store.store_batch(newBatch1, fake_session)
-        command2 = open_batch.command_records.get_slice(1, 1)[0]
+def test_DatabaseStore_store_batch(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    command2 = open_batch.command_records.get_slice(1, 1)[0]
 
-        with store._connect() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions_id` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
-                command2_page, command2_actions_tpsv = cursor.fetchone()
-                assert command2_page == command2.command.page
-                assert command2_actions_tpsv == command2.command.actions_tpsv()
+    with store._connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions_id` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
+            command2_page, command2_actions_tpsv = cursor.fetchone()
+            assert command2_page == command2.command.page
+            assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_get_batch():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        stored_batch = store.store_batch(newBatch1, fake_session)
-        loaded_batch = store.get_batch(stored_batch.id)
+def test_DatabaseStore_get_batch(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    stored_batch = store.store_batch(newBatch1, fake_session)
+    loaded_batch = store.get_batch(stored_batch.id)
 
-        assert loaded_batch.id == stored_batch.id
-        assert loaded_batch.user_name == 'Lucas Werkmeister'
-        assert loaded_batch.local_user_id == 6198807
-        assert loaded_batch.global_user_id == 46054761
-        assert loaded_batch.domain == 'commons.wikimedia.org'
+    assert loaded_batch.id == stored_batch.id
+    assert loaded_batch.user_name == 'Lucas Werkmeister'
+    assert loaded_batch.local_user_id == 6198807
+    assert loaded_batch.global_user_id == 46054761
+    assert loaded_batch.domain == 'commons.wikimedia.org'
 
-        assert len(loaded_batch.command_records) == 2
-        assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
+    assert len(loaded_batch.command_records) == 2
+    assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
 
-def test_DatabaseStore_get_batch_missing():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        loaded_batch = store.get_batch(1)
-
+def test_DatabaseStore_get_batch_missing(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    loaded_batch = store.get_batch(1)
     assert loaded_batch is None
 
-def test_DatabaseStore_update_batch():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        stored_batch = store.store_batch(newBatch1, fake_session)
-        loaded_batch = store.get_batch(stored_batch.id)
+def test_DatabaseStore_update_batch(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    stored_batch = store.store_batch(newBatch1, fake_session)
+    loaded_batch = store.get_batch(stored_batch.id)
 
-        [command_plan_1, command_plan_2] = loaded_batch.command_records.get_slice(0, 2)
+    [command_plan_1, command_plan_2] = loaded_batch.command_records.get_slice(0, 2)
 
-        command_edit = CommandEdit(command_plan_1.id, command_plan_1.command, 1234, 1235)
-        loaded_batch.command_records.store_finish(command_edit)
-        command_edit_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
-        assert command_edit == command_edit_loaded
+    command_edit = CommandEdit(command_plan_1.id, command_plan_1.command, 1234, 1235)
+    loaded_batch.command_records.store_finish(command_edit)
+    command_edit_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
+    assert command_edit == command_edit_loaded
 
-        command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
-        time.sleep(1) # make sure that this update increases last_updated
-        loaded_batch.command_records.store_finish(command_noop)
-        command_noop_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
-        assert command_noop == command_noop_loaded
+    command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
+    time.sleep(1) # make sure that this update increases last_updated
+    loaded_batch.command_records.store_finish(command_noop)
+    command_noop_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
+    assert command_noop == command_noop_loaded
 
-        assert stored_batch.command_records.get_slice(0, 2) == loaded_batch.command_records.get_slice(0, 2)
+    assert stored_batch.command_records.get_slice(0, 2) == loaded_batch.command_records.get_slice(0, 2)
 
-        # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
-        reloaded_batch = store.get_batch(stored_batch.id)
-        assert reloaded_batch.last_updated > reloaded_batch.created
+    # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
+    reloaded_batch = store.get_batch(stored_batch.id)
+    assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseStore_closes_batch():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        open_batch = store.store_batch(newBatch1, fake_session)
-        [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
-        open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
-        assert type(store.get_batch(open_batch.id)) is OpenBatch
-        open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
-        assert type(store.get_batch(open_batch.id)) is ClosedBatch
+def test_DatabaseStore_closes_batch(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batch = store.store_batch(newBatch1, fake_session)
+    [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+    open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
+    assert type(store.get_batch(open_batch.id)) is OpenBatch
+    open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
+    assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
-def test_DatabaseStore_get_latest_batches():
-    with temporary_database() as connection_params:
-        store = DatabaseStore(connection_params)
-        open_batches = []
-        for i in range(25):
-            open_batches.append(store.store_batch(newBatch1, fake_session))
-        open_batches.reverse()
-        assert open_batches[:10] == store.get_latest_batches()
+def test_DatabaseStore_get_latest_batches(database_connection_params):
+    store = DatabaseStore(database_connection_params)
+    open_batches = []
+    for i in range(25):
+        open_batches.append(store.store_batch(newBatch1, fake_session))
+    open_batches.reverse()
+    assert open_batches[:10] == store.get_latest_batches()
 
 def test_DatabaseStore_datetime_to_utc_timestamp():
     store = DatabaseStore({})
@@ -259,30 +251,29 @@ def test_StringTableStore_hash(string, expected_hash):
 
     assert expected_hash == actual_hash
 
-def test_StringTableStore_acquire_id_database():
-    with temporary_database() as connection_params:
-        connection = pymysql.connect(**connection_params)
-        try:
-            store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+def test_StringTableStore_acquire_id_database(database_connection_params):
+    connection = pymysql.connect(**database_connection_params)
+    try:
+        store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
 
-            store.acquire_id(connection, 'test.wikipedia.org')
+        store.acquire_id(connection, 'test.wikipedia.org')
 
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT domain_name FROM domain WHERE domain_hash = 3277830609')
-                result = cursor.fetchone()
-                assert result == ('test.wikipedia.org',)
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT domain_name FROM domain WHERE domain_hash = 3277830609')
+            result = cursor.fetchone()
+            assert result == ('test.wikipedia.org',)
 
-            with store._cache_lock:
-                store._cache.clear()
+        with store._cache_lock:
+            store._cache.clear()
 
-            store.acquire_id(connection, 'test.wikipedia.org')
+        store.acquire_id(connection, 'test.wikipedia.org')
 
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT COUNT(*) FROM domain')
-                result = cursor.fetchone()
-                assert result == (1,)
-        finally:
-            connection.close()
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT COUNT(*) FROM domain')
+            result = cursor.fetchone()
+            assert result == (1,)
+    finally:
+        connection.close()
 
 def test_StringTableStore_acquire_id_cached():
     store = _StringTableStore('', '', '', '')
