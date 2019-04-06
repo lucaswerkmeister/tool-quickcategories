@@ -12,7 +12,7 @@ import requests_oauthlib # type: ignore
 import threading
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
-from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchCommandRecordsList
+from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchCommandRecordsList, BatchBackgroundRuns, BatchBackgroundRunsList
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
@@ -53,8 +53,7 @@ class InMemoryStore(BatchStore):
         self.next_batch_id = 1
         self.next_command_id = 1
         self.batches = {} # type: Dict[int, StoredBatch]
-        self.started_backgrounds = {} # type: Dict[int, Tuple[datetime.datetime, mwapi.Session]]
-        self.stopped_backgrounds = {} # type: Dict[int, List[Tuple[datetime.datetime, mwapi.Session, datetime.datetime, Optional[mwapi.Session]]]]
+        self.background_sessions = {} # type: Dict[int, mwapi.Session]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = _now()
@@ -72,7 +71,8 @@ class InMemoryStore(BatchStore):
                                domain,
                                created,
                                created,
-                               BatchCommandRecordsList(command_plans))
+                               BatchCommandRecordsList(command_plans),
+                               BatchBackgroundRunsList([]))
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
         return open_batch
@@ -92,7 +92,8 @@ class InMemoryStore(BatchStore):
                                        stored_batch.domain,
                                        stored_batch.created,
                                        stored_batch.last_updated,
-                                       stored_batch.command_records)
+                                       stored_batch.command_records,
+                                       stored_batch.background_runs)
             self.batches[id] = stored_batch
         return stored_batch
 
@@ -101,23 +102,29 @@ class InMemoryStore(BatchStore):
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
-        if batch.id not in self.started_backgrounds:
-            self.started_backgrounds[batch.id] = (started, session)
+        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
+        if not background_runs.currently_running():
+            background_runs.background_runs.append(((started, (user_name, local_user_id, global_user_id)), None))
+            self.background_sessions[batch.id] = session
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
         stopped = _now()
-        if batch.id in self.started_backgrounds:
-            started, started_session = self.started_backgrounds[batch.id]
-            stopped_backgrounds = self.stopped_backgrounds.get(batch.id, [])
-            stopped_backgrounds.append((started, started_session, stopped, session))
-            self.stopped_backgrounds[batch.id] = stopped_backgrounds
-            del self.started_backgrounds[batch.id]
+        if session:
+            user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+            user_info = (user_name, local_user_id, global_user_id) # type: Optional[Tuple[str, int, int]]
+        else:
+            user_info = None
+        background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
+        if background_runs.currently_running():
+            background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, user_info))
+            del self.background_sessions[batch.id]
 
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
-        batch_ids_by_last_updated = sorted(self.started_backgrounds, key=lambda id: self.batches[id].last_updated)
-        if not batch_ids_by_last_updated:
+        batches_by_last_updated = [batch for batch in sorted(self.batches.values(), key=lambda batch: batch.last_updated) if batch.background_runs.currently_running()]
+        if not batches_by_last_updated:
             return None
-        batch = self.batches[batch_ids_by_last_updated[0]]
+        batch = batches_by_last_updated[0]
         assert isinstance(batch, OpenBatch)
         assert isinstance(batch.command_records, BatchCommandRecordsList)
         for index, command_plan in enumerate(batch.command_records.command_records):
@@ -125,7 +132,7 @@ class InMemoryStore(BatchStore):
                 continue
             command_pending = CommandPending(command_plan.id, command_plan.command)
             batch.command_records.command_records[index] = command_pending
-        return batch, command_pending, self.started_backgrounds[batch.id][1]
+        return batch, command_pending, self.background_sessions[batch.id]
 
 
 class DatabaseStore(BatchStore):
@@ -191,7 +198,8 @@ class DatabaseStore(BatchStore):
                          domain,
                          created,
                          created,
-                         _BatchCommandRecordsDatabase(batch_id, self))
+                         _BatchCommandRecordsDatabase(batch_id, self),
+                         _BatchBackgroundRunsDatabase(batch_id, self))
 
     def get_batch(self, id: int) -> Optional[StoredBatch]:
         with self._connect() as connection:
@@ -217,7 +225,8 @@ class DatabaseStore(BatchStore):
                              domain,
                              created,
                              last_updated,
-                             _BatchCommandRecordsDatabase(id, self))
+                             _BatchCommandRecordsDatabase(id, self),
+                             _BatchBackgroundRunsDatabase(id, self))
         elif status == DatabaseStore._BATCH_STATUS_CLOSED:
             return ClosedBatch(id,
                                user_name,
@@ -226,7 +235,8 @@ class DatabaseStore(BatchStore):
                                domain,
                                created,
                                last_updated,
-                               _BatchCommandRecordsDatabase(id, self))
+                               _BatchCommandRecordsDatabase(id, self),
+                               _BatchBackgroundRunsDatabase(id, self))
         else:
             raise ValueError('Unknown batch type')
 
@@ -508,6 +518,66 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
     def __eq__(self, value: Any) -> bool:
         # limited test to avoid overly expensive full comparison
         return type(value) is _BatchCommandRecordsDatabase and \
+            self.batch_id == value.batch_id
+
+
+class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
+
+    def __init__(self, batch_id: int, store: DatabaseStore):
+        self.batch_id = batch_id
+        self.store = store
+
+    def currently_running(self) -> bool:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT 1
+                              FROM `background`
+                              WHERE `background_batch` = %s
+                              AND `background_stopped_utc_timestamp` IS NULL
+                              LIMIT 1''',
+                           (self.batch_id,))
+            return cursor.fetchone() is not None
+
+    def _row_to_background_run(self,
+                               started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
+                               stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
+                               -> Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]:
+        background_start = (self.store._utc_timestamp_to_datetime(started_utc_timestamp), (started_user_name, started_local_user_id, started_global_user_id))
+        if stopped_utc_timestamp:
+            if stopped_user_name:
+                stopped_user_info = (stopped_user_name, stopped_local_user_id, stopped_global_user_id) # type: Optional[Tuple[str, int, int]]
+            else:
+                stopped_user_info = None
+            background_stop = (self.store._utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_user_info) # type: Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]
+        else:
+            background_stop = None
+        return (background_start, background_stop)
+
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
+                              FROM `background`
+                              WHERE `background_batch` = %s
+                              ORDER BY `background_id` DESC
+                              LIMIT 1''',
+                           (self.batch_id,))
+            result = cursor.fetchone()
+            if result:
+                return self._row_to_background_run(*result)
+            else:
+                return None
+
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
+                              FROM `background`
+                              WHERE `background_batch` = %s
+                              ORDER BY `background_id` ASC''',
+                           (self.batch_id,))
+            return [self._row_to_background_run(*row) for row in cursor.fetchall()]
+
+    def __eq__(self, value: Any) -> bool:
+        # limited test to avoid overly expensive full comparison
+        return type(value) is _BatchBackgroundRunsDatabase and \
             self.batch_id == value.batch_id
 
 

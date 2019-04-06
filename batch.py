@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List
+from typing import Any, List, Optional, Sequence, Tuple
 
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandFinish
 
@@ -41,7 +41,8 @@ class StoredBatch:
                  domain: str,
                  created: datetime.datetime,
                  last_updated: datetime.datetime,
-                 command_records: 'BatchCommandRecords'):
+                 command_records: 'BatchCommandRecords',
+                 background_runs: 'BatchBackgroundRuns'):
         self.id = id
         self.user_name = user_name
         self.local_user_id = local_user_id
@@ -50,6 +51,7 @@ class StoredBatch:
         self.created = created
         self.last_updated = last_updated
         self.command_records = command_records
+        self.background_runs = background_runs
 
 
 class OpenBatch(StoredBatch):
@@ -64,7 +66,8 @@ class OpenBatch(StoredBatch):
             self.domain == value.domain and \
             self.created == value.created and \
             self.last_updated == value.last_updated and \
-            self.command_records == value.command_records
+            self.command_records == value.command_records and \
+            self.background_runs == value.background_runs
 
     def __str__(self) -> str:
         return 'batch #%d on %s by %s' % (self.id, self.domain, self.user_name)
@@ -78,7 +81,8 @@ class OpenBatch(StoredBatch):
             repr(self.domain) + ', ' + \
             repr(self.created) + ', ' + \
             repr(self.last_updated) + ', ' + \
-            repr(self.command_records) + ')'
+            repr(self.command_records) + ', ' + \
+            repr(self.background_runs) + ')'
 
 
 class ClosedBatch(StoredBatch):
@@ -93,7 +97,8 @@ class ClosedBatch(StoredBatch):
             self.domain == value.domain and \
             self.created == value.created and \
             self.last_updated == value.last_updated and \
-            self.command_records == value.command_records
+            self.command_records == value.command_records and \
+            self.background_runs == value.background_runs
 
     def __str__(self) -> str:
         return 'batch #%d on %s by %s' % (self.id, self.domain, self.user_name)
@@ -107,7 +112,8 @@ class ClosedBatch(StoredBatch):
             repr(self.domain) + ', ' + \
             repr(self.created) + ', ' + \
             repr(self.last_updated) + ', ' + \
-            repr(self.command_records) + ')'
+            repr(self.command_records) + ', ' + \
+            repr(self.background_runs) + ')'
 
 
 class BatchCommandRecords:
@@ -158,3 +164,38 @@ class BatchCommandRecordsList(BatchCommandRecords):
 
     def __repr__(self) -> str:
         return 'BatchCommandRecordsList(' + repr(self.command_records) + ')'
+
+
+class BatchBackgroundRuns:
+    """Accessor for the background runs of a StoredBatch."""
+
+    def currently_running(self) -> bool:
+        last = self.get_last()
+        return last is not None and last[1] is not None
+
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]: ...
+
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]: ...
+
+
+class BatchBackgroundRunsList(BatchBackgroundRuns):
+    """List-based implementation of BatchBackgroundRuns."""
+
+    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]):
+        self.background_runs = background_runs
+
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+        if self.background_runs:
+            return self.background_runs[-1]
+        else:
+            return None
+
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+        return self.background_runs
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is BatchBackgroundRunsList and \
+            self.background_runs == value.background_runs
+
+    def __repr__(self) -> str:
+        return 'BatchBackgroundRunsList(' + repr(self.background_runs) + ')'
