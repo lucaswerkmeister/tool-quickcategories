@@ -4,6 +4,7 @@ import os
 import pymysql
 import pytest # type: ignore
 import random
+import re
 import string
 import time
 from typing import List, Optional, Tuple
@@ -81,8 +82,8 @@ def test_InMemoryStore_closes_batch():
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
 
-@pytest.fixture
-def database_connection_params():
+@pytest.fixture(scope="module")
+def fresh_database_connection_params():
     if 'MARIADB_ROOT_PASSWORD' not in os.environ:
         pytest.skip('MariaDB credentials not provided')
     connection = pymysql.connect(host='localhost',
@@ -111,6 +112,21 @@ def database_connection_params():
             cursor.execute('DROP USER IF EXISTS `%s`' % user_name)
             connection.commit()
         connection.close()
+
+@pytest.fixture
+def database_connection_params(fresh_database_connection_params):
+    connection = pymysql.connect(**fresh_database_connection_params)
+    try:
+        with open('tables.sql') as tables:
+            queries = tables.read()
+        with connection.cursor() as cursor:
+            for table in re.findall(r'CREATE TABLE ([^ ]+) ', queries):
+                cursor.execute('DELETE FROM `%s`' % table) # more efficient than TRUNCATE TABLE on my system :/
+                # cursor.execute('ALTER TABLE `%s` AUTO_INCREMENT = 1' % table) # currently not necessary
+        connection.commit()
+    finally:
+        connection.close()
+    return fresh_database_connection_params
 
 def test_DatabaseStore_store_batch(database_connection_params):
     store = DatabaseStore(database_connection_params)
