@@ -4,6 +4,7 @@
 import mwoauth # type: ignore
 import os
 import sys
+import time
 import toolforge
 import yaml
 
@@ -34,23 +35,27 @@ else:
     print('No database configuration, cannot run in background')
     sys.exit(1)
 
-pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
-if not pending:
-    sys.exit(0)
 
-batch, command_pending, session = pending
-if 'summary_suffix' in config:
-    summary_suffix = config['summary_suffix'].format(batch.id)
-else:
-    summary_suffix = None
-runner = Runner(session, summary_suffix)
-
-for attempt in range(5):
-    command_finish = runner.run_command(command_pending)
-    if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
+while True:
+    pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
+    if not pending:
+        # TODO would be nicer to switch to some better notification mechanism for the app to let the runner know there’s work again
+        time.sleep(10)
         continue
+
+    batch, command_pending, session = pending
+    if 'summary_suffix' in config:
+        summary_suffix = config['summary_suffix'].format(batch.id)
     else:
-        break
-batch.command_records.store_finish(command_finish)
-if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
-    batch_store.stop_background(batch)
+        summary_suffix = None
+    runner = Runner(session, summary_suffix)
+
+    for attempt in range(5):
+        command_finish = runner.run_command(command_pending)
+        if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
+            continue
+        else:
+            break
+    batch.command_records.store_finish(command_finish)
+    if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
+        batch_store.stop_background(batch)
