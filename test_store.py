@@ -128,6 +128,16 @@ def database_connection_params(fresh_database_connection_params):
         connection.close()
     return fresh_database_connection_params
 
+@pytest.fixture(params=[InMemoryStore, DatabaseStore])
+def store(request):
+    if request.param is InMemoryStore:
+        yield InMemoryStore()
+    elif request.param is DatabaseStore:
+        database_connection_params = request.getfixturevalue('database_connection_params')
+        yield DatabaseStore(database_connection_params)
+    else:
+        raise ValueError('Unknown param!')
+
 def test_DatabaseStore_store_batch(database_connection_params):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
@@ -140,8 +150,7 @@ def test_DatabaseStore_store_batch(database_connection_params):
             assert command2_page == command2.command.page
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_get_batch(database_connection_params):
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseStore_get_batch(store):
     stored_batch = store.store_batch(newBatch1, fake_session)
     loaded_batch = store.get_batch(stored_batch.id)
 
@@ -154,8 +163,7 @@ def test_DatabaseStore_get_batch(database_connection_params):
     assert len(loaded_batch.command_records) == 2
     assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
 
-def test_DatabaseStore_get_batch_missing(database_connection_params):
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseStore_get_batch_missing(store):
     loaded_batch = store.get_batch(1)
     assert loaded_batch is None
 
@@ -183,8 +191,7 @@ def test_DatabaseStore_update_batch(database_connection_params):
     reloaded_batch = store.get_batch(stored_batch.id)
     assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseStore_closes_batch(database_connection_params):
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseStore_closes_batch(store):
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
     open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
@@ -192,8 +199,7 @@ def test_DatabaseStore_closes_batch(database_connection_params):
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
-def test_DatabaseStore_get_latest_batches(database_connection_params):
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseStore_get_latest_batches(store):
     open_batches = []
     for i in range(25):
         open_batches.append(store.store_batch(newBatch1, fake_session))
