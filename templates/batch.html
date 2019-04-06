@@ -1,17 +1,28 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
+{% set background_run = batch.background_runs.get_last() %}
+{% set currently_running = background_run and not background_run[1] %}
+<p class="lead">
+  Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
+  Created {{ batch.created | render_datetime }},
+  last updated {{ batch.last_updated | render_datetime }}.
+</p>
+{% if background_run %}
 <form method="post">
-  <p class="lead">
-    Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
-    Created {{ batch.created | render_datetime }},
-    last updated {{ batch.last_updated | render_datetime }}.
-    {% if can_stop_background() %}
+  <p>
+    {% if currently_running %}
+    Running in background since {{ background_run[0][0] | render_datetime }}.
+    {% else %}
+    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}.
+    {% endif %}
+    {% if currently_running and can_stop_background() %}
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-    <button class="btn btn-danger" formaction="{{ url_for('stop_batch_background', id=batch.id) }}">Stop batch running in background</button>
+    <button class="btn btn-danger btn-sm" formaction="{{ url_for('stop_batch_background', id=batch.id) }}">Stop</button>
     {% endif %}
   </p>
 </form>
+{% endif %}
 <nav aria-label="command pages">
   <ul class="pagination">
     {% if offset > 0 %}
