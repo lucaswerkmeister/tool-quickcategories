@@ -300,8 +300,8 @@ class DatabaseStore(BatchStore):
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
-                                  FROM `batch`
-                                  JOIN `background` ON `background_batch` = `batch_id`
+                                  FROM `background`
+                                  JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   JOIN `actions` ON `command_actions_id` = `actions_id`
