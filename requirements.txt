@@ -5,7 +5,7 @@ humanize
 mwapi
 mwoauth
 mwparserfromhell
-mypy
+mypy==0.670
 pymysql
 pytest
 pyyaml
