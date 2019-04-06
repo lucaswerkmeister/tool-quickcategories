@@ -47,13 +47,13 @@ class InMemoryStore(BatchStore):
         self.batches = {} # type: Dict[int, StoredBatch]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
+        created = _now()
+        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+
         command_plans = [] # type: List[CommandRecord]
         for command in new_batch.commands:
             command_plans.append(CommandPlan(self.next_command_id, command))
             self.next_command_id += 1
-
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
-        created = _now()
 
         open_batch = OpenBatch(self.next_batch_id,
                                user_name,
@@ -129,9 +129,9 @@ class DatabaseStore(BatchStore):
                                                tz=datetime.timezone.utc)
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
         created = _now()
         created_utc_timestamp = self._datetime_to_utc_timestamp(created)
+        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
 
         with self._connect() as connection:
             domain_id = self.domain_store.acquire_id(connection, domain)
@@ -351,9 +351,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         return command_records
 
     def store_finish(self, command_finish: CommandFinish) -> None:
-        status, outcome = self._command_finish_to_row(command_finish)
         last_updated = _now()
         last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
+        status, outcome = self._command_finish_to_row(command_finish)
 
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `command`
