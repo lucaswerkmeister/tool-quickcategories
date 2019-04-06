@@ -18,6 +18,8 @@
     {% endif %}
     {% if currently_running and can_stop_background() %}
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+    <input name="offset" type="hidden" value="{{ offset }}">
+    <input name="limit" type="hidden" value="{{ limit }}">
     <button class="btn btn-danger btn-sm" formaction="{{ url_for('stop_batch_background', id=batch.id) }}">Stop</button>
     {% endif %}
   </p>
