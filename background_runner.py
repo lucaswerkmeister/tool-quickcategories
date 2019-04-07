@@ -50,12 +50,14 @@ while True:
         summary_suffix = None
     runner = Runner(session, summary_suffix)
 
+    print('Running command %d of batch #%d... ' % (command_pending.id, batch.id), end='', flush=True)
     for attempt in range(5):
         command_finish = runner.run_command(command_pending)
         if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
             continue
         else:
             break
+    print(type(command_finish).__name__, flush=True)
     batch.command_records.store_finish(command_finish)
     if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
         batch_store.stop_background(batch)
