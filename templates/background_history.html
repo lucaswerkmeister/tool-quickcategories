@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block main %}
+<h1>Background run history of <a href="{{ url_for('batch', id=batch.id) }}">batch #{{ batch.id }}</a></h1>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">started</th>
+      <th scope="col">by</th>
+      <th scope="col">stopped</th>
+      <th scope="col">by</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for start, stop in batch.background_runs.get_all() %}
+    <tr>
+      <td>{{ start[0] | render_datetime }}</td>
+      <td><a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ start[1][1] }}"><bdi>{{ start[1][0] }}</bdi></a></td>
+      {% if stop %}
+      <td>{{ stop[0] | render_datetime }}</td>
+      {% if stop[1] %}
+      <td><a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ stop[1][1] }}"><bdi>{{ stop[1][0] }}</bdi></a></td>
+      {% else %}
+      <td></td>
+      {% endif %}
+      {% else %}
+      <td colspan="2" class="text-center font-italic">currently running</td>
+      {% endif %}
+    </tr>
+    {% else %}
+    <tr><td colspan="4" class="text-center font-italic">no background runs</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

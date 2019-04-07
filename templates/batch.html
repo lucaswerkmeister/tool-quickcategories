@@ -12,10 +12,11 @@
 <form method="post">
   <p>
     {% if currently_running %}
-    Running in background since {{ background_run[0][0] | render_datetime }}.
+    Running in background since {{ background_run[0][0] | render_datetime }}
     {% else %}
-    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}.
+    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}
     {% endif %}
+    (<a href="{{ url_for('batch_background_history', id=batch.id) }}">full history</a>).
     {% if currently_running and can_stop_background() %}
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
     <input name="offset" type="hidden" value="{{ offset }}">

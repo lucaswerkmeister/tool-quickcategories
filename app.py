@@ -248,6 +248,16 @@ def batch(id: int):
                                  offset=offset,
                                  limit=limit)
 
+@app.route('/batch/<int:id>/background_history')
+def batch_background_history(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    return flask.render_template('background_history.html',
+                                 batch=batch)
+
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
     batch = batch_store.get_batch(id)
