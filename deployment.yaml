@@ -1,0 +1,46 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: quickcategories.background-runner
+  namespace: quickcategories
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: quickcategories.background-runner
+    spec:
+      containers:
+        - name: background-runner
+          image: docker-registry.tools.wmflabs.org/toollabs-python35-base:latest
+          command: [ '/bin/bash', '-c' ]
+          args:
+            # venvs are not position-independent, so we build our own instead of
+            # mounting /data/project/quickcategories/www/python/venv somewhere
+            # (this also lets us use different Python versions for runner and webservice)
+            - python3 -m venv /tmp/venv &&
+              source /tmp/venv/bin/activate &&
+              pip install --upgrade pip &&
+              pip install -r /srv/quickcategories/requirements.txt &&
+              exec python3 /srv/quickcategories/background_runner.py
+          env:
+            # config.yaml specifies ~/replica.my.cnf as config path, we place it in /etc
+            - name: HOME
+              value: '/etc/'
+          volumeMounts:
+            # we mount the config file and source code in non-standard locations (i. e.
+            # not under /data/project/quickcategories) so that anything that’s confused about
+            # where it’s running will just crash instead of possibly doing the wrong thing
+            - name: replica-my-cnf
+              mountPath: '/etc/replica.my.cnf'
+              readOnly: true
+            - name: src
+              mountPath: '/srv/quickcategories/'
+              readOnly: true
+      volumes:
+        - name: replica-my-cnf
+          hostPath:
+            path: '/data/project/quickcategories/replica.my.cnf'
+        - name: src
+          hostPath:
+            path: '/data/project/quickcategories/www/python/src/'

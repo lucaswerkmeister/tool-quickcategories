@@ -9,9 +9,13 @@ please see the tool’s [on-wiki documentation page](https://meta.wikimedia.org/
 ## Toolforge setup
 
 On Wikimedia Toolforge, this tool runs under the `quickcategories` tool name.
-Source code resides in `~/www/python/src/`,
-a virtual environment is set up in `~/www/python/venv/`,
-logs end up in `~/uwsgi.log`.
+Source code resides in `~/www/python/src/`.
+
+### Webservice
+
+The web frontend of the tool runs as a standard Python web service,
+with a virtual environment in `~/www/python/venv/`
+and logs ending up in `~/uwsgi.log`.
 
 If the web service is not running for some reason, run the following command:
 ```
@@ -19,16 +23,44 @@ webservice --backend=kubernetes python start
 ```
 If it’s acting up, try the same command with `restart` instead of `start`.
 
-To update the service, run the following commands after becoming the tool account:
+### Background runner
+
+The background runner for batches runs as a [Kubernetes continuous job](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Kubernetes#Kubernetes_continuous_jobs),
+with a deployment described by the `deployment.yaml` file in the source code repository.
+To inspect the current status, get the currently running pod via `kubectl get pods`;
+you can then, for example, view its logs with `kubectl logs NAME`
+or enter a debugging shell with `kubectl exec -it NAME bash`.
+
+To stop the runner, use `kubectl delete deployment quickcategories.background-runner`.
+You can start a new one with `kubectl create -f deployment.yaml`
+(or `~/www/python/src/deployment.yaml` if you’re not in the source code directory).
+It sets up its own virtual environment, so it should be ready after a minute or so.
+
+### Update
+
+The following commands should work to update the tool after becoming the tool account:
+
 ```
-webservice --backend=kubernetes python shell
-source ~/www/python/venv/bin/activate
+# stop current processes
+webservice --backend=kubernetes python stop
+kubectl delete deployment quickcategories.background-runner
+
+# update source code
 cd ~/www/python/src
 git fetch
 git diff @ @{u} # inspect changes
 git merge --ff-only @{u}
-pip3 install -r requirements.txt
-webservice --backend=kubernetes python restart
+
+# update webservice venv
+webservice --backend=kubernetes python shell
+source ~/www/python/venv/bin/activate
+pip3 install --upgrade pip
+pip3 install -r ~/www/python/src/requirements.txt
+exit
+
+# start new processes
+webservice --backend=kubernetes python start
+kubectl create -f deployment.yaml
 ```
 
 ## Local development setup
