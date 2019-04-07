@@ -19,12 +19,16 @@ import parse_tpsv
 
 def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
     domain = session.host[len('https://'):]
-    response = session.get(action='query',
-                           meta='userinfo',
-                           uiprop='centralids')
+    response = session.get(**{'action': 'query',
+                              'meta': 'userinfo',
+                              'uiprop': 'centralids',
+                              'assert': 'user'}) # assert is a keyword, can’t use kwargs syntax :(
     user_name = response['query']['userinfo']['name']
     local_user_id = response['query']['userinfo']['id']
     global_user_id = response['query']['userinfo']['centralids']['CentralAuth']
+    assert user_name
+    assert local_user_id > 0
+    assert global_user_id > 0
     return user_name, local_user_id, global_user_id, domain
 
 
