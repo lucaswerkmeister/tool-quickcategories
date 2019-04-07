@@ -11,6 +11,7 @@ import re
 import requests_oauthlib # type: ignore
 import string
 import toolforge
+import traceback
 from typing import List, Optional, Tuple
 import yaml
 
@@ -207,6 +208,26 @@ def new_batch():
     session = authenticated_session(domain)
     if not session:
         return 'not logged in', 403 # Forbidden; 401 Unauthorized would be inappropriate because we don’t send WWW-Authenticate
+
+    try:
+        response = session.get(action='query',
+                               meta='siteinfo')
+        servername = response['query']['general']['servername']
+        if servername != domain:
+            message = (flask.Markup(r'The server at <code>') +
+                       flask.Markup.escape(domain) +
+                       flask.Markup(r'</code> indicates its actual name is <code>') +
+                       flask.Markup.escape(servername) +
+                       flask.Markup(r'</code>.'))
+            return flask.render_template('new_batch_error.html',
+                                         message=message), 400
+    except Exception:
+        traceback.print_exc() # for possible later manual inspection
+        message = (flask.Markup(r'Could not connect to the server at <code>') +
+                   flask.Markup.escape(domain) +
+                   flask.Markup(r'</code>.'))
+        return flask.render_template('new_batch_error.html',
+                                     message=message), 400
 
     try:
         batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''))
