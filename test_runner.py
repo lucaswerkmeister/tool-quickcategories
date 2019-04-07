@@ -21,10 +21,15 @@ def test_run_command():
                  lgpassword=os.environ['MW_PASSWORD'],
                  lgtoken=lgtoken)
 
-    command = Command('QuickCategories CI Test', [AddCategoryAction('Added cat'),
-                                                  AddCategoryAction('Already present cat'),
-                                                  RemoveCategoryAction('Removed cat'),
-                                                  RemoveCategoryAction('Not present cat')])
+    title = 'QuickCategories CI Test'
+    if 'TRAVIS_JOB_NUMBER' in os.environ:
+        job_number = os.environ['TRAVIS_JOB_NUMBER']
+        title += '/' + job_number[job_number.index('.')+1:]
+
+    command = Command(title, [AddCategoryAction('Added cat'),
+                              AddCategoryAction('Already present cat'),
+                              RemoveCategoryAction('Removed cat'),
+                              RemoveCategoryAction('Not present cat')])
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
     setup_edit = session.post(**{'action': 'edit',

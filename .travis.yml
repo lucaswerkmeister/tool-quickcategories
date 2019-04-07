@@ -1,6 +1,11 @@
 language: python
 python:
+  # Note: each extra job will cause test_runner.py to try to edit another page –
+  # QuickCategories CI Test/1, QuickCategories CI Test/2, etc. –
+  # and since the bot password does not have permission to create pages,
+  # when adding a new job you’ll have to create that page manually first.
   - "3.4"
+  - "3.5"
 addons:
   mariadb: "10.1"
 env:
