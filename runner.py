@@ -115,5 +115,5 @@ class Runner():
             return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
 
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
-        # TODO update prepared_page?
+        del self.prepared_pages[title] # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
         return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])

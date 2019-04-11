@@ -30,6 +30,7 @@ def test_run_command():
                               AddCategoryAction('Already present cat'),
                               RemoveCategoryAction('Removed cat'),
                               RemoveCategoryAction('Not present cat')])
+    runner = Runner(session)
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
     setup_edit = session.post(**{'action': 'edit',
@@ -38,10 +39,11 @@ def test_run_command():
                                  'summary': 'setup',
                                  'token': csrftoken,
                                  'assert': 'user'})
-    edit = Runner(session).run_command(CommandPending(0, command))
+    edit = runner.run_command(CommandPending(0, command))
 
     assert isinstance(edit, CommandEdit)
     assert edit.base_revision == setup_edit['edit']['newrevid']
+    assert command.page not in runner.prepared_pages
 
     actual = session.get(action='query',
                          revids=[edit.revision],
