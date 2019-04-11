@@ -131,6 +131,7 @@ def test_with_nochange():
 
     assert isinstance(command_record, CommandNoop)
     assert command_record.revision == 195259
+    assert 'Main page' not in runner.prepared_pages
 
 def test_with_missing_page():
     curtimestamp = '2019-03-11T23:33:30Z'

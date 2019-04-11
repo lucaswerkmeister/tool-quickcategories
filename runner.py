@@ -112,6 +112,7 @@ class Runner():
                 raise e
 
         if 'nochange' in response['edit']:
+            del self.prepared_pages[title] # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
             return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
 
         assert response['edit']['oldrevid'] == prepared_page['base_revid']
