@@ -191,6 +191,32 @@ class CommandPageMissing(CommandFailure):
             repr(self.curtimestamp) + ')'
 
 
+class CommandPageProtected(CommandFailure):
+    """A command that failed because the specified page was protected at the time."""
+
+    def __init__(self, id: int, command: Command, curtimestamp: str):
+        super().__init__(id, command)
+        self.curtimestamp = curtimestamp
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
+        return True
+
+    def __eq__(self, value: Any) -> bool:
+        return type(value) is CommandPageProtected and \
+            self.id == value.id and \
+            self.command == value.command and \
+            self.curtimestamp == value.curtimestamp
+
+    def __repr__(self) -> str:
+        return 'CommandPageProtected(' + \
+            repr(self.id) + ', ' + \
+            repr(self.command) + ', ' + \
+            repr(self.curtimestamp) + ')'
+
+
 class CommandEditConflict(CommandFailure):
     """A command that failed due to an edit conflict."""
 

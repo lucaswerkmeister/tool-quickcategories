@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple
 import yaml
 
 from batch import StoredBatch, OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 from runner import Runner
 import store
@@ -141,6 +141,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
         command_record_markup = flask.render_template('command_page_missing.html',
                                                       domain=domain,
                                                       command_page_missing=command_record)
+    elif isinstance(command_record, CommandPageProtected):
+        command_record_markup = flask.render_template('command_page_protected.html',
+                                                      domain=domain,
+                                                      command_page_protected=command_record)
     elif isinstance(command_record, CommandEditConflict):
         command_record_markup = flask.render_template('command_edit_conflict.html',
                                                       domain=domain,

@@ -13,7 +13,7 @@ import threading
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchCommandRecordsList, BatchBackgroundRuns, BatchBackgroundRunsList
-from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import parse_tpsv
 
 
@@ -153,6 +153,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_MAXLAG_EXCEEDED = 131
     _COMMAND_STATUS_BLOCKED = 132
     _COMMAND_STATUS_WIKI_READ_ONLY = 133
+    _COMMAND_STATUS_PAGE_PROTECTED = 134
 
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
@@ -359,6 +360,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         elif isinstance(command_finish, CommandPageMissing):
             status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
             outcome = {'curtimestamp': command_finish.curtimestamp}
+        elif isinstance(command_finish, CommandPageProtected):
+            status = DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED
+            outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandEditConflict):
             status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
             outcome = {}
@@ -402,6 +406,10 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             return CommandPageMissing(id,
                                       command,
                                       curtimestamp=outcome_dict['curtimestamp'])
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
+            return CommandPageProtected(id,
+                                        command,
+                                        curtimestamp=outcome_dict['curtimestamp'])
         elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict(id,
                                        command)

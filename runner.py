@@ -2,7 +2,7 @@ import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import siteinfo
 
 
@@ -94,6 +94,8 @@ class Runner():
             if e.code == 'editconflict':
                 del self.prepared_pages[title] # this must be outdated now
                 return CommandEditConflict(command_pending.id, command_pending.command)
+            elif e.code == 'protectedpage':
+                return CommandPageProtected(command_pending.id, command_pending.command, curtimestamp=prepared_page['start_timestamp'])
             elif e.code == 'maxlag':
                 retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)

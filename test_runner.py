@@ -4,7 +4,7 @@ import os
 import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from runner import Runner
 
 from test_utils import FakeSession
@@ -241,6 +241,69 @@ def test_with_missing_page_unnormalized():
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_protected_page():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'pageid': 58692,
+                        'ns': 0,
+                        'title': 'Main page',
+                        'revisions': [
+                            {
+                                'revid': 195259,
+                                'parentid': 114947,
+                                'timestamp': '2014-02-23T15:14:40Z',
+                                'slots': {
+                                    'main': {
+                                        'contentmodel': 'wikitext',
+                                        'contentformat': 'text/x-wiki',
+                                        'content': 'Unit Testing 1, 2, 3... External link: http://some-fake-site.com/?p=1774943982 Hit me with a captcha...',
+                                    },
+                                },
+                            },
+                        ],
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        'name': 'comma-separator',
+                        'content': ', ',
+                    },
+                    {
+                        'name': 'semicolon-separator',
+                        'content': '; ',
+                    },
+                    {
+                        'name': 'parentheses',
+                        'content': '($1)',
+                    },
+                ],
+            },
+        },
+        mwapi.errors.APIError('protectedpage', 'This page has been protected to prevent editing or other actions.', None)
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
 
 def test_with_edit_conflict():
     curtimestamp = '2019-03-11T23:33:30Z'

@@ -15,7 +15,7 @@ from command import CommandRecord, CommandEdit, CommandNoop
 from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
 
 from test_batch import newBatch1
-from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
+from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandPageProtected1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
 from test_utils import FakeSession
 
 
@@ -384,6 +384,7 @@ command_finishes_and_rows = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+    (commandPageProtected1, (DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED, {'curtimestamp': '2019-03-11T23:26:02Z'})),
     (commandEditConflict1, (DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
     (commandMaxlagExceeded1, (DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842})),
     (commandBlocked1, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': blockinfo})),

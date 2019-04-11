@@ -2,7 +2,7 @@ import datetime
 import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -178,6 +178,9 @@ def test_CommandPageMissing_eq_same():
 def test_CommandPageMissing_eq_equal():
     assert commandPageMissing1 == CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
 
+def test_CommandPageMissing_eq_different_type():
+    assert commandPageMissing1 != commandPageProtected1
+
 def test_CommandPageMissing_eq_different_id():
     assert commandPageMissing1 != CommandPageMissing(43, commandPageMissing1.command, commandPageMissing1.curtimestamp)
 
@@ -192,6 +195,41 @@ def test_CommandPageMissing_str():
 
 def test_CommandPageMissing_repr():
     assert eval(repr(commandPageMissing1)) == commandPageMissing1
+
+
+commandWithProtectedPage = Command('Main Page', command2.actions)
+commandPageProtected1 = CommandPageProtected(42, commandWithProtectedPage, '2019-03-11T23:26:02Z')
+
+
+def test_CommandPageProtected_can_retry_immediately():
+    assert not commandPageProtected1.can_retry_immediately()
+
+def test_CommandPageProtected_can_continue_batch():
+    assert commandPageProtected1.can_continue_batch()
+
+def test_CommandPageProtected_eq_same():
+    assert commandPageProtected1 == commandPageProtected1
+
+def test_CommandPageProtected_eq_equal():
+    assert commandPageProtected1 == CommandPageProtected(42, commandWithProtectedPage, '2019-03-11T23:26:02Z')
+
+def test_CommandPageProtected_eq_different_type():
+    assert commandPageProtected1 != commandPageMissing1
+
+def test_CommandPageProtected_eq_different_id():
+    assert commandPageProtected1 != CommandPageProtected(43, commandPageProtected1.command, commandPageProtected1.curtimestamp)
+
+def test_CommandPageProtected_eq_different_command():
+    assert commandPageProtected1 != CommandPageProtected(commandPageProtected1.id, command2, commandPageProtected1.curtimestamp)
+
+def test_CommandPageProtected_eq_different_curtimestamp():
+    assert commandPageProtected1 != CommandPageProtected(commandPageProtected1.id, commandPageProtected1.command, '2019-03-11T23:28:12Z')
+
+def test_CommandPageProtected_str():
+    assert str(commandPageProtected1) == '# ' + str(commandWithProtectedPage)
+
+def test_CommandPageProtected_repr():
+    assert eval(repr(commandPageProtected1)) == commandPageProtected1
 
 
 commandEditConflict1 = CommandEditConflict(42, command1)
