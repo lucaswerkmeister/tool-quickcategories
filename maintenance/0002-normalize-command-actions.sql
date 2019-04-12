@@ -14,6 +14,7 @@ FROM command;
 
 CREATE INDEX actions_hash ON actions (actions_hash);
 
+
 ALTER TABLE command
 ADD COLUMN command_page text DEFAULT NULL AFTER command_tpsv,
 ADD COLUMN command_actions_id int unsigned DEFAULT NULL AFTER command_page;

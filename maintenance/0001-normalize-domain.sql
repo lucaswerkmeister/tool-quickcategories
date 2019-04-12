@@ -13,6 +13,7 @@ FROM batch;
 
 CREATE INDEX domain_hash ON domain (domain_hash);
 
+
 ALTER TABLE batch
 ADD COLUMN batch_domain_id int unsigned DEFAULT NULL AFTER batch_domain;
 
