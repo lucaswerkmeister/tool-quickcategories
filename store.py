@@ -106,19 +106,18 @@ class InMemoryStore(BatchStore):
         local_user = _local_user_from_session(session)
         background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
-            background_runs.background_runs.append(((started, (local_user.user_name, local_user.local_user_id, local_user.global_user_id)), None))
+            background_runs.background_runs.append(((started, local_user), None))
             self.background_sessions[batch.id] = session
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
         stopped = _now()
         if session:
-            local_user = _local_user_from_session(session)
-            user_info = (local_user.user_name, local_user.local_user_id, local_user.global_user_id) # type: Optional[Tuple[str, int, int]]
+            local_user = _local_user_from_session(session) # type: Optional[LocalUser]
         else:
-            user_info = None
+            local_user = None
         background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
         if background_runs.currently_running():
-            background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, user_info))
+            background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, local_user))
             del self.background_sessions[batch.id]
 
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
@@ -199,7 +198,7 @@ class DatabaseStore(BatchStore):
                          created,
                          created,
                          _BatchCommandRecordsDatabase(batch_id, self),
-                         _BatchBackgroundRunsDatabase(batch_id, self))
+                         _BatchBackgroundRunsDatabase(batch_id, local_user.domain, self))
 
     def get_batch(self, id: int) -> Optional[StoredBatch]:
         with self._connect() as connection:
@@ -225,7 +224,7 @@ class DatabaseStore(BatchStore):
                              created,
                              last_updated,
                              _BatchCommandRecordsDatabase(id, self),
-                             _BatchBackgroundRunsDatabase(id, self))
+                             _BatchBackgroundRunsDatabase(id, local_user.domain, self))
         elif status == DatabaseStore._BATCH_STATUS_CLOSED:
             return ClosedBatch(id,
                                local_user,
@@ -233,7 +232,7 @@ class DatabaseStore(BatchStore):
                                created,
                                last_updated,
                                _BatchCommandRecordsDatabase(id, self),
-                               _BatchBackgroundRunsDatabase(id, self))
+                               _BatchBackgroundRunsDatabase(id, local_user.domain, self))
         else:
             raise ValueError('Unknown batch type')
 
@@ -530,8 +529,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
 class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
-    def __init__(self, batch_id: int, store: DatabaseStore):
+    def __init__(self, batch_id: int, domain: str, store: DatabaseStore):
         self.batch_id = batch_id
+        self.domain = domain
         self.store = store
 
     def currently_running(self) -> bool:
@@ -547,19 +547,19 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
     def _row_to_background_run(self,
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
-                               -> Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]:
-        background_start = (self.store._utc_timestamp_to_datetime(started_utc_timestamp), (started_user_name, started_local_user_id, started_global_user_id))
+                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:
+        background_start = (self.store._utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
         if stopped_utc_timestamp:
             if stopped_user_name:
-                stopped_user_info = (stopped_user_name, stopped_local_user_id, stopped_global_user_id) # type: Optional[Tuple[str, int, int]]
+                stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id) # type: Optional[LocalUser]
             else:
-                stopped_user_info = None
-            background_stop = (self.store._utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_user_info) # type: Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]
+                stopped_local_user = None
+            background_stop = (self.store._utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user) # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
         else:
             background_stop = None
         return (background_start, background_stop)
 
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
                               FROM `background`
@@ -573,7 +573,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             else:
                 return None
 
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
                               FROM `background`

@@ -162,24 +162,24 @@ class BatchBackgroundRuns:
         last = self.get_last()
         return last is not None and last[1] is not None
 
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]: ...
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]: ...
 
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]: ...
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]: ...
 
 
 class BatchBackgroundRunsList(BatchBackgroundRuns):
     """List-based implementation of BatchBackgroundRuns."""
 
-    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]):
+    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]):
         self.background_runs = background_runs
 
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         if self.background_runs:
             return self.background_runs[-1]
         else:
             return None
 
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, Tuple[str, int, int]], Optional[Tuple[datetime.datetime, Optional[Tuple[str, int, int]]]]]]:
+    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         return self.background_runs
 
     def __eq__(self, value: Any) -> bool:
