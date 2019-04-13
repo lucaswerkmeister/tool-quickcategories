@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<h1>Batch #{{ batch.id }} by {{ render_batch_user(batch) }}</h1>
+<h1>Batch #{{ batch.id }} by {{ render_local_user(batch.user) }}</h1>
 {% set background_run = batch.background_runs.get_last() %}
 {% set currently_running = background_run and not background_run[1] %}
 <p class="lead">

@@ -15,8 +15,9 @@ import traceback
 from typing import List, Optional, Tuple
 import yaml
 
-from batch import StoredBatch, OpenBatch
+from batch import OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from localuser import LocalUser
 import parse_tpsv
 from runner import Runner
 import store
@@ -178,13 +179,13 @@ def render_datetime(dt: datetime.datetime) -> flask.Markup:
             flask.Markup(r'</time>'))
 
 @app.template_global()
-def render_batch_user(batch: StoredBatch) -> flask.Markup:
+def render_local_user(local_user: LocalUser) -> flask.Markup:
     return (flask.Markup(r'<a href="https://') +
-            flask.Markup.escape(batch.user.domain) +
+            flask.Markup.escape(local_user.domain) +
             flask.Markup(r'/wiki/Special:Redirect/user/') +
-            flask.Markup.escape(str(batch.user.local_user_id)) +
+            flask.Markup.escape(str(local_user.local_user_id)) +
             flask.Markup(r'"><bdi>') +
-            flask.Markup.escape(batch.user.user_name) +
+            flask.Markup.escape(local_user.user_name) +
             flask.Markup(r'</bdi></a>'))
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
