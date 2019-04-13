@@ -180,11 +180,11 @@ def render_datetime(dt: datetime.datetime) -> flask.Markup:
 @app.template_global()
 def render_batch_user(batch: StoredBatch) -> flask.Markup:
     return (flask.Markup(r'<a href="https://') +
-            flask.Markup.escape(batch.domain) +
+            flask.Markup.escape(batch.user.domain) +
             flask.Markup(r'/wiki/Special:Redirect/user/') +
-            flask.Markup.escape(str(batch.local_user_id)) +
+            flask.Markup.escape(str(batch.user.local_user_id)) +
             flask.Markup(r'"><bdi>') +
-            flask.Markup.escape(batch.user_name) +
+            flask.Markup.escape(batch.user.user_name) +
             flask.Markup(r'</bdi></a>'))
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
@@ -256,7 +256,7 @@ def batch(id: int):
                                meta='userinfo',
                                uiprop=['groups'])['query']['userinfo']
         local_user_id = userinfo['id']
-        flask.g.can_run_commands = local_user_id == batch.local_user_id
+        flask.g.can_run_commands = local_user_id == batch.user.local_user_id
         flask.g.can_start_background = flask.g.can_run_commands and \
             'autoconfirmed' in userinfo['groups']
         flask.g.can_stop_background = flask.g.can_start_background or \
@@ -295,7 +295,7 @@ def run_batch_slice(id: int):
         return 'not logged in', 403
     local_user_id = session.get(action='query',
                                 meta='userinfo')['query']['userinfo']['id']
-    if local_user_id != batch.local_user_id:
+    if local_user_id != batch.user.local_user_id:
         return 'may not run this batch', 403
 
     if 'summary_suffix' in app.config:
@@ -341,7 +341,7 @@ def start_batch_background(id: int):
                            meta='userinfo',
                            uiprop=['groups'])['query']['userinfo']
     local_user_id = userinfo['id']
-    if local_user_id != batch.local_user_id or \
+    if local_user_id != batch.user.local_user_id or \
        'autoconfirmed' not in userinfo['groups']:
         return 'may not start this batch in background', 403
 
@@ -367,7 +367,7 @@ def stop_batch_background(id: int):
                            meta='userinfo',
                            uiprop=['groups'])['query']['userinfo']
     local_user_id = userinfo['id']
-    if local_user_id != batch.local_user_id and \
+    if local_user_id != batch.user.local_user_id and \
        'sysop' not in userinfo['groups']:
         return 'may not stop this batch in background', 403
 

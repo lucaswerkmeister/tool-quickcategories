@@ -14,10 +14,11 @@ from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchCommandRecordsList, BatchBackgroundRuns, BatchBackgroundRunsList
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from localuser import LocalUser
 import parse_tpsv
 
 
-def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
+def _local_user_from_session(session: mwapi.Session) -> LocalUser:
     domain = session.host[len('https://'):]
     response = session.get(**{'action': 'query',
                               'meta': 'userinfo',
@@ -29,7 +30,7 @@ def _metadata_from_session(session: mwapi.Session) -> Tuple[str, int, int, str]:
     assert user_name
     assert local_user_id > 0
     assert global_user_id > 0
-    return user_name, local_user_id, global_user_id, domain
+    return LocalUser(user_name, domain, local_user_id, global_user_id)
 
 
 def _now() -> datetime.datetime:
@@ -61,7 +62,7 @@ class InMemoryStore(BatchStore):
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = _now()
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        local_user = _local_user_from_session(session)
 
         command_plans = [] # type: List[CommandRecord]
         for command in new_batch.commands:
@@ -69,10 +70,8 @@ class InMemoryStore(BatchStore):
             self.next_command_id += 1
 
         open_batch = OpenBatch(self.next_batch_id,
-                               user_name,
-                               local_user_id,
-                               global_user_id,
-                               domain,
+                               local_user,
+                               local_user.domain,
                                created,
                                created,
                                BatchCommandRecordsList(command_plans),
@@ -90,9 +89,7 @@ class InMemoryStore(BatchStore):
         if isinstance(stored_batch, OpenBatch) and \
            all(map(lambda command_record: isinstance(command_record, CommandFinish), command_records)):
             stored_batch = ClosedBatch(stored_batch.id,
-                                       stored_batch.user_name,
-                                       stored_batch.local_user_id,
-                                       stored_batch.global_user_id,
+                                       stored_batch.user,
                                        stored_batch.domain,
                                        stored_batch.created,
                                        stored_batch.last_updated,
@@ -106,17 +103,17 @@ class InMemoryStore(BatchStore):
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        local_user = _local_user_from_session(session)
         background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
-            background_runs.background_runs.append(((started, (user_name, local_user_id, global_user_id)), None))
+            background_runs.background_runs.append(((started, (local_user.user_name, local_user.local_user_id, local_user.global_user_id)), None))
             self.background_sessions[batch.id] = session
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
         stopped = _now()
         if session:
-            user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
-            user_info = (user_name, local_user_id, global_user_id) # type: Optional[Tuple[str, int, int]]
+            local_user = _local_user_from_session(session)
+            user_info = (local_user.user_name, local_user.local_user_id, local_user.global_user_id) # type: Optional[Tuple[str, int, int]]
         else:
             user_info = None
         background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
@@ -181,13 +178,13 @@ class DatabaseStore(BatchStore):
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = _now()
         created_utc_timestamp = self._datetime_to_utc_timestamp(created)
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        local_user = _local_user_from_session(session)
 
         with self._connect() as connection:
-            domain_id = self.domain_store.acquire_id(connection, domain)
+            domain_id = self.domain_store.acquire_id(connection, local_user.domain)
             with connection.cursor() as cursor:
                 cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain_id`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                               (user_name, local_user_id, global_user_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
+                               (local_user.user_name, local_user.local_user_id, local_user.global_user_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
@@ -197,10 +194,8 @@ class DatabaseStore(BatchStore):
             connection.commit()
 
         return OpenBatch(batch_id,
-                         user_name,
-                         local_user_id,
-                         global_user_id,
-                         domain,
+                         local_user,
+                         local_user.domain,
                          created,
                          created,
                          _BatchCommandRecordsDatabase(batch_id, self),
@@ -222,22 +217,19 @@ class DatabaseStore(BatchStore):
         id, user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
         created = self._utc_timestamp_to_datetime(created_utc_timestamp)
         last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
+        local_user = LocalUser(user_name, domain, local_user_id, global_user_id)
         if status == DatabaseStore._BATCH_STATUS_OPEN:
             return OpenBatch(id,
-                             user_name,
-                             local_user_id,
-                             global_user_id,
-                             domain,
+                             local_user,
+                             local_user.domain,
                              created,
                              last_updated,
                              _BatchCommandRecordsDatabase(id, self),
                              _BatchBackgroundRunsDatabase(id, self))
         elif status == DatabaseStore._BATCH_STATUS_CLOSED:
             return ClosedBatch(id,
-                               user_name,
-                               local_user_id,
-                               global_user_id,
-                               domain,
+                               local_user,
+                               local_user.domain,
                                created,
                                last_updated,
                                _BatchCommandRecordsDatabase(id, self),
@@ -258,7 +250,7 @@ class DatabaseStore(BatchStore):
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
         started_utc_timestamp = self._datetime_to_utc_timestamp(started)
-        user_name, local_user_id, global_user_id, domain = _metadata_from_session(session)
+        local_user = _local_user_from_session(session)
 
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT 1
@@ -278,7 +270,7 @@ class DatabaseStore(BatchStore):
             cursor.execute('''INSERT INTO `background`
                               (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`)
                               VALUES (%s, %s, %s, %s, %s, %s)''',
-                           (batch.id, json.dumps(auth), started_utc_timestamp, user_name, local_user_id, global_user_id))
+                           (batch.id, json.dumps(auth), started_utc_timestamp, local_user.user_name, local_user.local_user_id, local_user.global_user_id))
             connection.commit()
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
@@ -288,7 +280,10 @@ class DatabaseStore(BatchStore):
         stopped = _now()
         stopped_utc_timestamp = self._datetime_to_utc_timestamp(stopped)
         if session:
-            user_name, local_user_id, global_user_id, domain = _metadata_from_session(session) # type: Tuple[Optional[str], Optional[int], Optional[int], str]
+            local_user = _local_user_from_session(session)
+            user_name = local_user.user_name # type: Optional[str]
+            local_user_id = local_user.local_user_id # type: Optional[int]
+            global_user_id = local_user.global_user_id # type: Optional[int]
         else:
             user_name, local_user_id, global_user_id = None, None, None
         with self._connect() as connection, connection.cursor() as cursor:

@@ -2,6 +2,7 @@ import datetime
 from typing import Any, List, Optional, Sequence, Tuple
 
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandFinish
+from localuser import LocalUser
 
 
 class NewBatch:
@@ -35,18 +36,14 @@ class StoredBatch:
 
     def __init__(self,
                  id: int,
-                 user_name: str,
-                 local_user_id: int,
-                 global_user_id: int,
+                 user: LocalUser,
                  domain: str,
                  created: datetime.datetime,
                  last_updated: datetime.datetime,
                  command_records: 'BatchCommandRecords',
                  background_runs: 'BatchBackgroundRuns'):
         self.id = id
-        self.user_name = user_name
-        self.local_user_id = local_user_id
-        self.global_user_id = global_user_id
+        self.user = user
         self.domain = domain
         self.created = created
         self.last_updated = last_updated
@@ -60,9 +57,7 @@ class OpenBatch(StoredBatch):
     def __eq__(self, value: Any) -> bool:
         return type(value) is OpenBatch and \
             self.id == value.id and \
-            self.user_name == value.user_name and \
-            self.local_user_id == value.local_user_id and \
-            self.global_user_id == value.global_user_id and \
+            self.user == value.user and \
             self.domain == value.domain and \
             self.created == value.created and \
             self.last_updated == value.last_updated and \
@@ -70,14 +65,12 @@ class OpenBatch(StoredBatch):
             self.background_runs == value.background_runs
 
     def __str__(self) -> str:
-        return 'batch #%d on %s by %s' % (self.id, self.domain, self.user_name)
+        return 'batch #%d on %s by %s' % (self.id, self.domain, self.user.user_name)
 
     def __repr__(self) -> str:
         return 'OpenBatch(' + \
             repr(self.id) + ', ' + \
-            repr(self.user_name) + ', ' + \
-            repr(self.local_user_id) + ', ' + \
-            repr(self.global_user_id) + ', ' + \
+            repr(self.user) + ', ' + \
             repr(self.domain) + ', ' + \
             repr(self.created) + ', ' + \
             repr(self.last_updated) + ', ' + \
@@ -91,9 +84,7 @@ class ClosedBatch(StoredBatch):
     def __eq__(self, value: Any) -> bool:
         return type(value) is ClosedBatch and \
             self.id == value.id and \
-            self.user_name == value.user_name and \
-            self.local_user_id == value.local_user_id and \
-            self.global_user_id == value.global_user_id and \
+            self.user == value.user and \
             self.domain == value.domain and \
             self.created == value.created and \
             self.last_updated == value.last_updated and \
@@ -101,14 +92,12 @@ class ClosedBatch(StoredBatch):
             self.background_runs == value.background_runs
 
     def __str__(self) -> str:
-        return 'batch #%d on %s by %s' % (self.id, self.domain, self.user_name)
+        return 'batch #%d on %s by %s' % (self.id, self.domain, self.user.user_name)
 
     def __repr__(self) -> str:
         return 'ClosedBatch(' + \
             repr(self.id) + ', ' + \
-            repr(self.user_name) + ', ' + \
-            repr(self.local_user_id) + ', ' + \
-            repr(self.global_user_id) + ', ' + \
+            repr(self.user) + ', ' + \
             repr(self.domain) + ', ' + \
             repr(self.created) + ', ' + \
             repr(self.last_updated) + ', ' + \
