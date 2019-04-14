@@ -89,7 +89,7 @@ class InMemoryStore(BatchStore):
         if isinstance(stored_batch, OpenBatch) and \
            all(map(lambda command_record: isinstance(command_record, CommandFinish), command_records)):
             stored_batch = ClosedBatch(stored_batch.id,
-                                       stored_batch.user,
+                                       stored_batch.local_user,
                                        stored_batch.domain,
                                        stored_batch.created,
                                        stored_batch.last_updated,

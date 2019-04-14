@@ -53,7 +53,7 @@ def test_InMemoryStore_store_batch_batch_ids():
 
 def test_InMemoryStore_store_batch_metadata():
     open_batch = InMemoryStore().store_batch(newBatch1, fake_session)
-    assert open_batch.user == LocalUser('Lucas Werkmeister', 'commons.wikimedia.org', 6198807, 46054761)
+    assert open_batch.local_user == LocalUser('Lucas Werkmeister', 'commons.wikimedia.org', 6198807, 46054761)
     assert open_batch.domain == 'commons.wikimedia.org'
 
 def test_InMemoryStore_get_batch():
@@ -157,7 +157,7 @@ def test_DatabaseStore_get_batch(store):
     loaded_batch = store.get_batch(stored_batch.id)
 
     assert loaded_batch.id == stored_batch.id
-    assert loaded_batch.user == LocalUser('Lucas Werkmeister', 'commons.wikimedia.org', 6198807, 46054761)
+    assert loaded_batch.local_user == LocalUser('Lucas Werkmeister', 'commons.wikimedia.org', 6198807, 46054761)
     assert loaded_batch.domain == 'commons.wikimedia.org'
 
     assert len(loaded_batch.command_records) == 2
