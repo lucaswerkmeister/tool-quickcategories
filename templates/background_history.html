@@ -14,11 +14,11 @@
     {% for start, stop in batch.background_runs.get_all() %}
     <tr>
       <td>{{ start[0] | render_datetime }}</td>
-      <td><a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ start[1].local_user_id }}"><bdi>{{ start[1].user_name }}</bdi></a></td>
+      <td>{{ render_local_user(start[1]) }}</td>
       {% if stop %}
       <td>{{ stop[0] | render_datetime }}</td>
       {% if stop[1] %}
-      <td><a href="https://{{ batch.domain }}/wiki/Special:Redirect/user/{{ stop[1].local_user_id }}"><bdi>{{ stop[1].user_name }}</bdi></a></td>
+      <td>{{ render_local_user(stop[1]) }}</td>
       {% else %}
       <td></td>
       {% endif %}
