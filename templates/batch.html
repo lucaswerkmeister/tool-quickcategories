@@ -14,7 +14,9 @@
     {% if currently_running %}
     Running in background since {{ background_run[0][0] | render_datetime }}
     {% else %}
-    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}
+    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}{% if background_run[1][1] and background_run[1][1] != background_run[0][1] %},
+    stopped by {{ render_local_user(background_run[1][1]) }}
+    {% endif %}
     {% endif %}
     (<a href="{{ url_for('batch_background_history', id=batch.id) }}">full history</a>).
     {% if currently_running and can_stop_background() %}
