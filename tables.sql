@@ -1,9 +1,7 @@
 -- stored batches
 CREATE TABLE batch (
   batch_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT, -- public, also used to identify batches in URLs and on the page
-  batch_user_name varchar(255) binary NOT NULL,
-  batch_local_user_id int unsigned NOT NULL,
-  batch_global_user_id int unsigned NOT NULL,
+  batch_localuser_id int unsigned NOT NULL, -- referencing localuser.localuser_id
   batch_domain_id int unsigned NOT NULL, -- referencing domain.domain_id
   batch_created_utc_timestamp int unsigned NOT NULL,
   batch_last_updated_utc_timestamp int unsigned NOT NULL,
@@ -63,13 +61,9 @@ CREATE TABLE background (
   background_batch int unsigned NOT NULL, -- referencing batch.batch_id
   background_auth text, -- NULL after the background run was stopped
   background_started_utc_timestamp int unsigned NOT NULL,
-  background_started_user_name varchar(255) binary NOT NULL,
-  background_started_local_user_id int unsigned NOT NULL,
-  background_started_global_user_id int unsigned NOT NULL,
+  background_started_localuser_id int unsigned NOT NULL, -- referencing localuser.localuser_id
   background_stopped_utc_timestamp int unsigned,
-  background_stopped_user_name varchar(255) binary,
-  background_stopped_local_user_id int unsigned,
-  background_stopped_global_user_id int unsigned
+  background_stopped_localuser_id int unsigned -- referencing localuser.localuser_id
 )
 CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
@@ -79,3 +73,20 @@ CREATE INDEX background_batch_stopped ON background (background_batch, backgroun
 
 -- index for finding backgrounds not yet stopped, for any batch
 CREATE INDEX background_stopped_batch ON background (background_stopped_utc_timestamp, background_batch);
+
+
+-- user accounts local to wikis
+CREATE TABLE localuser (
+  localuser_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  localuser_user_name varchar(255) binary NOT NULL,
+  localuser_domain_id int unsigned NOT NULL, -- referencing domain.domain_id
+  localuser_local_user_id int unsigned NOT NULL,
+  localuser_global_user_id int unsigned NOT NULL
+)
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_bin';
+
+-- unique index for ensuring that when a user was renamed and starts a new batch,
+-- we use the same localuser record, effectively updating all past batches to use the new name too
+-- (with the local user ID first because it has much higher selectivity, being virtually unique on its own)
+CREATE UNIQUE INDEX localuser_local_user_id_domain_id ON localuser (localuser_local_user_id, localuser_domain_id);

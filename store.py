@@ -156,6 +156,7 @@ class DatabaseStore(BatchStore):
         self.connection_params = connection_params
         self.domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         self.actions_store = _StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
+        self.local_user_store = _LocalUserStore(self.domain_store)
 
     @contextlib.contextmanager
     def _connect(self) -> Generator[pymysql.connections.Connection, None, None]:
@@ -181,9 +182,10 @@ class DatabaseStore(BatchStore):
 
         with self._connect() as connection:
             domain_id = self.domain_store.acquire_id(connection, local_user.domain)
+            localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
             with connection.cursor() as cursor:
-                cursor.execute('INSERT INTO `batch` (`batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `batch_domain_id`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s, %s)',
-                               (local_user.user_name, local_user.local_user_id, local_user.global_user_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
+                cursor.execute('INSERT INTO `batch` (`batch_localuser_id`, `batch_domain_id`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s)',
+                               (localuser_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
@@ -203,9 +205,10 @@ class DatabaseStore(BatchStore):
     def get_batch(self, id: int) -> Optional[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
+                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
         if not result:
@@ -239,9 +242,10 @@ class DatabaseStore(BatchStore):
     def get_latest_batches(self) -> Sequence[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
+                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
                                   ORDER BY `batch_id` DESC
                                   LIMIT 10''')
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
@@ -251,25 +255,29 @@ class DatabaseStore(BatchStore):
         started_utc_timestamp = self._datetime_to_utc_timestamp(started)
         local_user = _local_user_from_session(session)
 
-        with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''SELECT 1
-                              FROM `background`
-                              WHERE `background_batch` = %s
-                              AND `background_stopped_utc_timestamp` IS NULL
-                              FOR UPDATE''',
-                           (batch.id,))
-            if cursor.fetchone():
-                connection.commit() # finish the FOR UPDATE
-                return
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT 1
+                                  FROM `background`
+                                  WHERE `background_batch` = %s
+                                  AND `background_stopped_utc_timestamp` IS NULL
+                                  FOR UPDATE''',
+                               (batch.id,))
+                if cursor.fetchone():
+                    connection.commit() # finish the FOR UPDATE
+                    return
 
             assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
             auth = {'resource_owner_key': session.session.auth.client.resource_owner_key,
                     'resource_owner_secret': session.session.auth.client.resource_owner_secret}
 
-            cursor.execute('''INSERT INTO `background`
-                              (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`)
-                              VALUES (%s, %s, %s, %s, %s, %s)''',
-                           (batch.id, json.dumps(auth), started_utc_timestamp, local_user.user_name, local_user.local_user_id, local_user.global_user_id))
+            localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
+
+            with connection.cursor() as cursor:
+                cursor.execute('''INSERT INTO `background`
+                                  (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id`)
+                                  VALUES (%s, %s, %s, %s)''',
+                               (batch.id, json.dumps(auth), started_utc_timestamp, localuser_id))
             connection.commit()
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
@@ -278,19 +286,18 @@ class DatabaseStore(BatchStore):
     def _stop_background_by_id(self, batch_id: int, session: Optional[mwapi.Session] = None) -> None:
         stopped = _now()
         stopped_utc_timestamp = self._datetime_to_utc_timestamp(stopped)
-        if session:
-            local_user = _local_user_from_session(session)
-            user_name = local_user.user_name # type: Optional[str]
-            local_user_id = local_user.local_user_id # type: Optional[int]
-            global_user_id = local_user.global_user_id # type: Optional[int]
-        else:
-            user_name, local_user_id, global_user_id = None, None, None
-        with self._connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''UPDATE `background`
-                              SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_user_name` = %s, `background_stopped_local_user_id` = %s, `background_stopped_global_user_id` = %s
-                              WHERE `background_batch` = %s
-                              AND `background_stopped_utc_timestamp` IS NULL''',
-                           (stopped_utc_timestamp, user_name, local_user_id, global_user_id, batch_id))
+        with self._connect() as connection:
+            if session:
+                local_user = _local_user_from_session(session)
+                localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user) # type: Optional[int]
+            else:
+                localuser_id = None
+            with connection.cursor() as cursor:
+                cursor.execute('''UPDATE `background`
+                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser_id` = %s
+                                  WHERE `background_batch` = %s
+                                  AND `background_stopped_utc_timestamp` IS NULL''',
+                               (stopped_utc_timestamp, localuser_id, batch_id))
             connection.commit()
             if cursor.rowcount > 1:
                 raise RuntimeError('Should have stopped at most 1 background operation, actually affected %d!' % cursor.rowcount)
@@ -298,12 +305,13 @@ class DatabaseStore(BatchStore):
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `batch_user_name`, `batch_local_user_id`, `batch_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   JOIN `actions` ON `command_actions_id` = `actions_id`
+                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
                                   WHERE `background_stopped_utc_timestamp` IS NULL
                                   AND `command_status` = %s
                                   ORDER BY `batch_last_updated_utc_timestamp` ASC, `command_id` ASC
@@ -561,8 +569,10 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
     def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store._connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
+            cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
+                              JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
+                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser_id` = `stopped`.`localuser_id`
                               WHERE `background_batch` = %s
                               ORDER BY `background_id` DESC
                               LIMIT 1''',
@@ -575,8 +585,10 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
     def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store._connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''SELECT `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`, `background_stopped_utc_timestamp`, `background_stopped_user_name`, `background_stopped_local_user_id`, `background_stopped_global_user_id`
+            cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
+                              JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
+                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser_id` = `stopped`.`localuser_id`
                               WHERE `background_batch` = %s
                               ORDER BY `background_id` ASC''',
                            (self.batch_id,))
@@ -638,3 +650,35 @@ class _StringTableStore:
             string_id = cursor.lastrowid
         connection.commit()
         return string_id
+
+
+class _LocalUserStore:
+    """Encapsulates access to a local user account in the localuser table.
+
+       When a user has been renamed, the same ID will still be used
+       and the name will be updated once the user is stored the next time."""
+
+    def __init__(self, domain_store: _StringTableStore):
+        self.domain_store = domain_store
+
+    def acquire_localuser_id(self, connection: pymysql.connections.Connection, local_user: LocalUser) -> int:
+        domain_id = self.domain_store.acquire_id(connection, local_user.domain)
+
+        with connection.cursor() as cursor:
+            cursor.execute('''INSERT INTO `localuser`
+                              (`localuser_user_name`, `localuser_domain_id`, `localuser_local_user_id`, `localuser_global_user_id`)
+                              VALUES (%s, %s, %s, %s)
+                              ON DUPLICATE KEY UPDATE `localuser_user_name` = %s''',
+                           (local_user.user_name, domain_id, local_user.local_user_id, local_user.global_user_id,
+                            local_user.user_name))
+            localuser_id = cursor.lastrowid
+            if not localuser_id: # not returned in the ON DUPLICATE KEY UPDATE case, apparently
+                cursor.execute('''SELECT `localuser_id`
+                                  FROM `localuser`
+                                  WHERE `localuser_local_user_id` = %s
+                                  AND `localuser_domain_id` = %s''',
+                               (local_user.local_user_id, domain_id))
+                (localuser_id,) = cursor.fetchone()
+                assert cursor.fetchone() is None
+        connection.commit()
+        return localuser_id

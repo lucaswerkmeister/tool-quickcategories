@@ -13,10 +13,11 @@ from typing import List, Optional, Tuple
 from batch import OpenBatch, ClosedBatch
 from command import CommandRecord, CommandEdit, CommandNoop
 from localuser import LocalUser
-from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore
+from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore, _LocalUserStore
 
 from test_batch import newBatch1
 from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandPageProtected1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
+from test_localuser import localUser1, localUser2
 from test_utils import FakeSession
 
 
@@ -232,7 +233,7 @@ def test_DatabaseStore_start_background_inserts_row(database_connection_params):
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store._connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_started_user_name`, `background_auth` FROM `background`')
+        cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser_id` = `localuser_id`')
         assert cursor.rowcount == 1
         user_name, auth = cursor.fetchone()
         assert user_name == 'Lucas Werkmeister'
@@ -259,7 +260,7 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch, fake_session)
     with store._connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser_id` = `localuser_id`')
         assert cursor.rowcount == 1
         auth, stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
         assert stopped_utc_timestamp > 0
@@ -272,11 +273,11 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch)
     with store._connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser_id` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser_id = cursor.fetchone()
         assert stopped_utc_timestamp > 0
-        assert stopped_user_name is None
+        assert stopped_localuser_id is None
 
 def test_DatabaseStore_stop_background_noop(store):
     open_batch = store.store_batch(newBatch1, fake_session)
@@ -288,7 +289,7 @@ def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(data
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store._connect() as connection, connection.cursor() as cursor:
-        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_user_name`, `background_started_local_user_id`, `background_started_global_user_id` FROM `background`')
+        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id` FROM `background`')
         connection.commit()
     with pytest.raises(RuntimeError, match='Should have stopped at most 1 background operation, actually affected 2!'):
         store.stop_background(open_batch)
@@ -306,11 +307,11 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
     open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     with store._connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_user_name` FROM `background`')
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser_id` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser_id = cursor.fetchone()
         assert stopped_utc_timestamp > 0
-        assert stopped_user_name is None
+        assert stopped_localuser_id is None
 
 def test_DatabaseStore_make_plan_pending_background(database_connection_params):
     store = DatabaseStore(database_connection_params)
@@ -450,3 +451,74 @@ def test_StringTableStore_acquire_id_cached():
         store._cache['test.wikipedia.org'] = 1
 
     assert store.acquire_id(None, 'test.wikipedia.org') == 1
+
+
+def test_LocalUserStore_store_two_users(database_connection_params):
+    connection = pymysql.connect(**database_connection_params)
+    try:
+        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        local_user_store = _LocalUserStore(domain_store)
+
+        localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)
+        localuser_id_2 = local_user_store.acquire_localuser_id(connection, localUser2)
+
+        assert localuser_id_1 != localuser_id_2
+
+        with connection.cursor() as cursor:
+            cursor.execute('''SELECT localuser_user_name, localuser_local_user_id, localuser_global_user_id
+                              FROM localuser
+                              WHERE localuser_id = %s''',
+                           (localuser_id_1,))
+            assert cursor.fetchone() == (localUser1.user_name, localUser1.local_user_id, localUser1.global_user_id)
+
+        with connection.cursor() as cursor:
+            cursor.execute('''SELECT localuser_user_name, localuser_local_user_id, localuser_global_user_id
+                              FROM localuser
+                              WHERE localuser_id = %s''',
+                           (localuser_id_2,))
+            assert cursor.fetchone() == (localUser2.user_name, localUser2.local_user_id, localUser2.global_user_id)
+    finally:
+        connection.close()
+
+def test_LocalUserStore_store_same_user_twice(database_connection_params):
+    connection = pymysql.connect(**database_connection_params)
+    try:
+        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        local_user_store = _LocalUserStore(domain_store)
+
+        localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)
+        localuser_id_2 = local_user_store.acquire_localuser_id(connection, localUser1)
+
+        assert localuser_id_1 == localuser_id_2
+
+        with connection.cursor() as cursor:
+            cursor.execute('''SELECT localuser_user_name, localuser_local_user_id, localuser_global_user_id
+                              FROM localuser
+                              WHERE localuser_id = %s''',
+                           (localuser_id_1,))
+            assert cursor.fetchone() == (localUser1.user_name, localUser1.local_user_id, localUser1.global_user_id)
+    finally:
+        connection.close()
+
+def test_LocalUserStore_store_renamed_user(database_connection_params):
+    connection = pymysql.connect(**database_connection_params)
+    try:
+        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        local_user_store = _LocalUserStore(domain_store)
+
+        localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)
+        localuser_id_2 = local_user_store.acquire_localuser_id(connection, LocalUser(localUser1.user_name + ' (renamed)',
+                                                                                     localUser1.domain,
+                                                                                     localUser1.local_user_id,
+                                                                                     localUser1.global_user_id))
+
+        assert localuser_id_1 == localuser_id_2
+
+        with connection.cursor() as cursor:
+            cursor.execute('''SELECT localuser_user_name, localuser_local_user_id, localuser_global_user_id
+                              FROM localuser
+                              WHERE localuser_id = %s''',
+                           (localuser_id_1,))
+            assert cursor.fetchone() == (localUser1.user_name + ' (renamed)', localUser1.local_user_id, localUser1.global_user_id)
+    finally:
+        connection.close()
