@@ -9,7 +9,17 @@
       id="domain" class="form-control"
       name="domain" type="text"
       required pattern="[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org"
+      list="domains"
       placeholder="commons.wikimedia.org">
+    <datalist id="domains">
+      <option value="commons.wikimedia.org">
+      <option value="en.wikipedia.org">
+      <option value="de.wikipedia.org">
+      <option value="fr.wikipedia.org">
+      <option value="es.wikipedia.org">
+      <option value="ru.wikipedia.org">
+      <option value="ja.wikipedia.org">
+    </datalist>
   </div>
   <div class="form-group">
     <label for="commands">Commands</label>
