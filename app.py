@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import cachetools
 import datetime
 import flask
 import humanize
@@ -10,9 +11,10 @@ import random
 import re
 import requests_oauthlib # type: ignore
 import string
+import threading
 import toolforge
 import traceback
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 import yaml
 
 from batch import OpenBatch
@@ -43,6 +45,9 @@ if 'database' in app.config:
 else:
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
     batch_store = store.InMemoryStore()
+
+stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60) # type: cachetools.TTLCache[Any, List[int]]
+stewards_global_user_ids_cache_lock = threading.RLock()
 
 
 @app.template_global()
@@ -416,6 +421,9 @@ def slice_from_args(args: dict) -> Tuple[int, int]:
 
     return offset, limit
 
+@cachetools.cached(cache=stewards_global_user_ids_cache,
+                   key=lambda: '#stewards',
+                   lock=stewards_global_user_ids_cache_lock)
 def steward_global_user_ids() -> List[int]:
     session = mwapi.Session(host='https://meta.wikimedia.org', user_agent=user_agent)
     ids = []

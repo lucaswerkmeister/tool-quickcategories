@@ -22,6 +22,10 @@ class TTLCache(Cache[Key, Value]):
     def __init__(self, maxsize: int, ttl: int): ...
 
 # the ... here all need to be the same (list) type, but apparently mypy doesn’t support a typevar there
+def cached(cache: Cache[Key, Value],
+           key: Callable[..., Key],
+           lock: threading.RLock) -> Callable[[Callable[..., Value]], Callable[..., Value]]:
+    ...
 def cachedmethod(cache: Callable[[Any], Cache[Key, Value]],
                  key: Callable[..., Key],
                  lock: Callable[[Any], threading.RLock]) -> Callable[[Callable[..., Value]], Callable[..., Value]]:
