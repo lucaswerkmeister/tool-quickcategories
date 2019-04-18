@@ -255,13 +255,15 @@ def batch(id: int):
     if session:
         userinfo = session.get(action='query',
                                meta='userinfo',
-                               uiprop=['groups'])['query']['userinfo']
+                               uiprop=['groups', 'centralids'])['query']['userinfo']
         local_user_id = userinfo['id']
+        global_user_id = userinfo['centralids']['CentralAuth']
         flask.g.can_run_commands = local_user_id == batch.local_user.local_user_id
         flask.g.can_start_background = flask.g.can_run_commands and \
             'autoconfirmed' in userinfo['groups']
         flask.g.can_stop_background = flask.g.can_start_background or \
-            'sysop' in userinfo['groups']
+            'sysop' in userinfo['groups'] or \
+            global_user_id in steward_global_user_ids()
     else:
         flask.g.can_run_commands = False
         flask.g.can_start_background = False
@@ -366,10 +368,12 @@ def stop_batch_background(id: int):
         return 'not logged in', 403
     userinfo = session.get(action='query',
                            meta='userinfo',
-                           uiprop=['groups'])['query']['userinfo']
+                           uiprop=['groups', 'centralids'])['query']['userinfo']
     local_user_id = userinfo['id']
+    global_user_id = userinfo['centralids']['CentralAuth']
     if local_user_id != batch.local_user.local_user_id and \
-       'sysop' not in userinfo['groups']:
+       'sysop' not in userinfo['groups'] and \
+       global_user_id not in steward_global_user_ids():
         return 'may not stop this batch in background', 403
 
     batch_store.stop_background(batch, session)
@@ -411,6 +415,19 @@ def slice_from_args(args: dict) -> Tuple[int, int]:
     limit = max(1, min(500, limit))
 
     return offset, limit
+
+def steward_global_user_ids() -> List[int]:
+    session = mwapi.Session(host='https://meta.wikimedia.org', user_agent=user_agent)
+    ids = []
+    for result in session.get(action='query',
+                              list='allusers',
+                              augroup=['steward'],
+                              auprop=['centralids'],
+                              aulimit='max',
+                              continuation=True):
+        for user in result['query']['allusers']:
+            ids.append(user['centralids']['CentralAuth'])
+    return ids
 
 
 def full_url(endpoint: str, **kwargs) -> str:
