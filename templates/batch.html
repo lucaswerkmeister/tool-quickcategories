@@ -12,7 +12,8 @@
 <form method="post">
   <p>
     {% if currently_running %}
-    Running in background since {{ background_run[0][0] | render_datetime }}
+    Running in background since {{ background_run[0][0] | render_datetime }},
+    <a id="reload" href="{{ current_url() }}">reload</a> to refresh
     {% else %}
     Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}{% if background_run[1][1] and background_run[1][1] != background_run[0][1] %},
     stopped by {{ render_local_user(background_run[1][1]) }}

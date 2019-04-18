@@ -443,6 +443,22 @@ def full_url(endpoint: str, **kwargs) -> str:
     scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     return flask.url_for(endpoint, _external=True, _scheme=scheme, **kwargs)
 
+@app.template_global()
+def current_url(external: bool = False) -> str:
+    all_args = {}
+    for args in [flask.request.args, flask.request.view_args]:
+        all_args.update(args)
+    # in Python 3.5+, replace that with **flask.request.args, **flask.request.view_args
+
+    if external:
+        return flask.url_for(flask.request.endpoint,
+                             _external=True,
+                             _scheme=flask.request.headers.get('X-Forwarded-Proto', 'http'),
+                             **all_args)
+    else:
+        return flask.url_for(flask.request.endpoint,
+                             **all_args)
+
 def submitted_request_valid() -> bool:
     """Check whether a submitted POST request is valid.
 
