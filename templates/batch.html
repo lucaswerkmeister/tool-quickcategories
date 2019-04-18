@@ -48,12 +48,15 @@
   {{ render_command_record(command_record, batch.domain) }}
 </div>
 {% endfor %}
-{% if can_run_commands(command_records) %}
-<form method="post" action="{{ url_for('run_batch_slice', id=batch.id) }}">
+{% set can_run_command_records = can_run_commands(command_records) %}
+{% if can_run_command_records or can_start_background() %}
+<form method="post">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <input name="offset" type="hidden" value="{{ offset }}">
   <input name="limit" type="hidden" value="{{ limit }}">
-  <button class="btn btn-primary">Run these commands</button>
+  {% if can_run_command_records %}
+  <button class="btn btn-primary" formaction="{{ url_for('run_batch_slice', id=batch.id) }}">Run these commands</button>
+  {% endif %}
   {% if can_start_background() %}
   <button class="btn btn-secondary" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run whole batch in background</button>
   {% endif %}

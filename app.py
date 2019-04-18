@@ -265,7 +265,8 @@ def batch(id: int):
         global_user_id = userinfo['centralids']['CentralAuth']
         flask.g.can_run_commands = local_user_id == batch.local_user.local_user_id
         flask.g.can_start_background = flask.g.can_run_commands and \
-            'autoconfirmed' in userinfo['groups']
+            'autoconfirmed' in userinfo['groups'] and \
+            isinstance(batch, OpenBatch)
         flask.g.can_stop_background = flask.g.can_start_background or \
             'sysop' in userinfo['groups'] or \
             global_user_id in steward_global_user_ids()
