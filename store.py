@@ -334,23 +334,16 @@ class DatabaseStore(BatchStore):
         auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
                                         resource_owner_key=auth_data['resource_owner_key'], resource_owner_secret=auth_data['resource_owner_secret'])
         session = mwapi.Session(host='https://'+result[4], auth=auth, user_agent=user_agent)
-        command_pending = _BatchCommandRecordsDatabase(result[0], self)._row_to_command_record(result[9],
-                                                                                               result[10],
-                                                                                               result[11],
-                                                                                               DatabaseStore._COMMAND_STATUS_PENDING,
-                                                                                               outcome=None)
+        command_pending = self._row_to_command_record(result[9],
+                                                      result[10],
+                                                      result[11],
+                                                      DatabaseStore._COMMAND_STATUS_PENDING,
+                                                      outcome=None)
         batch = self._result_to_batch(result[0:8])
 
         assert isinstance(batch, OpenBatch), "must be open since at least one command is still pending"
         assert isinstance(command_pending, CommandPending), "must be pending since we just set that status"
         return batch, command_pending, session
-
-
-class _BatchCommandRecordsDatabase(BatchCommandRecords):
-
-    def __init__(self, batch_id: int, store: DatabaseStore):
-        self.batch_id = batch_id
-        self.store = store
 
     def _command_finish_to_row(self, command_finish: CommandFinish) -> Tuple[int, dict]:
         if isinstance(command_finish, CommandEdit):
@@ -370,7 +363,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             outcome = {}
         elif isinstance(command_finish, CommandMaxlagExceeded):
             status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
-            outcome = {'retry_after_utc_timestamp': self.store._datetime_to_utc_timestamp(command_finish.retry_after)}
+            outcome = {'retry_after_utc_timestamp': self._datetime_to_utc_timestamp(command_finish.retry_after)}
         elif isinstance(command_finish, CommandBlocked):
             status = DatabaseStore._COMMAND_STATUS_BLOCKED
             outcome = {'auto': command_finish.auto, 'blockinfo': command_finish.blockinfo}
@@ -418,7 +411,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
             return CommandMaxlagExceeded(id,
                                          command,
-                                         self.store._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
+                                         self._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
         elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
             return CommandBlocked(id,
                                   command,
@@ -431,6 +424,13 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         else:
             raise ValueError('Unknown command status %d' % status)
 
+
+class _BatchCommandRecordsDatabase(BatchCommandRecords):
+
+    def __init__(self, batch_id: int, store: DatabaseStore):
+        self.batch_id = batch_id
+        self.store = store
+
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         command_records = []
         with self.store._connect() as connection, connection.cursor() as cursor:
@@ -441,7 +441,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, limit, offset))
             for id, page, actions_tpsv, status, outcome in cursor.fetchall():
-                command_records.append(self._row_to_command_record(id, page, actions_tpsv, status, outcome))
+                command_records.append(self.store._row_to_command_record(id, page, actions_tpsv, status, outcome))
         return command_records
 
     def __len__(self) -> int:
@@ -495,7 +495,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             for id, page, actions_tpsv, status, outcome in cursor.fetchall():
                 assert status == DatabaseStore._COMMAND_STATUS_PENDING
                 assert outcome is None
-                command_record = self._row_to_command_record(id, page, actions_tpsv, status, outcome)
+                command_record = self.store._row_to_command_record(id, page, actions_tpsv, status, outcome)
                 assert isinstance(command_record, CommandPending)
                 command_records.append(command_record)
         return command_records
@@ -503,7 +503,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
     def store_finish(self, command_finish: CommandFinish) -> None:
         last_updated = _now()
         last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
-        status, outcome = self._command_finish_to_row(command_finish)
+        status, outcome = self.store._command_finish_to_row(command_finish)
 
         with self.store._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `command`

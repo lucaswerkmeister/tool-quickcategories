@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple
 from batch import OpenBatch, ClosedBatch
 from command import CommandRecord, CommandEdit, CommandNoop
 from localuser import LocalUser
-from store import InMemoryStore, DatabaseStore, _BatchCommandRecordsDatabase, _StringTableStore, _LocalUserStore
+from store import InMemoryStore, DatabaseStore, _StringTableStore, _LocalUserStore
 
 from test_batch import newBatch1
 from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandPageProtected1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
@@ -392,16 +392,16 @@ command_finishes_and_rows = [
 ] # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
-def test_BatchCommandRecordsDatabase_command_finish_to_row(command_finish, expected_row):
-    actual_row = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._command_finish_to_row(command_finish)
+def test_DatabaseStore_command_finish_to_row(command_finish, expected_row):
+    actual_row = DatabaseStore({})._command_finish_to_row(command_finish)
     assert expected_row == actual_row
 
 @pytest.mark.parametrize('expected_command_record, row', command_unfinishes_and_rows + command_finishes_and_rows)
-def test_BatchCommandRecordsDatabase_row_to_command_record(expected_command_record, row):
+def test_DatabaseStore_row_to_command_record(expected_command_record, row):
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
     full_row = expected_command_record.id, expected_command_record.command.page, expected_command_record.command.actions_tpsv(), status, outcome_json
-    actual_command_record = _BatchCommandRecordsDatabase(0, DatabaseStore({}))._row_to_command_record(*full_row)
+    actual_command_record = DatabaseStore({})._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 
 
