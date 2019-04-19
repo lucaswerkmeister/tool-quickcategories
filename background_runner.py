@@ -3,6 +3,7 @@
 
 import mwoauth # type: ignore
 import os
+import signal
 import sys
 import time
 import toolforge
@@ -36,7 +37,15 @@ else:
     sys.exit(1)
 
 
-while True:
+stopped = False
+def on_sigterm(signalnum, frame):
+    global stopped
+    stopped = True
+    print('Received SIGTERM, will stop once the current command is done')
+signal.signal(signal.SIGTERM, on_sigterm) # NOQA: E305 (no blank lines after function definition)
+
+
+while not stopped:
     pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
     if not pending:
         # TODO would be nicer to switch to some better notification mechanism for the app to let the runner know there’s work again
@@ -61,3 +70,5 @@ while True:
     batch.command_records.store_finish(command_finish)
     if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
         batch_store.stop_background(batch)
+
+print('Done.')
