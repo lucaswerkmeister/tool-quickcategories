@@ -155,6 +155,13 @@ class CommandFailure(CommandFinish):
         so this should not be used if the failure resulted in any actions on the wiki."""
         ...
 
+    def can_retry_later(self) -> bool:
+        """Whether it is okay to retry running this command at a later time.
+
+        If True, a new command plan for the same command with a fresh ID
+        will be appended to the end of the batch."""
+        ...
+
     def can_continue_batch(self) -> bool:
         """Whether it is okay to continue with other commands in this batch.
 
@@ -173,6 +180,9 @@ class CommandPageMissing(CommandFailure):
         self.curtimestamp = curtimestamp
 
     def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_retry_later(self) -> bool:
         return False
 
     def can_continue_batch(self) -> bool:
@@ -201,6 +211,9 @@ class CommandPageProtected(CommandFailure):
     def can_retry_immediately(self) -> bool:
         return False
 
+    def can_retry_later(self) -> bool:
+        return False
+
     def can_continue_batch(self) -> bool:
         return True
 
@@ -221,6 +234,9 @@ class CommandEditConflict(CommandFailure):
     """A command that failed due to an edit conflict."""
 
     def can_retry_immediately(self) -> bool:
+        return True
+
+    def can_retry_later(self) -> bool:
         return True
 
     def can_continue_batch(self) -> bool:
@@ -246,6 +262,9 @@ class CommandMaxlagExceeded(CommandFailure):
 
     def can_retry_immediately(self) -> bool:
         return False
+
+    def can_retry_later(self) -> bool:
+        return True
 
     def can_continue_batch(self) -> bool:
         return False
@@ -273,6 +292,9 @@ class CommandBlocked(CommandFailure):
 
     def can_retry_immediately(self) -> bool:
         return False
+
+    def can_retry_later(self) -> bool:
+        return True
 
     def can_continue_batch(self) -> bool:
         # we could perhaps continue the batch if the block is partial
@@ -304,6 +326,9 @@ class CommandWikiReadOnly(CommandFailure):
 
     def can_retry_immediately(self) -> bool:
         return False
+
+    def can_retry_later(self) -> bool:
+        return True
 
     def can_continue_batch(self) -> bool:
         return False

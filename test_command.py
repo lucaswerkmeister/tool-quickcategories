@@ -169,6 +169,9 @@ commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11
 def test_CommandPageMissing_can_retry_immediately():
     assert not commandPageMissing1.can_retry_immediately()
 
+def test_CommandPageMissing_can_retry_later():
+    assert not commandPageMissing1.can_retry_later()
+
 def test_CommandPageMissing_can_continue_batch():
     assert commandPageMissing1.can_continue_batch()
 
@@ -204,6 +207,9 @@ commandPageProtected1 = CommandPageProtected(42, commandWithProtectedPage, '2019
 def test_CommandPageProtected_can_retry_immediately():
     assert not commandPageProtected1.can_retry_immediately()
 
+def test_CommandPageProtected_can_retry_later():
+    assert not commandPageProtected1.can_retry_later()
+
 def test_CommandPageProtected_can_continue_batch():
     assert commandPageProtected1.can_continue_batch()
 
@@ -238,6 +244,9 @@ commandEditConflict1 = CommandEditConflict(42, command1)
 def test_CommandEditConflict_can_retry_immediately():
     assert commandEditConflict1.can_retry_immediately()
 
+def test_CommandEditConflict_can_retry_later():
+    assert commandEditConflict1.can_retry_later()
+
 def test_CommandEditConflict_can_continue_batch():
     assert commandEditConflict1.can_continue_batch()
 
@@ -265,6 +274,9 @@ commandMaxlagExceeded1 = CommandMaxlagExceeded(42, command1, datetime.datetime(2
 
 def test_CommandMaxlagExceeded_can_retry_immediately():
     assert not commandMaxlagExceeded1.can_retry_immediately()
+
+def test_CommandMaxlagExceeded_can_retry_later():
+    assert commandMaxlagExceeded1.can_retry_later()
 
 def test_CommandMaxlagExceeded_can_continue_batch():
     assert not commandMaxlagExceeded1.can_continue_batch()
@@ -307,6 +319,9 @@ commandBlocked2 = CommandBlocked(42, command1, False, None)
 def test_CommandBlocked_can_retry_immediately():
     assert not commandBlocked1.can_retry_immediately()
 
+def test_CommandBlocked_can_retry_later():
+    assert commandBlocked1.can_retry_later()
+
 def test_CommandBlocked_can_continue_batch():
     assert not commandBlocked1.can_continue_batch()
 
@@ -341,6 +356,9 @@ commandWikiReadOnly2 = CommandWikiReadOnly(42, command1, None)
 
 def test_CommandWikiReadOnly_can_retry_immediately():
     assert not commandWikiReadOnly1.can_retry_immediately()
+
+def test_CommandWikiReadOnly_can_retry_later():
+    assert commandWikiReadOnly1.can_retry_later()
 
 def test_CommandWikiReadOnly_can_continue_batch():
     assert not commandWikiReadOnly1.can_continue_batch()
