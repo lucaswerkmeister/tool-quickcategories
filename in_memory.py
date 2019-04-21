@@ -33,8 +33,8 @@ class InMemoryStore(BatchStore):
                                local_user.domain,
                                created,
                                created,
-                               BatchCommandRecordsList(command_plans),
-                               BatchBackgroundRunsList([]))
+                               _BatchCommandRecordsList(command_plans, self),
+                               _BatchBackgroundRunsList([], self))
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
         return open_batch
@@ -44,7 +44,7 @@ class InMemoryStore(BatchStore):
         if stored_batch is None:
             return None
 
-        command_records = cast(BatchCommandRecordsList, stored_batch.command_records).command_records
+        command_records = cast(_BatchCommandRecordsList, stored_batch.command_records).command_records
         if isinstance(stored_batch, OpenBatch) and \
            all(map(lambda command_record: isinstance(command_record, CommandFinish), command_records)):
             stored_batch = ClosedBatch(stored_batch.id,
@@ -63,7 +63,7 @@ class InMemoryStore(BatchStore):
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
         local_user = _local_user_from_session(session)
-        background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
+        background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
             background_runs.background_runs.append(((started, local_user), None))
             self.background_sessions[batch.id] = session
@@ -74,7 +74,7 @@ class InMemoryStore(BatchStore):
             local_user = _local_user_from_session(session) # type: Optional[LocalUser]
         else:
             local_user = None
-        background_runs = cast(BatchBackgroundRunsList, batch.background_runs)
+        background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if background_runs.currently_running():
             background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, local_user))
             del self.background_sessions[batch.id]
@@ -85,7 +85,7 @@ class InMemoryStore(BatchStore):
             return None
         batch = batches_by_last_updated[0]
         assert isinstance(batch, OpenBatch)
-        assert isinstance(batch.command_records, BatchCommandRecordsList)
+        assert isinstance(batch.command_records, _BatchCommandRecordsList)
         for index, command_plan in enumerate(batch.command_records.command_records):
             if not isinstance(command_plan, CommandPlan):
                 continue
@@ -94,11 +94,11 @@ class InMemoryStore(BatchStore):
         return batch, command_pending, self.background_sessions[batch.id]
 
 
-class BatchCommandRecordsList(BatchCommandRecords):
-    """List-based implementation of BatchCommandRecords."""
+class _BatchCommandRecordsList(BatchCommandRecords):
 
-    def __init__(self, command_records: List[CommandRecord]):
+    def __init__(self, command_records: List[CommandRecord], store: InMemoryStore):
         self.command_records = command_records
+        self.store = store
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         return self.command_records[offset:offset+limit]
@@ -125,18 +125,15 @@ class BatchCommandRecordsList(BatchCommandRecords):
         return len(self.command_records)
 
     def __eq__(self, value: Any) -> bool:
-        return type(value) is BatchCommandRecordsList and \
+        return type(value) is _BatchCommandRecordsList and \
             self.command_records == value.command_records
 
-    def __repr__(self) -> str:
-        return 'BatchCommandRecordsList(' + repr(self.command_records) + ')'
 
+class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
-class BatchBackgroundRunsList(BatchBackgroundRuns):
-    """List-based implementation of BatchBackgroundRuns."""
-
-    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]):
+    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]], store: InMemoryStore):
         self.background_runs = background_runs
+        self.store = store
 
     def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         if self.background_runs:
@@ -148,8 +145,5 @@ class BatchBackgroundRunsList(BatchBackgroundRuns):
         return self.background_runs
 
     def __eq__(self, value: Any) -> bool:
-        return type(value) is BatchBackgroundRunsList and \
+        return type(value) is _BatchBackgroundRunsList and \
             self.background_runs == value.background_runs
-
-    def __repr__(self) -> str:
-        return 'BatchBackgroundRunsList(' + repr(self.background_runs) + ')'
