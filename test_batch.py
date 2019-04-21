@@ -1,7 +1,10 @@
 import datetime
+from typing import cast
 
 from action import AddCategoryAction, RemoveCategoryAction # NOQA “unused” import RemoveCategoryAction needed for eval(repr) test
-from batch import NewBatch, OpenBatch, ClosedBatch, BatchCommandRecordsList, BatchBackgroundRunsList
+from batch import NewBatch, OpenBatch, ClosedBatch
+from batch_background_runs import BatchBackgroundRuns
+from batch_command_records import BatchCommandRecords
 from command import Command, CommandPlan, CommandEdit # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
 from localuser import LocalUser # NOQA “unused” import LocalUser needed for eval(repr) test
 
@@ -43,8 +46,10 @@ def test_NewBatch_repr():
 
 datetime1 = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
 datetime2 = datetime.datetime(2019, 3, 17, 13, 48, 16, 844848, tzinfo=datetime.timezone.utc)
-batchCommandRecords1 = BatchCommandRecordsList([commandPlan1, commandEdit1])
-batchBackgroundRuns1 = BatchBackgroundRunsList([])
+batchCommandRecords1 = cast(BatchCommandRecords, [commandPlan1, commandEdit1])
+batchCommandRecords2 = cast(BatchCommandRecords, [commandPlan1])
+batchBackgroundRuns1 = cast(BatchBackgroundRuns, [])
+batchBackgroundRuns2 = cast(BatchBackgroundRuns, [((datetime.datetime.now(), ('Lucas Werkmeister', 6198807, 46618563)), None)])
 openBatch1 = OpenBatch(5, localUser2, 'commons.wikimedia.org', datetime1, datetime2, batchCommandRecords1, batchBackgroundRuns1)
 closedBatch1 = ClosedBatch(5, localUser2, 'commons.wikimedia.org', datetime1, datetime2, batchCommandRecords1, batchBackgroundRuns1)
 
@@ -75,10 +80,10 @@ def test_OpenBatch_eq_different_last_updated():
     assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.local_user, openBatch1.domain, openBatch1.created, datetime1, openBatch1.command_records, openBatch1.background_runs)
 
 def test_OpenBatch_eq_different_command_records():
-    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.local_user, openBatch1.domain, openBatch1.created, openBatch1.last_updated, BatchCommandRecordsList([commandPlan1]), openBatch1.background_runs)
+    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.local_user, openBatch1.domain, openBatch1.created, openBatch1.last_updated, batchCommandRecords2, openBatch1.background_runs)
 
 def test_OpenBatch_eq_different_background_runs():
-    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.local_user, openBatch1.domain, openBatch1.created, openBatch1.last_updated, openBatch1.command_records, BatchBackgroundRunsList([((datetime.datetime.now(), ('Lucas Werkmeister', 6198807, 46618563)), None)]))
+    assert openBatch1 != OpenBatch(openBatch1.id, openBatch1.local_user, openBatch1.domain, openBatch1.created, openBatch1.last_updated, openBatch1.command_records, batchBackgroundRuns2)
 
 def test_OpenBatch_str():
     assert str(openBatch1) == '''batch #5 on commons.wikimedia.org by Lucas Werkmeister'''
@@ -113,10 +118,10 @@ def test_ClosedBatch_eq_different_last_updated():
     assert closedBatch1 != ClosedBatch(closedBatch1.id, closedBatch1.local_user, closedBatch1.domain, closedBatch1.created, datetime1, closedBatch1.command_records, closedBatch1.background_runs)
 
 def test_ClosedBatch_eq_different_command_records():
-    assert closedBatch1 != ClosedBatch(closedBatch1.id, closedBatch1.local_user, closedBatch1.domain, closedBatch1.created, closedBatch1.last_updated, BatchCommandRecordsList([commandPlan1]), closedBatch1.background_runs)
+    assert closedBatch1 != ClosedBatch(closedBatch1.id, closedBatch1.local_user, closedBatch1.domain, closedBatch1.created, closedBatch1.last_updated, batchCommandRecords2, closedBatch1.background_runs)
 
 def test_ClosedBatch_eq_different_background_runs():
-    assert closedBatch1 != ClosedBatch(closedBatch1.id, closedBatch1.local_user, closedBatch1.domain, closedBatch1.created, closedBatch1.last_updated, closedBatch1.command_records, BatchBackgroundRunsList([((datetime.datetime.now(), ('Lucas Werkmeister', 6020327, 46618563)), (datetime.datetime.now(), ('Lucas Werkmeister', 6020327, 46618563)))]))
+    assert closedBatch1 != ClosedBatch(closedBatch1.id, closedBatch1.local_user, closedBatch1.domain, closedBatch1.created, closedBatch1.last_updated, closedBatch1.command_records, batchBackgroundRuns2)
 
 def test_ClosedBatch_str():
     assert str(closedBatch1) == '''batch #5 on commons.wikimedia.org by Lucas Werkmeister'''

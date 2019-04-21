@@ -10,8 +10,8 @@ import toolforge
 import yaml
 
 from command import CommandFailure
+from database import DatabaseStore
 from runner import Runner
-import store
 
 
 user_agent = toolforge.set_user_agent('quickcategories', email='mail@lucaswerkmeister.de')
@@ -31,7 +31,7 @@ else:
     sys.exit(1)
 
 if 'database' in config:
-    batch_store = store.DatabaseStore(config['database']) # type: store.BatchStore
+    batch_store = DatabaseStore(config['database'])
 else:
     print('No database configuration, cannot run in background')
     sys.exit(1)

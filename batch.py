@@ -1,7 +1,9 @@
 import datetime
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, List
 
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandFinish
+from batch_background_runs import BatchBackgroundRuns
+from batch_command_records import BatchCommandRecords
+from command import Command
 from localuser import LocalUser
 
 
@@ -40,8 +42,8 @@ class StoredBatch:
                  domain: str,
                  created: datetime.datetime,
                  last_updated: datetime.datetime,
-                 command_records: 'BatchCommandRecords',
-                 background_runs: 'BatchBackgroundRuns'):
+                 command_records: BatchCommandRecords,
+                 background_runs: BatchBackgroundRuns):
         self.id = id
         self.local_user = local_user
         self.domain = domain
@@ -103,88 +105,3 @@ class ClosedBatch(StoredBatch):
             repr(self.last_updated) + ', ' + \
             repr(self.command_records) + ', ' + \
             repr(self.background_runs) + ')'
-
-
-class BatchCommandRecords:
-    """Accessor for the CommandRecords of a StoredBatch."""
-
-    def get_slice(self, offset: int, limit: int) -> List[CommandRecord]: ...
-
-    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]: ...
-
-    def store_finish(self, command_finish: CommandFinish) -> None: ...
-
-    def __len__(self) -> int: ...
-
-
-class BatchCommandRecordsList(BatchCommandRecords):
-    """List-based implementation of BatchCommandRecords."""
-
-    def __init__(self, command_records: List[CommandRecord]):
-        self.command_records = command_records
-
-    def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
-        return self.command_records[offset:offset+limit]
-
-    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
-        command_pendings = []
-        for index, command_plan in enumerate(self.command_records[offset:offset+limit]):
-            if not isinstance(command_plan, CommandPlan):
-                continue
-            command_pending = CommandPending(command_plan.id, command_plan.command)
-            self.command_records[index] = command_pending
-            command_pendings.append(command_pending)
-        return command_pendings
-
-    def store_finish(self, command_finish: CommandFinish) -> None:
-        for index, command_record in enumerate(self.command_records):
-            if command_record.id == command_finish.id:
-                self.command_records[index] = command_finish
-                break
-        else:
-            raise KeyError('command not found')
-
-    def __len__(self) -> int:
-        return len(self.command_records)
-
-    def __eq__(self, value: Any) -> bool:
-        return type(value) is BatchCommandRecordsList and \
-            self.command_records == value.command_records
-
-    def __repr__(self) -> str:
-        return 'BatchCommandRecordsList(' + repr(self.command_records) + ')'
-
-
-class BatchBackgroundRuns:
-    """Accessor for the background runs of a StoredBatch."""
-
-    def currently_running(self) -> bool:
-        last = self.get_last()
-        return last is not None and last[1] is not None
-
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]: ...
-
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]: ...
-
-
-class BatchBackgroundRunsList(BatchBackgroundRuns):
-    """List-based implementation of BatchBackgroundRuns."""
-
-    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]):
-        self.background_runs = background_runs
-
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
-        if self.background_runs:
-            return self.background_runs[-1]
-        else:
-            return None
-
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
-        return self.background_runs
-
-    def __eq__(self, value: Any) -> bool:
-        return type(value) is BatchBackgroundRunsList and \
-            self.background_runs == value.background_runs
-
-    def __repr__(self) -> str:
-        return 'BatchBackgroundRunsList(' + repr(self.background_runs) + ')'

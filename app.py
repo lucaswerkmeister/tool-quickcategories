@@ -22,7 +22,7 @@ from command import Command, CommandRecord, CommandPlan, CommandPending, Command
 from localuser import LocalUser
 import parse_tpsv
 from runner import Runner
-import store
+from store import BatchStore
 
 
 app = flask.Flask(__name__)
@@ -41,10 +41,12 @@ if 'oauth' in app.config:
     consumer_token = mwoauth.ConsumerToken(app.config['oauth']['consumer_key'], app.config['oauth']['consumer_secret'])
 
 if 'database' in app.config:
-    batch_store = store.DatabaseStore(app.config['database']) # type: store.BatchStore
+    from database import DatabaseStore
+    batch_store = DatabaseStore(app.config['database']) # type: BatchStore
 else:
+    from in_memory import InMemoryStore
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
-    batch_store = store.InMemoryStore()
+    batch_store = InMemoryStore()
 
 stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60) # type: cachetools.TTLCache[Any, List[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
