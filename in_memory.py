@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
-from command import CommandPlan, CommandPending, CommandRecord, CommandFinish
+from command import CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
 from store import BatchStore, _local_user_from_session, _now
 
@@ -120,6 +120,13 @@ class _BatchCommandRecordsList(BatchCommandRecords):
                 break
         else:
             raise KeyError('command not found')
+
+        if isinstance(command_finish, CommandFailure) and \
+           command_finish.can_retry_later():
+            # append a fresh plan for the same command
+            command_plan = CommandPlan(self.store.next_command_id, command_finish.command)
+            self.store.next_command_id += 1
+            self.command_records.append(command_plan)
 
     def __len__(self) -> int:
         return len(self.command_records)

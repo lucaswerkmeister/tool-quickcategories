@@ -1,7 +1,7 @@
 import pytest # type: ignore
 
 from batch import OpenBatch, ClosedBatch
-from command import CommandNoop
+from command import CommandPlan, CommandNoop, CommandWikiReadOnly
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
@@ -75,3 +75,18 @@ def test_BatchStore_stop_background_noop(store):
     open_batch = store.store_batch(newBatch1, fake_session)
     store.stop_background(open_batch)
     # no error
+
+def test_BatchStore_retry(store):
+    open_batch = store.store_batch(newBatch1, fake_session)
+    [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
+    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_1.id, command_record_1.command, reason=None))
+    assert len(open_batch.command_records) == 3
+    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_2.id, command_record_2.command, reason=None))
+    assert len(open_batch.command_records) == 4
+    [command_record_1, command_record_2, command_record_3, command_record_4] = open_batch.command_records.get_slice(0, 4)
+    assert command_record_3.command == command_record_1.command
+    assert command_record_4.command == command_record_2.command
+    assert isinstance(command_record_3, CommandPlan)
+    assert isinstance(command_record_4, CommandPlan)
+    assert command_record_3.id != command_record_1.id
+    assert command_record_3.id != command_record_4.id

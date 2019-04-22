@@ -13,7 +13,7 @@ import threading
 from typing import Any, Generator, List, Optional, Sequence, Tuple
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
-from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_tpsv
 from store import BatchStore, _local_user_from_session, _now
@@ -398,20 +398,37 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               SET `batch_last_updated_utc_timestamp` = %s
                               WHERE `batch_id` = %s''', (last_updated_utc_timestamp, self.batch_id))
             connection.commit()
-            cursor.execute('''SELECT 1
-                              FROM `command`
-                              WHERE `command_batch` = %s
-                              AND `command_status` IN (%s, %s)
-                              LIMIT 1''',
-                           (self.batch_id, DatabaseStore._COMMAND_STATUS_PLAN, DatabaseStore._COMMAND_STATUS_PENDING))
-            if not cursor.fetchone():
-                # close the batch
-                cursor.execute('''UPDATE `batch`
-                                  SET `batch_status` = %s
-                                  WHERE `batch_id` = %s''',
-                               (DatabaseStore._BATCH_STATUS_CLOSED, self.batch_id))
+
+            if isinstance(command_finish, CommandFailure) and \
+               command_finish.can_retry_later():
+                # append a fresh plan for the same command
+                cursor.execute('''INSERT INTO `command`
+                                  (`command_batch`, `command_page`, `command_actions_id`, `command_status`, `command_outcome`)
+                                  SELECT `command_batch`, `command_page`, `command_actions_id`, %s, NULL
+                                  FROM `command`
+                                  WHERE `command_id` = %s''',
+                               (DatabaseStore._COMMAND_STATUS_PLAN, command_finish.id))
+                command_plan_id = cursor.lastrowid
+                cursor.execute('''INSERT INTO `retry`
+                                  (`retry_failure`, `retry_new`)
+                                  VALUES (%s, %s)''',
+                               (command_finish.id, command_plan_id))
                 connection.commit()
-                self.store._stop_background_by_id(self.batch_id)
+            else:
+                # close the batch if no planned or pending commands are left in it
+                cursor.execute('''SELECT 1
+                                  FROM `command`
+                                  WHERE `command_batch` = %s
+                                  AND `command_status` IN (%s, %s)
+                                  LIMIT 1''',
+                               (self.batch_id, DatabaseStore._COMMAND_STATUS_PLAN, DatabaseStore._COMMAND_STATUS_PENDING))
+                if not cursor.fetchone():
+                    cursor.execute('''UPDATE `batch`
+                                      SET `batch_status` = %s
+                                      WHERE `batch_id` = %s''',
+                                   (DatabaseStore._BATCH_STATUS_CLOSED, self.batch_id))
+                    connection.commit()
+                    self.store._stop_background_by_id(self.batch_id)
 
     def __eq__(self, value: Any) -> bool:
         # limited test to avoid overly expensive full comparison
