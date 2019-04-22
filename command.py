@@ -1,5 +1,5 @@
 import datetime
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 
 from action import Action
 from siteinfo import CategoryInfo
@@ -162,13 +162,19 @@ class CommandFailure(CommandFinish):
         will be appended to the end of the batch."""
         ...
 
-    def can_continue_batch(self) -> bool:
+    def can_continue_batch(self) -> Union[bool, datetime.datetime]:
         """Whether it is okay to continue with other commands in this batch.
 
         If the failure only affects this command, we can proceed with the batch as usual;
         if other commands are likely to fail for the same reason,
         or we should back off for some other reason,
-        the batch should be suspended for a time."""
+        the batch should be suspended for a time.
+
+        True means that we can continue immediately;
+        False means that we should suspend the batch for an unspecified time
+        (i. e., stop background runs and only proceed on manual input by the user);
+        a datetime means that we should suspend the batch until that time
+        (i. e., suspend background runs but resume them automatically)."""
         ...
 
 
@@ -266,8 +272,8 @@ class CommandMaxlagExceeded(CommandFailure):
     def can_retry_later(self) -> bool:
         return True
 
-    def can_continue_batch(self) -> bool:
-        return False
+    def can_continue_batch(self) -> datetime.datetime:
+        return self.retry_after
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandMaxlagExceeded and \
@@ -331,8 +337,8 @@ class CommandWikiReadOnly(CommandFailure):
     def can_retry_later(self) -> bool:
         return True
 
-    def can_continue_batch(self) -> bool:
-        return False
+    def can_continue_batch(self) -> Union[bool, datetime.datetime]:
+        return self.retry_after or False
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is CommandWikiReadOnly and \

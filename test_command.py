@@ -279,7 +279,7 @@ def test_CommandMaxlagExceeded_can_retry_later():
     assert commandMaxlagExceeded1.can_retry_later()
 
 def test_CommandMaxlagExceeded_can_continue_batch():
-    assert not commandMaxlagExceeded1.can_continue_batch()
+    assert commandMaxlagExceeded1.can_continue_batch() == commandMaxlagExceeded1.retry_after
 
 def test_CommandMaxlagExceeded_eq_same():
     assert commandMaxlagExceeded1 == commandMaxlagExceeded1
@@ -361,7 +361,8 @@ def test_CommandWikiReadOnly_can_retry_later():
     assert commandWikiReadOnly1.can_retry_later()
 
 def test_CommandWikiReadOnly_can_continue_batch():
-    assert not commandWikiReadOnly1.can_continue_batch()
+    assert commandWikiReadOnly1.can_continue_batch() == commandWikiReadOnly1.retry_after
+    assert commandWikiReadOnly2.can_continue_batch() is False
 
 def test_CommandWikiReadOnly_eq_same():
     assert commandWikiReadOnly1 == commandWikiReadOnly1

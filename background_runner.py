@@ -69,7 +69,7 @@ while not stopped:
                 break
         print(type(command_finish).__name__, flush=True)
         batch.command_records.store_finish(command_finish)
-        if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
+        if isinstance(command_finish, CommandFailure) and command_finish.can_continue_batch() is not True:
             batch_store.stop_background(batch)
     finally:
         batch.command_records.make_pendings_planned([command_pending.id])
