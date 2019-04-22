@@ -319,17 +319,20 @@ def run_batch_slice(id: int):
     offset, limit = slice_from_args(flask.request.form)
     command_pendings = batch.command_records.make_plans_pending(offset, limit)
 
-    runner.prepare_pages([command_pending.command.page for command_pending in command_pendings])
-    for command_pending in command_pendings:
-        for attempt in range(5):
-            command_finish = runner.run_command(command_pending)
-            if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
-                continue
-            else:
+    try:
+        runner.prepare_pages([command_pending.command.page for command_pending in command_pendings])
+        for command_pending in command_pendings:
+            for attempt in range(5):
+                command_finish = runner.run_command(command_pending)
+                if isinstance(command_finish, CommandFailure) and command_finish.can_retry_immediately():
+                    continue
+                else:
+                    break
+            batch.command_records.store_finish(command_finish)
+            if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
                 break
-        batch.command_records.store_finish(command_finish)
-        if isinstance(command_finish, CommandFailure) and not command_finish.can_continue_batch():
-            break
+    finally:
+        batch.command_records.make_pendings_planned([command_pending.id for command_pending in command_pendings])
 
     return flask.redirect(flask.url_for('batch',
                                         id=id,

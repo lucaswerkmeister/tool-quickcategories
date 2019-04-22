@@ -1,11 +1,12 @@
 import pytest # type: ignore
 
-from batch import OpenBatch, ClosedBatch
-from command import CommandPlan, CommandNoop, CommandWikiReadOnly
+from batch import NewBatch, OpenBatch, ClosedBatch
+from command import Command, CommandPlan, CommandPending, CommandNoop, CommandWikiReadOnly
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
 
+from test_action import addCategory1
 from test_batch import newBatch1
 from test_database import fresh_database_connection_params, database_connection_params # NOQA F401 “unused” imports needed for store fixture
 from test_utils import FakeSession
@@ -90,3 +91,22 @@ def test_BatchStore_retry(store):
     assert isinstance(command_record_4, CommandPlan)
     assert command_record_3.id != command_record_1.id
     assert command_record_3.id != command_record_4.id
+
+def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
+    command_1 = Command('Page 1', [addCategory1])
+    command_2 = Command('Page 2', [addCategory1])
+    command_3 = Command('Page 3', [addCategory1])
+    command_4 = Command('Page 4', [addCategory1])
+    open_batch = store.store_batch(NewBatch([command_1, command_2, command_3, command_4]), fake_session)
+    command_records = open_batch.command_records
+    [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]
+
+    [pending_1, pending_2] = command_records.make_plans_pending(offset=0, limit=2)
+    assert [pending_1.id, pending_2.id] == [id_1, id_2]
+    [pending_3, pending_4] = command_records.make_plans_pending(offset=0, limit=4) # does not return commands that are already pending
+    assert [pending_3.id, pending_4.id] == [id_3, id_4]
+
+    command_records.make_pendings_planned([id_1, id_3])
+    assert [CommandPlan, CommandPending, CommandPlan, CommandPending] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
+    command_records.make_pendings_planned([id_2, id_4])
+    assert [CommandPlan, CommandPlan, CommandPlan, CommandPlan] == [type(command_record) for command_record in command_records.get_slice(0, 4)]

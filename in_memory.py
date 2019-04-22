@@ -113,6 +113,15 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             command_pendings.append(command_pending)
         return command_pendings
 
+    def make_pendings_planned(self, command_record_ids: List[int]) -> None:
+        for index, command_pending in enumerate(self.command_records):
+            if not isinstance(command_pending, CommandPending):
+                continue
+            if command_pending.id not in command_record_ids:
+                continue
+            command_plan = CommandPlan(command_pending.id, command_pending.command)
+            self.command_records[index] = command_plan
+
     def store_finish(self, command_finish: CommandFinish) -> None:
         for index, command_record in enumerate(self.command_records):
             if command_record.id == command_finish.id:

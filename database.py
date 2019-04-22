@@ -384,6 +384,18 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                 command_records.append(command_record)
         return command_records
 
+    def make_pendings_planned(self, command_record_ids: List[int]) -> None:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            parameters = [DatabaseStore._COMMAND_STATUS_PLAN] # in Python 3.5+, replace that with [DS._C_S_PLAN, *c_r_ids, DS._C_S_PENDING]
+            parameters.extend(command_record_ids)
+            parameters.append(DatabaseStore._COMMAND_STATUS_PENDING)
+            cursor.execute('''UPDATE `command`
+                              SET `command_status` = %%s
+                              WHERE `command_id` IN (%s)
+                              AND `command_status` = %%s''' % ', '.join(['%s'] * len(command_record_ids)),
+                           parameters)
+            connection.commit()
+
     def store_finish(self, command_finish: CommandFinish) -> None:
         last_updated = _now()
         last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
