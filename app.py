@@ -260,17 +260,33 @@ def batch(id: int):
 
     session = authenticated_session(batch.domain)
     if session:
-        userinfo = session.get(action='query',
-                               meta='userinfo',
-                               uiprop=['groups', 'centralids'])['query']['userinfo']
-        local_user_id = userinfo['id']
-        global_user_id = userinfo['centralids']['CentralAuth']
+        try:
+            userinfo = session.get(action='query',
+                                   meta='userinfo',
+                                   uiprop=['groups', 'centralids'])['query']['userinfo']
+        except mwapi.errors.APIError as e:
+            if e.code == 'mwoauth-invalid-authorization-invalid-user':
+                # user is viewing a batch for a wiki where they do not have a local user account
+                # treat as anonymous on the local wiki, but query Meta to find out if they’re a steward
+                local_user_id = None # type: Optional[int]
+                groups = [] # type: List[str]
+                meta_session = authenticated_session('meta.wikimedia.org') # type: mwapi.Session
+                meta_userinfo = meta_session.get(action='query',
+                                                 meta='userinfo',
+                                                 uiprop=['centralids'])['query']['userinfo']
+                global_user_id = meta_userinfo['centralids']['CentralAuth']
+            else:
+                raise e
+        else:
+            local_user_id = userinfo['id']
+            groups = userinfo['groups']
+            global_user_id = userinfo['centralids']['CentralAuth']
         flask.g.can_run_commands = local_user_id == batch.local_user.local_user_id
         flask.g.can_start_background = flask.g.can_run_commands and \
-            'autoconfirmed' in userinfo['groups'] and \
+            'autoconfirmed' in groups and \
             isinstance(batch, OpenBatch)
         flask.g.can_stop_background = flask.g.can_start_background or \
-            'sysop' in userinfo['groups'] or \
+            'sysop' in groups or \
             global_user_id in steward_global_user_ids()
     else:
         flask.g.can_run_commands = False
