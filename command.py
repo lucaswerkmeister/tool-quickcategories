@@ -320,9 +320,10 @@ class CommandBlocked(CommandFailure):
 class CommandWikiReadOnly(CommandFailure):
     """A command that failed because the wiki was in read-only mode."""
 
-    def __init__(self, id: int, command: Command, reason: Optional[str]):
+    def __init__(self, id: int, command: Command, reason: Optional[str], retry_after: Optional[datetime.datetime]):
         super().__init__(id, command)
         self.reason = reason
+        self.retry_after = retry_after
 
     def can_retry_immediately(self) -> bool:
         return False
@@ -337,10 +338,12 @@ class CommandWikiReadOnly(CommandFailure):
         return type(value) is CommandWikiReadOnly and \
             self.id == value.id and \
             self.command == value.command and \
-            self.reason == value.reason
+            self.reason == value.reason and \
+            self.retry_after == value.retry_after
 
     def __repr__(self) -> str:
         return 'CommandWikiReadOnly(' + \
             repr(self.id) + ', ' + \
             repr(self.command) + ', ' + \
-            repr(self.reason) + ')'
+            repr(self.reason) + ', ' + \
+            repr(self.retry_after) + ')'

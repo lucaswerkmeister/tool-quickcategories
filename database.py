@@ -254,6 +254,8 @@ class DatabaseStore(BatchStore):
         elif isinstance(command_finish, CommandWikiReadOnly):
             status = DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY
             outcome = {'reason': command_finish.reason}
+            if command_finish.retry_after:
+                outcome['retry_after_utc_timestamp'] = self._datetime_to_utc_timestamp(command_finish.retry_after)
         else:
             raise ValueError('Unknown command type')
 
@@ -302,9 +304,14 @@ class DatabaseStore(BatchStore):
                                   auto=outcome_dict['auto'],
                                   blockinfo=outcome_dict['blockinfo'])
         elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+            if 'retry_after_utc_timestamp' in outcome_dict:
+                retry_after = self._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']) # type: Optional[datetime.datetime]
+            else:
+                retry_after = None
             return CommandWikiReadOnly(id,
                                        command,
-                                       outcome_dict['reason'])
+                                       outcome_dict['reason'],
+                                       retry_after)
         else:
             raise ValueError('Unknown command status %d' % status)
 

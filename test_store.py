@@ -80,9 +80,9 @@ def test_BatchStore_stop_background_noop(store):
 def test_BatchStore_retry(store):
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
-    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_1.id, command_record_1.command, reason=None))
+    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_1.id, command_record_1.command, reason=None, retry_after=None))
     assert len(open_batch.command_records) == 3
-    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_2.id, command_record_2.command, reason=None))
+    open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_2.id, command_record_2.command, reason=None, retry_after=None))
     assert len(open_batch.command_records) == 4
     [command_record_1, command_record_2, command_record_3, command_record_4] = open_batch.command_records.get_slice(0, 4)
     assert command_record_3.command == command_record_1.command
