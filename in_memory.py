@@ -33,7 +33,7 @@ class InMemoryStore(BatchStore):
                                local_user.domain,
                                created,
                                created,
-                               _BatchCommandRecordsList(command_plans, self),
+                               _BatchCommandRecordsList(command_plans, self.next_batch_id, self),
                                _BatchBackgroundRunsList([], self))
         self.next_batch_id += 1
         self.batches[open_batch.id] = open_batch
@@ -96,8 +96,9 @@ class InMemoryStore(BatchStore):
 
 class _BatchCommandRecordsList(BatchCommandRecords):
 
-    def __init__(self, command_records: List[CommandRecord], store: InMemoryStore):
+    def __init__(self, command_records: List[CommandRecord], batch_id: int, store: InMemoryStore):
         self.command_records = command_records
+        self.batch_id = batch_id
         self.store = store
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
@@ -129,6 +130,8 @@ class _BatchCommandRecordsList(BatchCommandRecords):
                 break
         else:
             raise KeyError('command not found')
+
+        self.store.batches[self.batch_id].last_updated = _now()
 
         if isinstance(command_finish, CommandFailure) and \
            command_finish.can_retry_later():
