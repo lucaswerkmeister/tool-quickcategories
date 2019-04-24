@@ -9,7 +9,7 @@ class BatchBackgroundRuns:
 
     def currently_running(self) -> bool:
         last = self.get_last()
-        return last is not None and last[1] is not None
+        return last is not None and last[1] is None
 
     def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]: ...
 
