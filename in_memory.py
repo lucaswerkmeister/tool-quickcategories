@@ -91,7 +91,8 @@ class InMemoryStore(BatchStore):
                 continue
             command_pending = CommandPending(command_plan.id, command_plan.command)
             batch.command_records.command_records[index] = command_pending
-        return batch, command_pending, self.background_sessions[batch.id]
+            return batch, command_pending, self.background_sessions[batch.id]
+        return None
 
 
 class _BatchCommandRecordsList(BatchCommandRecords):
