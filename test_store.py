@@ -1,4 +1,6 @@
+import mwoauth # type: ignore
 import pytest # type: ignore
+import time
 
 from batch import NewBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandNoop, CommandWikiReadOnly
@@ -110,3 +112,62 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
     assert [CommandPlan, CommandPending, CommandPlan, CommandPending] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
     command_records.make_pendings_planned([id_2, id_4])
     assert [CommandPlan, CommandPlan, CommandPlan, CommandPlan] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
+
+def test_BatchStore_make_plan_pending_background(store):
+    batch_1 = store.store_batch(newBatch1, fake_session)
+    time.sleep(1)
+    batch_2 = store.store_batch(newBatch1, fake_session) # NOQA: F841 (unused)
+    time.sleep(1)
+    batch_3 = store.store_batch(newBatch1, fake_session)
+    time.sleep(1)
+    batch_4 = store.store_batch(newBatch1, fake_session)
+    time.sleep(1)
+    batch_5 = store.store_batch(newBatch1, fake_session)
+
+    # batch 1 cannot be run because it is already finished
+    [batch_1_command_record_1, batch_1_command_record_2] = batch_1.command_records.get_slice(0, 2)
+    batch_1.command_records.store_finish(CommandNoop(batch_1_command_record_1.id, batch_1_command_record_1.command, revision=1))
+    batch_1.command_records.store_finish(CommandNoop(batch_1_command_record_2.id, batch_1_command_record_2.command, revision=2))
+
+    # batch 2 cannot be run because there is no background run
+    # batch 3 cannot be run because the only background run is already stopped
+    store.start_background(batch_3, fake_session)
+    store.stop_background(batch_3, fake_session)
+
+    # batch 4 and 5 have background runs and can be run
+    store.start_background(batch_4, fake_session)
+    store.start_background(batch_5, fake_session)
+
+    # first batch 4 (older)
+    pending_1 = store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')
+    assert pending_1 is not None
+    background_batch_1, background_command_1, background_session_1 = pending_1
+    assert background_batch_1.id == batch_4.id
+    assert background_command_1.id == batch_4.command_records.get_slice(0, 1)[0].id
+    time.sleep(1)
+    batch_4.command_records.store_finish(CommandNoop(background_command_1.id, background_command_1.command, revision=3))
+
+    # next batch 5, even though batch 4 isn’t done yet, because batch 4 is now newer
+    pending_2 = store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')
+    assert pending_2 is not None
+    background_batch_2, background_command_2, background_session_2 = pending_2
+    assert background_batch_2.id == batch_5.id
+    assert background_command_2.id == batch_5.command_records.get_slice(0, 1)[0].id
+    time.sleep(1)
+    batch_5.command_records.store_finish(CommandNoop(background_command_2.id, background_command_2.command, revision=4))
+
+    # then batch 4 again
+    pending_3 = store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')
+    assert pending_3 is not None
+    background_batch_3, background_command_3, background_session_3 = pending_3
+    assert background_batch_3.id == batch_4.id
+    assert background_command_3.id == batch_4.command_records.get_slice(1, 1)[0].id
+    batch_4.command_records.store_finish(CommandNoop(background_command_3.id, background_command_3.command, revision=5))
+
+    # meanwhile, we finish batch 5 independently
+    batch_5_command_record_2 = batch_5.command_records.get_slice(1, 1)[0]
+    batch_5.command_records.store_finish(CommandNoop(batch_5_command_record_2.id, batch_5_command_record_2.command, revision=6))
+
+    # therefore, there is now nothing to do
+    pending_4 = store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')
+    assert pending_4 is None
