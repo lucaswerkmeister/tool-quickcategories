@@ -60,7 +60,10 @@ def log(type, message):
 @app.template_global()
 def csrf_token() -> str:
     if 'csrf_token' not in flask.session:
+        log('CSRF', 'allocating a new token')
         flask.session['csrf_token'] = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(64))
+    else:
+        log('CSRF', 'reusing token from session')
     return flask.session['csrf_token']
 
 @app.template_global()
@@ -493,6 +496,7 @@ def submitted_request_valid() -> bool:
     callers MUST NOT process the request in that case.
     """
     real_token = flask.session.pop('csrf_token', None)
+    log('CSRF', 'invalidated token from session')
     submitted_token = flask.request.form.get('csrf_token', None)
     if not real_token:
         # we never expected a POST
