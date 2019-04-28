@@ -13,6 +13,10 @@ class Action:
     def summary(self, category_info: CategoryInfo) -> str:
         raise NotImplementedError
 
+    def is_minor(self) -> bool:
+        """Whether this action, on its own, can be considered a minor edit."""
+        raise NotImplementedError
+
     def cleanup(self) -> None:
         """Partially normalize the action, as a convenience for users.
 
@@ -90,6 +94,9 @@ class AddCategoryAction(CategoryAction):
             wikicode.append(wikilink)
         return str(wikicode)
 
+    def is_minor(self) -> bool:
+        return True
+
     def __repr__(self) -> str:
         return 'AddCategoryAction(' + repr(self.category) + ')'
 
@@ -120,6 +127,9 @@ class RemoveCategoryAction(CategoryAction):
                 del wikicode.nodes[index] # this should happen *after* the above blocks, otherwise the indices get confusing
                 break
         return str(wikicode)
+
+    def is_minor(self) -> bool:
+        return False
 
     def __repr__(self) -> str:
         return 'RemoveCategoryAction(' + repr(self.category) + ')'

@@ -45,20 +45,22 @@ def test_run_command():
     assert edit.base_revision == setup_edit['edit']['newrevid']
     assert command.page not in runner.prepared_pages
 
-    actual = session.get(action='query',
-                         revids=[edit.revision],
-                         prop=['revisions'],
-                         rvprop=['content'],
-                         rvslots=['main'],
-                         formatversion=2)['query']['pages'][0]['revisions'][0]['slots']['main']['content']
+    actual_revision = session.get(action='query',
+                                  revids=[edit.revision],
+                                  prop=['revisions'],
+                                  rvprop=['content', 'flags'],
+                                  rvslots=['main'],
+                                  formatversion=2)['query']['pages'][0]['revisions'][0]
+    actual_content = actual_revision['slots']['main']['content']
     session.post(**{'action': 'edit',
                     'title': command.page,
                     'text': 'Test page for the QuickCategories tool.',
                     'summary': 'teardown',
                     'token': csrftoken,
                     'assert': 'user'})
-    expected = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
-    assert expected == actual
+    expected_content = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
+    assert expected_content == actual_content
+    assert not actual_revision['minor']
 
 def test_with_nochange():
     curtimestamp = '2019-03-11T23:33:30Z'

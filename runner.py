@@ -62,10 +62,16 @@ class Runner():
 
         wikitext, actions = command_pending.command.apply(prepared_page['wikitext'], category_info)
         summary = ''
+        major_commands, minor_commands = 0, 0
         for action, noop in actions:
             action_summary = action.summary(category_info)
             if noop:
                 action_summary = siteinfo.parentheses(self.session, action_summary)
+            else:
+                if action.is_minor():
+                    minor_commands += 1
+                else:
+                    major_commands += 1
             if summary:
                 summary += siteinfo.comma_separator(self.session)
             summary += action_summary
@@ -77,19 +83,22 @@ class Runner():
         if wikitext == prepared_page['wikitext']:
             return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
         try:
-            response = self.session.post(**{'action': 'edit',
-                                            'pageid': prepared_page['page_id'],
-                                            'text': wikitext,
-                                            'summary': summary,
-                                            'bot': True,
-                                            'basetimestamp': prepared_page['base_timestamp'],
-                                            'starttimestamp': prepared_page['start_timestamp'],
-                                            'contentformat': 'text/x-wiki',
-                                            'contentmodel': 'wikitext',
-                                            'token': self.csrf_token,
-                                            'assert': 'user', # assert is a keyword, can’t use kwargs syntax :(
-                                            'maxlag': 5,
-                                            'formatversion': 2})
+            params = {'action': 'edit',
+                      'pageid': prepared_page['page_id'],
+                      'text': wikitext,
+                      'summary': summary,
+                      'bot': True,
+                      'basetimestamp': prepared_page['base_timestamp'],
+                      'starttimestamp': prepared_page['start_timestamp'],
+                      'contentformat': 'text/x-wiki',
+                      'contentmodel': 'wikitext',
+                      'token': self.csrf_token,
+                      'assert': 'user',
+                      'maxlag': 5,
+                      'formatversion': 2}
+            if minor_commands < 2 and not major_commands:
+                params['minor'] = ''
+            response = self.session.post(**params)
         except mwapi.errors.APIError as e:
             if e.code == 'editconflict':
                 del self.prepared_pages[title] # this must be outdated now

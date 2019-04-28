@@ -73,6 +73,9 @@ def test_AddCategoryAction_apply_case_sensitive():
 def test_AddCategoryAction_summary():
     assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
 
+def test_AddCategoryAction_is_minor():
+    assert AddCategoryAction('Test').is_minor()
+
 def test_AddCategoryAction_cleanup():
     action = AddCategoryAction('User_input_from_URL')
     action.cleanup()
@@ -129,6 +132,9 @@ def test_RemoveCategoryAction_apply_case_sensitive():
 
 def test_RemoveCategoryAction_summary():
     assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test]]'
+
+def test_RemoveCategoryAction_is_minor():
+    assert not RemoveCategoryAction('Test').is_minor()
 
 def test_RemoveCategoryAction_cleanup():
     action = RemoveCategoryAction('User_input_from_URL')
