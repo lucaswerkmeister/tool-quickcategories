@@ -18,6 +18,7 @@ class InMemoryStore(BatchStore):
         self.next_command_id = 1
         self.batches = {} # type: Dict[int, StoredBatch]
         self.background_sessions = {} # type: Dict[int, mwapi.Session]
+        self.background_suspensions = {} # type: Dict[int, datetime.datetime]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = _now()
@@ -78,20 +79,29 @@ class InMemoryStore(BatchStore):
         if background_runs.currently_running():
             background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, local_user))
             del self.background_sessions[batch.id]
+            self.background_suspensions.pop(batch.id, None)
+
+    def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
+        self.background_suspensions[batch.id] = until
 
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
-        batches_by_last_updated = [batch for batch in sorted(self.batches.values(), key=lambda batch: batch.last_updated) if batch.background_runs.currently_running()]
-        if not batches_by_last_updated:
-            return None
-        batch = batches_by_last_updated[0]
-        assert isinstance(batch, OpenBatch)
-        assert isinstance(batch.command_records, _BatchCommandRecordsList)
-        for index, command_plan in enumerate(batch.command_records.command_records):
-            if not isinstance(command_plan, CommandPlan):
+        batches_by_last_updated = sorted(self.batches.values(), key=lambda batch: batch.last_updated)
+        for batch in batches_by_last_updated:
+            if not batch.background_runs.currently_running():
                 continue
-            command_pending = CommandPending(command_plan.id, command_plan.command)
-            batch.command_records.command_records[index] = command_pending
-            return batch, command_pending, self.background_sessions[batch.id]
+            if batch.id in self.background_suspensions:
+                if self.background_suspensions[batch.id] < _now():
+                    del self.background_suspensions[batch.id]
+                else:
+                    continue
+            assert isinstance(batch, OpenBatch)
+            assert isinstance(batch.command_records, _BatchCommandRecordsList)
+            for index, command_plan in enumerate(batch.command_records.command_records):
+                if not isinstance(command_plan, CommandPlan):
+                    continue
+                command_pending = CommandPending(command_plan.id, command_plan.command)
+                batch.command_records.command_records[index] = command_pending
+                return batch, command_pending, self.background_sessions[batch.id]
         return None
 
 

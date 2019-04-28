@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import datetime
 import mwoauth # type: ignore
 import os
 import signal
@@ -49,6 +50,7 @@ while not stopped:
     pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
     if not pending:
         # TODO would be nicer to switch to some better notification mechanism for the app to let the runner know there’s work again
+        # (but note that suspended background commands can start yielding pending commands at basically any time again)
         time.sleep(10)
         continue
 
@@ -69,8 +71,12 @@ while not stopped:
                 break
         print(type(command_finish).__name__, flush=True)
         batch.command_records.store_finish(command_finish)
-        if isinstance(command_finish, CommandFailure) and command_finish.can_continue_batch() is not True:
-            batch_store.stop_background(batch)
+        if isinstance(command_finish, CommandFailure):
+            can_continue = command_finish.can_continue_batch()
+            if isinstance(can_continue, datetime.datetime):
+                batch_store.suspend_background(batch, until=can_continue)
+            elif not can_continue:
+                batch_store.stop_background(batch)
     finally:
         batch.command_records.make_pendings_planned([command_pending.id])
 

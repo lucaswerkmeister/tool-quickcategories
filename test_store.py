@@ -1,3 +1,4 @@
+import datetime
 import mwoauth # type: ignore
 import pytest # type: ignore
 import time
@@ -7,6 +8,7 @@ from command import Command, CommandPlan, CommandPending, CommandNoop, CommandWi
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
+from store import _now
 
 from test_action import addCategory1
 from test_batch import newBatch1
@@ -123,6 +125,8 @@ def test_BatchStore_make_plan_pending_background(store):
     batch_4 = store.store_batch(newBatch1, fake_session)
     time.sleep(1)
     batch_5 = store.store_batch(newBatch1, fake_session)
+    time.sleep(1)
+    batch_6 = store.store_batch(newBatch1, fake_session)
 
     # batch 1 cannot be run because it is already finished
     [batch_1_command_record_1, batch_1_command_record_2] = batch_1.command_records.get_slice(0, 2)
@@ -134,9 +138,16 @@ def test_BatchStore_make_plan_pending_background(store):
     store.start_background(batch_3, fake_session)
     store.stop_background(batch_3, fake_session)
 
-    # batch 4 and 5 have background runs and can be run
+    # batches 4, 5 and 6 have background runs that were not stopped yet
     store.start_background(batch_4, fake_session)
     store.start_background(batch_5, fake_session)
+    store.start_background(batch_6, fake_session)
+
+    # batch 5 was suspended until an hour ago, batch 6 is still suspended for another hour
+    store.suspend_background(batch_5, _now() - datetime.timedelta(hours=1))
+    store.suspend_background(batch_6, _now() + datetime.timedelta(hours=1))
+
+    # in sum: batch 4 and 5 can be run
 
     # first batch 4 (older)
     pending_1 = store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')

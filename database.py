@@ -178,7 +178,7 @@ class DatabaseStore(BatchStore):
                 localuser_id = None
             with connection.cursor() as cursor:
                 cursor.execute('''UPDATE `background`
-                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser_id` = %s
+                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser_id` = %s, `background_suspended_until_utc_timestamp` = NULL
                                   WHERE `background_batch` = %s
                                   AND `background_stopped_utc_timestamp` IS NULL''',
                                (stopped_utc_timestamp, localuser_id, batch_id))
@@ -186,9 +186,23 @@ class DatabaseStore(BatchStore):
             if cursor.rowcount > 1:
                 raise RuntimeError('Should have stopped at most 1 background operation, actually affected %d!' % cursor.rowcount)
 
+    def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
+        until_utc_timestamp = self._datetime_to_utc_timestamp(until)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''UPDATE `background`
+                              SET `background_suspended_until_utc_timestamp` = %s
+                              WHERE `background_batch` = %s
+                              AND `background_stopped_utc_timestamp` IS NULL''',
+                           (until_utc_timestamp, batch.id))
+            connection.commit()
+            if cursor.rowcount > 1:
+                raise RuntimeError('Should have suspended at most 1 background run, actually affected %d!' % cursor.rowcount)
+
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
+                now = _now()
+                now_utc_timestamp = self._datetime_to_utc_timestamp(now)
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
@@ -197,11 +211,12 @@ class DatabaseStore(BatchStore):
                                   JOIN `actions` ON `command_actions_id` = `actions_id`
                                   JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
                                   WHERE `background_stopped_utc_timestamp` IS NULL
+                                  AND COALESCE(`background_suspended_until_utc_timestamp`, 0) < %s
                                   AND `command_status` = %s
                                   ORDER BY `batch_last_updated_utc_timestamp` ASC, `command_id` ASC
                                   LIMIT 1
                                   FOR UPDATE''',
-                               (DatabaseStore._COMMAND_STATUS_PLAN))
+                               (now_utc_timestamp, DatabaseStore._COMMAND_STATUS_PLAN))
                 result = cursor.fetchone()
             if not result:
                 connection.commit() # finish the FOR UPDATE

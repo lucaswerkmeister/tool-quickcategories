@@ -353,8 +353,14 @@ def run_batch_slice(id: int):
                 else:
                     break
             batch.command_records.store_finish(command_finish)
-            if isinstance(command_finish, CommandFailure) and command_finish.can_continue_batch() is not True:
-                break
+            if isinstance(command_finish, CommandFailure):
+                can_continue = command_finish.can_continue_batch()
+                if isinstance(can_continue, datetime.datetime):
+                    batch_store.suspend_background(batch, until=can_continue)
+                    break
+                elif not can_continue:
+                    batch_store.stop_background(batch)
+                    break
     finally:
         batch.command_records.make_pendings_planned([command_pending.id for command_pending in command_pendings])
 
