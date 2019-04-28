@@ -6,7 +6,6 @@ import pytest # type: ignore
 import random
 import re
 import string
-import time
 from typing import List, Optional, Tuple
 
 from command import CommandRecord, CommandEdit, CommandNoop
@@ -97,7 +96,7 @@ def test_DatabaseStore_store_batch(database_connection_params):
             assert command2_page == command2.command.page
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_update_batch(database_connection_params):
+def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
     store = DatabaseStore(database_connection_params)
     stored_batch = store.store_batch(newBatch1, fake_session)
     loaded_batch = store.get_batch(stored_batch.id)
@@ -110,7 +109,7 @@ def test_DatabaseStore_update_batch(database_connection_params):
     assert command_edit == command_edit_loaded
 
     command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
-    time.sleep(1) # make sure that this update increases last_updated
+    frozen_time.tick() # make sure that this update increases last_updated
     loaded_batch.command_records.store_finish(command_noop)
     command_noop_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
     assert command_noop == command_noop_loaded

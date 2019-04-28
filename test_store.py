@@ -1,7 +1,6 @@
 import datetime
 import mwoauth # type: ignore
 import pytest # type: ignore
-import time
 
 from batch import NewBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandNoop, CommandWikiReadOnly
@@ -115,17 +114,17 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
     command_records.make_pendings_planned([id_2, id_4])
     assert [CommandPlan, CommandPlan, CommandPlan, CommandPlan] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
 
-def test_BatchStore_make_plan_pending_background(store):
+def test_BatchStore_make_plan_pending_background(store, frozen_time):
     batch_1 = store.store_batch(newBatch1, fake_session)
-    time.sleep(1)
+    frozen_time.tick()
     batch_2 = store.store_batch(newBatch1, fake_session) # NOQA: F841 (unused)
-    time.sleep(1)
+    frozen_time.tick()
     batch_3 = store.store_batch(newBatch1, fake_session)
-    time.sleep(1)
+    frozen_time.tick()
     batch_4 = store.store_batch(newBatch1, fake_session)
-    time.sleep(1)
+    frozen_time.tick()
     batch_5 = store.store_batch(newBatch1, fake_session)
-    time.sleep(1)
+    frozen_time.tick()
     batch_6 = store.store_batch(newBatch1, fake_session)
 
     # batch 1 cannot be run because it is already finished
@@ -155,7 +154,7 @@ def test_BatchStore_make_plan_pending_background(store):
     background_batch_1, background_command_1, background_session_1 = pending_1
     assert background_batch_1.id == batch_4.id
     assert background_command_1.id == batch_4.command_records.get_slice(0, 1)[0].id
-    time.sleep(1)
+    frozen_time.tick()
     batch_4.command_records.store_finish(CommandNoop(background_command_1.id, background_command_1.command, revision=3))
 
     # next batch 5, even though batch 4 isn’t done yet, because batch 4 is now newer
@@ -164,7 +163,7 @@ def test_BatchStore_make_plan_pending_background(store):
     background_batch_2, background_command_2, background_session_2 = pending_2
     assert background_batch_2.id == batch_5.id
     assert background_command_2.id == batch_5.command_records.get_slice(0, 1)[0].id
-    time.sleep(1)
+    frozen_time.tick()
     batch_5.command_records.store_finish(CommandNoop(background_command_2.id, background_command_2.command, revision=4))
 
     # then batch 4 again

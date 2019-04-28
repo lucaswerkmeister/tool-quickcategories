@@ -1,6 +1,7 @@
 cachetools
 flake8
 flask
+freezegun
 humanize
 mwapi
 mwoauth
