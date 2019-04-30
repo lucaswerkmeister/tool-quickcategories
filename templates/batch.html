@@ -34,12 +34,12 @@
     {% if offset > 0 %}
     <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=([0, offset-limit] | max), limit=limit) }}">Previous</a></li>
     {% else %}
-    <li class="page-item disabled"><span class="page-link">Previous</a></li>
+    <li class="page-item disabled"><span class="page-link">Previous</span></li>
     {% endif %}
     {% if offset + limit < (batch.command_records | length) %}
     <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=offset+limit, limit=limit) }}">Next</a></li>
     {% else %}
-    <li class="page-item disabled"><span class="page-link">Next</a></li>
+    <li class="page-item disabled"><span class="page-link">Next</span></li>
     {% endif %}
   </ul>
 </nav>
