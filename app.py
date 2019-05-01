@@ -313,7 +313,7 @@ def batch(id: int):
         flask.g.can_stop_background = False
 
     if batch.title:
-        title = parse_wikitext.parse_summary(any_session(batch.domain), batch.title) # type: Optional[flask.Markup]
+        title = parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title) # type: Optional[flask.Markup]
     else:
         title = None
 
