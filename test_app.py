@@ -1,7 +1,8 @@
-import mwapi # type: ignore
 import pytest # type: ignore
 
 import app as quickcategories
+
+from test_utils import internet_test
 
 
 @pytest.mark.parametrize('domain, expected', [
@@ -66,14 +67,10 @@ def test_slice_from_args_with_invalid_limit(limit, effective_limit):
     assert quickcategories.slice_from_args({'limit': limit}) == (0, effective_limit)
 
 
+@internet_test
 def test_steward_global_user_ids_Sjoerddebruin():
-    try:
-        assert 8133267 in quickcategories.steward_global_user_ids()
-    except mwapi.errors.ConnectionError:
-        pytest.skip('no internet connection')
+    assert 8133267 in quickcategories.steward_global_user_ids()
 
+@internet_test
 def test_steward_global_user_ids_Lucas_Werkmeister():
-    try:
-        assert 46054761 not in quickcategories.steward_global_user_ids()
-    except mwapi.errors.ConnectionError:
-        pytest.skip('no internet connection')
+    assert 46054761 not in quickcategories.steward_global_user_ids()

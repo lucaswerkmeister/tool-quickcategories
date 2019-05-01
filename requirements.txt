@@ -1,4 +1,5 @@
 cachetools
+decorator
 flake8
 flask
 freezegun

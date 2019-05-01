@@ -1,5 +1,9 @@
+import decorator
+import mwapi # type: ignore
+import pytest # type: ignore
 import requests
 import requests_oauthlib # type: ignore
+from typing import Callable, TypeVar
 
 
 class FakeSession:
@@ -23,3 +27,19 @@ class FakeSession:
                 return self.post_response
         else:
             raise NotImplementedError
+
+
+Ret = TypeVar('Ret')
+
+
+@decorator.decorator
+def internet_test(func: Callable[..., Ret], *args, **kwargs) -> Ret:
+    """Decorator for a test that accesses the internet.
+
+    If the test raises a ConnectionError, the test is marked as
+    skipped instead of failed.
+    """
+    try:
+        return func(*args, **kwargs)
+    except mwapi.errors.ConnectionError:
+        return pytest.skip('no internet connection') # does not actually return, but mypy wants a return statement
