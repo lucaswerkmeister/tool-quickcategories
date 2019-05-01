@@ -225,6 +225,10 @@ def new_batch():
     if not is_wikimedia_domain(domain):
         return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
 
+    title = flask.request.form.get('title')
+    if title is not None and len(title) > 800:
+        return flask.Markup('Title "') + flask.Markup.escape(title) + flask.Markup('" is too long for a summary'), 400
+
     session = authenticated_session(domain)
     if not session:
         return 'not logged in', 403 # Forbidden; 401 Unauthorized would be inappropriate because we don’t send WWW-Authenticate
@@ -250,7 +254,7 @@ def new_batch():
                                      message=message), 400
 
     try:
-        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=None)
+        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=title)
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 
