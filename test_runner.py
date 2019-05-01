@@ -30,7 +30,7 @@ def test_run_command():
                               AddCategoryAction('Already present cat'),
                               RemoveCategoryAction('Removed cat'),
                               RemoveCategoryAction('Not present cat')])
-    runner = Runner(session)
+    runner = Runner(session, summary_batch_title='QuickCategories CI test')
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
     setup_edit = session.post(**{'action': 'edit',
@@ -48,10 +48,11 @@ def test_run_command():
     actual_revision = session.get(action='query',
                                   revids=[edit.revision],
                                   prop=['revisions'],
-                                  rvprop=['content', 'flags'],
+                                  rvprop=['content', 'flags', 'comment'],
                                   rvslots=['main'],
                                   formatversion=2)['query']['pages'][0]['revisions'][0]
     actual_content = actual_revision['slots']['main']['content']
+    actual_comment = actual_revision['comment']
     session.post(**{'action': 'edit',
                     'title': command.page,
                     'text': 'Test page for the QuickCategories tool.',
@@ -61,6 +62,8 @@ def test_run_command():
     expected_content = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert expected_content == actual_content
     assert not actual_revision['minor']
+    expected_comment = '+[[Category:Added cat]], (+[[Category:Already present cat]]), -[[Category:Removed cat]], (-[[Category:Not present cat]]); QuickCategories CI test'
+    assert expected_comment == actual_comment
 
 def test_with_nochange():
     curtimestamp = '2019-03-11T23:33:30Z'

@@ -62,7 +62,7 @@ while not stopped:
             summary_batch_link = config['summary_batch_link'].format(batch.id)
         else:
             summary_batch_link = None
-        runner = Runner(session, summary_batch_link)
+        runner = Runner(session, batch.title, summary_batch_link)
 
         for attempt in range(5):
             command_finish = runner.run_command(command_pending)

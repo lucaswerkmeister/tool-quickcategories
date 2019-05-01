@@ -8,10 +8,11 @@ import siteinfo
 
 class Runner():
 
-    def __init__(self, session: mwapi.Session, summary_batch_link: Optional[str] = None):
+    def __init__(self, session: mwapi.Session, summary_batch_title: Optional[str] = None, summary_batch_link: Optional[str] = None):
         self.session = session
         self.csrf_token = session.get(action='query',
                                       meta='tokens')['query']['tokens']['csrftoken']
+        self.summary_batch_title = summary_batch_title
         self.summary_batch_link = summary_batch_link
         self.prepared_pages = {} # type: Dict[str, dict]
 
@@ -76,7 +77,13 @@ class Runner():
                 summary += siteinfo.comma_separator(self.session)
             summary += action_summary
 
-        if self.summary_batch_link:
+        if self.summary_batch_title:
+            summary += siteinfo.semicolon_separator(self.session)
+            summary += self.summary_batch_title
+            if self.summary_batch_link:
+                summary += siteinfo.word_separator(self.session)
+                summary += siteinfo.parentheses(self.session, self.summary_batch_link)
+        elif self.summary_batch_link:
             summary += siteinfo.semicolon_separator(self.session)
             summary += self.summary_batch_link
 

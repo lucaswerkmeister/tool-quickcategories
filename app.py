@@ -342,7 +342,7 @@ def run_batch_slice(id: int):
     else:
         summary_batch_link = None
 
-    runner = Runner(session, summary_batch_link)
+    runner = Runner(session, batch.title, summary_batch_link)
 
     offset, limit = slice_from_args(flask.request.form)
     command_pendings = batch.command_records.make_plans_pending(offset, limit)
