@@ -250,7 +250,7 @@ def new_batch():
                                      message=message), 400
 
     try:
-        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''))
+        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=None)
     except parse_tpsv.ParseBatchError as e:
         return str(e)
 

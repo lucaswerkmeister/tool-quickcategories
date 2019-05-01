@@ -3,6 +3,7 @@ CREATE TABLE batch (
   batch_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT, -- public, also used to identify batches in URLs and on the page
   batch_localuser_id int unsigned NOT NULL, -- referencing localuser.localuser_id
   batch_domain_id int unsigned NOT NULL, -- referencing domain.domain_id
+  batch_title int unsigned, -- referencing title.title_id
   batch_created_utc_timestamp int unsigned NOT NULL,
   batch_last_updated_utc_timestamp int unsigned NOT NULL,
   batch_status int unsigned NOT NULL
@@ -39,6 +40,19 @@ COLLATE = 'utf8mb4_bin';
 
 -- index for finding a domain ID by its hash
 CREATE INDEX domain_hash ON domain (domain_hash);
+
+
+-- batch titles (normalized)
+CREATE TABLE title (
+  title_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
+  title_hash int unsigned NOT NULL, -- first four bytes of the SHA2-256 hash of the title_text
+  title_text varchar(255) binary NOT NULL
+)
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_bin';
+
+-- index for finding a title ID by its hash
+CREATE INDEX title_hash ON title (title_hash);
 
 
 -- actions of commands (normalized)

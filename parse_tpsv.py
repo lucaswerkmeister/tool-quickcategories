@@ -1,13 +1,13 @@
 """Functions to parse batches from tab/pipe-separated values syntax."""
 
-from typing import List
+from typing import List, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
 from batch import NewBatch
 from command import Command
 
 
-def parse_batch(tpsv: str) -> NewBatch:
+def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
     commands = []
     errors = []
     for line in tpsv.split('\n'):
@@ -20,7 +20,7 @@ def parse_batch(tpsv: str) -> NewBatch:
             errors.append(e)
     if errors:
         raise ParseBatchError(errors)
-    return NewBatch(commands)
+    return NewBatch(commands, title)
 
 
 def parse_command(line: str) -> Command:

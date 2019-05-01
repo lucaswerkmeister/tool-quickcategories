@@ -39,6 +39,7 @@ class DatabaseStore(BatchStore):
         connection_params.setdefault('charset', 'utf8mb4')
         self.connection_params = connection_params
         self.domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        self.title_store = _StringTableStore('title', 'title_id', 'title_hash', 'title_text')
         self.actions_store = _StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
         self.local_user_store = _LocalUserStore(self.domain_store)
 
@@ -66,10 +67,14 @@ class DatabaseStore(BatchStore):
 
         with self._connect() as connection:
             domain_id = self.domain_store.acquire_id(connection, local_user.domain)
+            if new_batch.title:
+                title_id = self.title_store.acquire_id(connection, new_batch.title)
+            else:
+                title_id = None
             localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
             with connection.cursor() as cursor:
-                cursor.execute('INSERT INTO `batch` (`batch_localuser_id`, `batch_domain_id`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s)',
-                               (localuser_id, domain_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
+                cursor.execute('INSERT INTO `batch` (`batch_localuser_id`, `batch_domain_id`, `batch_title`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s)',
+                               (localuser_id, domain_id, title_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
@@ -81,6 +86,7 @@ class DatabaseStore(BatchStore):
         return OpenBatch(batch_id,
                          local_user,
                          local_user.domain,
+                         new_batch.title,
                          created,
                          created,
                          _BatchCommandRecordsDatabase(batch_id, self),
@@ -89,10 +95,11 @@ class DatabaseStore(BatchStore):
     def get_batch(self, id: int) -> Optional[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
         if not result:
@@ -100,7 +107,7 @@ class DatabaseStore(BatchStore):
         return self._result_to_batch(result)
 
     def _result_to_batch(self, result: tuple) -> StoredBatch:
-        id, user_name, local_user_id, global_user_id, domain, created_utc_timestamp, last_updated_utc_timestamp, status = result
+        id, user_name, local_user_id, global_user_id, domain, title, created_utc_timestamp, last_updated_utc_timestamp, status = result
         created = self._utc_timestamp_to_datetime(created_utc_timestamp)
         last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
         local_user = LocalUser(user_name, domain, local_user_id, global_user_id)
@@ -108,6 +115,7 @@ class DatabaseStore(BatchStore):
             return OpenBatch(id,
                              local_user,
                              local_user.domain,
+                             title,
                              created,
                              last_updated,
                              _BatchCommandRecordsDatabase(id, self),
@@ -116,6 +124,7 @@ class DatabaseStore(BatchStore):
             return ClosedBatch(id,
                                local_user,
                                local_user.domain,
+                               title,
                                created,
                                last_updated,
                                _BatchCommandRecordsDatabase(id, self),
@@ -126,10 +135,11 @@ class DatabaseStore(BatchStore):
     def get_latest_batches(self) -> Sequence[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  LEFT JOIN `title` ON `batch_title` = `title_id`
                                   ORDER BY `batch_id` DESC
                                   LIMIT 10''')
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
@@ -203,13 +213,14 @@ class DatabaseStore(BatchStore):
             with connection.cursor() as cursor:
                 now = _now()
                 now_utc_timestamp = self._datetime_to_utc_timestamp(now)
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
                                   JOIN `domain` ON `batch_domain_id` = `domain_id`
                                   JOIN `actions` ON `command_actions_id` = `actions_id`
                                   JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `background_stopped_utc_timestamp` IS NULL
                                   AND COALESCE(`background_suspended_until_utc_timestamp`, 0) < %s
                                   AND `command_status` = %s
@@ -226,19 +237,19 @@ class DatabaseStore(BatchStore):
                 cursor.execute('''UPDATE `command`
                                   SET `command_status` = %s
                                   WHERE `command_id` = %s AND `command_batch` = %s''',
-                               (DatabaseStore._COMMAND_STATUS_PENDING, result[9], result[0]))
+                               (DatabaseStore._COMMAND_STATUS_PENDING, result[10], result[0]))
             connection.commit()
 
-        auth_data = json.loads(result[8])
+        auth_data = json.loads(result[9])
         auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
                                         resource_owner_key=auth_data['resource_owner_key'], resource_owner_secret=auth_data['resource_owner_secret'])
         session = mwapi.Session(host='https://'+result[4], auth=auth, user_agent=user_agent)
-        command_pending = self._row_to_command_record(result[9],
-                                                      result[10],
+        command_pending = self._row_to_command_record(result[10],
                                                       result[11],
+                                                      result[12],
                                                       DatabaseStore._COMMAND_STATUS_PENDING,
                                                       outcome=None)
-        batch = self._result_to_batch(result[0:8])
+        batch = self._result_to_batch(result[0:9])
 
         assert isinstance(batch, OpenBatch), "must be open since at least one command is still pending"
         assert isinstance(command_pending, CommandPending), "must be pending since we just set that status"

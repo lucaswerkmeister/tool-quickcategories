@@ -11,6 +11,7 @@ from store import _now
 
 from test_action import addCategory1
 from test_batch import newBatch1
+from test_command import command1
 from test_database import fresh_database_connection_params, database_connection_params # NOQA F401 “unused” imports needed for store fixture
 from test_utils import FakeSession
 
@@ -56,6 +57,20 @@ def test_BatchStore_get_batch(store):
     assert len(loaded_batch.command_records) == 2
     assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
 
+def test_BatchStore_store_get_without_title(store):
+    stored_batch = store.store_batch(NewBatch([command1], title=None), fake_session)
+    loaded_batch = store.get_batch(stored_batch.id)
+
+    assert stored_batch.title is None
+    assert loaded_batch.title is None
+
+def test_BatchStore_store_get_with_title(store):
+    stored_batch = store.store_batch(NewBatch([command1], title='Test batch'), fake_session)
+    loaded_batch = store.get_batch(stored_batch.id)
+
+    assert stored_batch.title == 'Test batch'
+    assert loaded_batch.title == 'Test batch'
+
 def test_BatchStore_get_batch_missing(store):
     loaded_batch = store.get_batch(1)
     assert loaded_batch is None
@@ -100,7 +115,7 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
     command_2 = Command('Page 2', [addCategory1])
     command_3 = Command('Page 3', [addCategory1])
     command_4 = Command('Page 4', [addCategory1])
-    open_batch = store.store_batch(NewBatch([command_1, command_2, command_3, command_4]), fake_session)
+    open_batch = store.store_batch(NewBatch([command_1, command_2, command_3, command_4], 'test batch'), fake_session)
     command_records = open_batch.command_records
     [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]
 
