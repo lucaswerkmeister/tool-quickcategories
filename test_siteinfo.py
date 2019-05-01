@@ -164,7 +164,7 @@ response_zhwiki = {
         'allmessages': [
             {
                 'name': 'comma-separator',
-                'content': '、 ',
+                'content': '、',
             },
             {
                 'name': 'semicolon-separator',
@@ -206,7 +206,7 @@ def test_comma_separator():
     session = FakeSession(response_zhwiki)
     session.host = 'https://zh.wikipedia.org'
     comma_separator = siteinfo.comma_separator(session)
-    assert comma_separator == '、 '
+    assert comma_separator == '、'
 
 
 def test_semicolon_separator():
