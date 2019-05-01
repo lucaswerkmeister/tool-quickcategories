@@ -20,6 +20,7 @@ import yaml
 from batch import OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
+import parse_wikitext
 import parse_tpsv
 from runner import Runner
 from store import BatchStore
@@ -309,10 +310,16 @@ def batch(id: int):
         flask.g.can_start_background = False
         flask.g.can_stop_background = False
 
+    if batch.title:
+        title = parse_wikitext.parse_summary(any_session(batch.domain), batch.title) # type: Optional[flask.Markup]
+    else:
+        title = None
+
     offset, limit = slice_from_args(flask.request.args)
 
     return flask.render_template('batch.html',
                                  batch=batch,
+                                 title=title,
                                  offset=offset,
                                  limit=limit)
 
