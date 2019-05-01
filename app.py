@@ -333,12 +333,12 @@ def run_batch_slice(id: int):
     if local_user_id != batch.local_user.local_user_id:
         return 'may not run this batch', 403
 
-    if 'summary_suffix' in app.config:
-        summary_suffix = app.config['summary_suffix'].format(id)
+    if 'summary_batch_link' in app.config:
+        summary_batch_link = app.config['summary_batch_link'].format(id)
     else:
-        summary_suffix = None
+        summary_batch_link = None
 
-    runner = Runner(session, summary_suffix)
+    runner = Runner(session, summary_batch_link)
 
     offset, limit = slice_from_args(flask.request.form)
     command_pendings = batch.command_records.make_plans_pending(offset, limit)

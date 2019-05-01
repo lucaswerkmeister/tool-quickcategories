@@ -58,11 +58,11 @@ while not stopped:
     try:
         print('Running command %d of batch #%d... ' % (command_pending.id, batch.id), end='', flush=True)
 
-        if 'summary_suffix' in config:
-            summary_suffix = config['summary_suffix'].format(batch.id)
+        if 'summary_batch_link' in config:
+            summary_batch_link = config['summary_batch_link'].format(batch.id)
         else:
-            summary_suffix = None
-        runner = Runner(session, summary_suffix)
+            summary_batch_link = None
+        runner = Runner(session, summary_batch_link)
 
         for attempt in range(5):
             command_finish = runner.run_command(command_pending)
