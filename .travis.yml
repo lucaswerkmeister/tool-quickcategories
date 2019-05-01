@@ -1,4 +1,5 @@
 language: python
+dist: trusty # MariaDB 10.1 doesn’t work in xenial
 python:
   # Note: each extra job will cause test_runner.py to try to edit another page –
   # QuickCategories CI Test/1, QuickCategories CI Test/2, etc. –
