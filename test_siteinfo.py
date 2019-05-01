@@ -33,6 +33,10 @@ response_enwiki = {
                 'content': '; ',
             },
             {
+                'name': 'word-separator',
+                'content': ' ',
+            },
+            {
                 'name': 'parentheses',
                 'content': '($1)',
             },
@@ -67,6 +71,10 @@ response_dewiktionary = {
             {
                 'name': 'semicolon-separator',
                 'content': '; ',
+            },
+            {
+                'name': 'word-separator',
+                'content': ' ',
             },
             {
                 'name': 'parentheses',
@@ -108,6 +116,10 @@ response_ruwiki = {
             {
                 'name': 'semicolon-separator',
                 'content': '; ',
+            },
+            {
+                'name': 'word-separator',
+                'content': ' ',
             },
             {
                 'name': 'parentheses',
@@ -159,6 +171,10 @@ response_zhwiki = {
                 'content': '；',
             },
             {
+                'name': 'word-separator',
+                'content': '',
+            },
+            {
                 'name': 'parentheses',
                 'content': '（$1）',
             },
@@ -198,6 +214,13 @@ def test_semicolon_separator():
     session.host = 'https://zh.wikipedia.org'
     semicolon_separator = siteinfo.semicolon_separator(session)
     assert semicolon_separator == '；'
+
+
+def test_word_separator():
+    session = FakeSession(response_zhwiki)
+    session.host = 'https://zh.wikipedia.org'
+    word_separator = siteinfo.word_separator(session)
+    assert word_separator == ''
 
 
 def test_parentheses():

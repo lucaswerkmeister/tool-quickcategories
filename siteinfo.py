@@ -19,7 +19,7 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
     response = session.get(action='query',
                            meta=['siteinfo', 'allmessages'],
                            siprop=['namespaces', 'namespacealiases'],
-                           ammessages=['comma-separator', 'semicolon-separator', 'parentheses'],
+                           ammessages=['comma-separator', 'semicolon-separator', 'word-separator', 'parentheses'],
                            formatversion=2)
 
     for namespace in response['query']['namespaces'].values():
@@ -74,6 +74,15 @@ def semicolon_separator(session: mwapi.Session) -> str:
             siteinfo = _get_siteinfo(session)
             siteinfo_cache[session.host] = siteinfo
     return siteinfo[1]['semicolon-separator']
+
+
+def word_separator(session: mwapi.Session) -> str:
+    with siteinfo_cache_lock:
+        siteinfo = siteinfo_cache.get(session.host)
+        if not siteinfo:
+            siteinfo = _get_siteinfo(session)
+            siteinfo_cache[session.host] = siteinfo
+    return siteinfo[1]['word-separator']
 
 
 def parentheses(session: mwapi.Session, content: str) -> str:
