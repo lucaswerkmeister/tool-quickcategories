@@ -73,6 +73,7 @@
     <tr>
       <th scope="col">batch ID</th>
       <th scope="col">by</th>
+      <th scope="col">wiki</th>
       <th scope="col">title</th>
       <th scope="col">created</th>
       <th scope="col">last updated</th>
@@ -83,6 +84,7 @@
     <tr>
       <th scope="row"><a href="{{ url_for('batch', id=batch.id) }}">{{ batch.id }}</a></th>
       <td>{{ render_local_user(batch.local_user) }}</td>
+      <td><a href="https://{{ batch.domain }}/">{{ batch.domain }}</a></td>
       <td>{{ render_batch_title(batch) or '' }}</td>
       <td>{{ batch.created | render_datetime }}</td>
       <td>{{ batch.last_updated | render_datetime }}</td>
