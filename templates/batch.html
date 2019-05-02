@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>Batch #{{ batch.id }} by {{ render_local_user(batch.local_user) }}</h1>
-{% if title %}
-<h2>{{ title }}</h2>
+{% if batch.title %}
+<h2>{{ render_batch_title( batch ) }}</h2>
 {% endif %}
 {% set background_run = batch.background_runs.get_last() %}
 {% set currently_running = background_run and not background_run[1] %}

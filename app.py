@@ -17,7 +17,7 @@ import traceback
 from typing import Any, List, Optional, Tuple
 import yaml
 
-from batch import OpenBatch
+from batch import StoredBatch, OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_wikitext
@@ -204,6 +204,12 @@ def render_local_user(local_user: LocalUser) -> flask.Markup:
             flask.Markup.escape(local_user.user_name) +
             flask.Markup(r'</bdi></a>'))
 
+@app.template_global()
+def render_batch_title(batch: StoredBatch) -> Optional[flask.Markup]:
+    if not batch.title:
+        return None
+    return parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title)
+
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
         access_token = mwoauth.AccessToken(**flask.session['oauth_access_token'])
@@ -312,16 +318,10 @@ def batch(id: int):
         flask.g.can_start_background = False
         flask.g.can_stop_background = False
 
-    if batch.title:
-        title = parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title) # type: Optional[flask.Markup]
-    else:
-        title = None
-
     offset, limit = slice_from_args(flask.request.args)
 
     return flask.render_template('batch.html',
                                  batch=batch,
-                                 title=title,
                                  offset=offset,
                                  limit=limit)
 
