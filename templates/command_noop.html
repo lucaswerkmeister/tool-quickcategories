@@ -1,2 +1,2 @@
-<a class="badge badge-info" href="https://{{ domain }}/wiki/Special:PermanentLink/{{ command_noop.revision }}">done</a>
+<a href="https://{{ domain }}/wiki/Special:PermanentLink/{{ command_noop.revision }}">{% include "command_noop_badge.html" %}</a>
 {{ render_command(command_noop.command, domain) }}

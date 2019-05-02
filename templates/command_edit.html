@@ -1,2 +1,2 @@
-<a class="badge badge-success" href="https://{{ domain }}/wiki/Special:Diff/{{ command_edit.base_revision }}/{{ command_edit.revision }}">done</a>
+<a href="https://{{ domain }}/wiki/Special:Diff/{{ command_edit.base_revision }}/{{ command_edit.revision }}">{% include "command_edit_badge.html" %}</a>
 {{ render_command(command_edit.command, domain) }}
