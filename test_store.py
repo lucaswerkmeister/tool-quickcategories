@@ -3,7 +3,7 @@ import mwoauth # type: ignore
 import pytest # type: ignore
 
 from batch import NewBatch, OpenBatch, ClosedBatch
-from command import Command, CommandPlan, CommandPending, CommandNoop, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
@@ -74,6 +74,30 @@ def test_BatchStore_store_get_with_title(store):
 def test_BatchStore_get_batch_missing(store):
     loaded_batch = store.get_batch(1)
     assert loaded_batch is None
+
+def test_BatchCommandRecords_get_summary(store):
+    batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
+    [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9] = batch.command_records.get_slice(0, 9)
+    batch.command_records.store_finish(CommandEdit(cr1.id, cr1.command, 1, 4))
+    batch.command_records.store_finish(CommandNoop(cr2.id, cr2.command, 2))
+    batch.command_records.store_finish(CommandEdit(cr3.id, cr3.command, 3, 5))
+    batch.command_records.store_finish(CommandPageMissing(cr4.id, cr4.command, "curtimestamp"))
+    batch.command_records.store_finish(CommandPageProtected(cr5.id, cr5.command, "curtimestamp"))
+    batch.command_records.store_finish(CommandEditConflict(cr6.id, cr6.command))
+    batch.command_records.store_finish(CommandMaxlagExceeded(cr7.id, cr7.command, _now()))
+    batch.command_records.store_finish(CommandBlocked(cr8.id, cr8.command, False, None))
+    batch.command_records.store_finish(CommandWikiReadOnly(cr9.id, cr9.command, None, _now()))
+    assert batch.command_records.get_summary() == {
+        CommandEdit: 2,
+        CommandNoop: 1,
+        CommandPageMissing: 1,
+        CommandPageProtected: 1,
+        CommandEditConflict: 1,
+        CommandMaxlagExceeded: 1,
+        CommandBlocked: 1,
+        CommandWikiReadOnly: 1,
+        CommandPlan: 4, # retries: CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+    }
 
 def test_BatchStore_closes_batch(store):
     open_batch = store.store_batch(newBatch1, fake_session)

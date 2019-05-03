@@ -10,7 +10,7 @@ import operator
 import pymysql
 import requests_oauthlib # type: ignore
 import threading
-from typing import Any, Generator, List, Optional, Sequence, Tuple
+from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Type
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -341,6 +341,30 @@ class DatabaseStore(BatchStore):
         else:
             raise ValueError('Unknown command status %d' % status)
 
+    def _status_to_command_record_type(self, status: int) -> Type[CommandRecord]:
+        if status == DatabaseStore._COMMAND_STATUS_PLAN:
+            return CommandPlan
+        elif status == DatabaseStore._COMMAND_STATUS_EDIT:
+            return CommandEdit
+        elif status == DatabaseStore._COMMAND_STATUS_NOOP:
+            return CommandNoop
+        elif status == DatabaseStore._COMMAND_STATUS_PENDING:
+            return CommandPending
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
+            return CommandPageMissing
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
+            return CommandPageProtected
+        elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
+            return CommandEditConflict
+        elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
+            return CommandMaxlagExceeded
+        elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
+            return CommandBlocked
+        elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+            return CommandWikiReadOnly
+        else:
+            raise ValueError('Unknown command status %d' % status)
+
 
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
@@ -360,6 +384,15 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             for id, page, actions_tpsv, status, outcome in cursor.fetchall():
                 command_records.append(self.store._row_to_command_record(id, page, actions_tpsv, status, outcome))
         return command_records
+
+    def get_summary(self) -> Dict[Type[CommandRecord], int]:
+        with self.store._connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `command_status`, COUNT(*) AS `count`
+                              FROM `command`
+                              WHERE `command_batch` = %s
+                              GROUP BY `command_status`''',
+                           (self.batch_id,))
+            return {self.store._status_to_command_record_type(status): count for status, count in cursor.fetchall()}
 
     def __len__(self) -> int:
         with self.store._connect() as connection, connection.cursor() as cursor:

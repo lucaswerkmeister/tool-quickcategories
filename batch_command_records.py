@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List, Type
 
 from command import CommandRecord, CommandPending, CommandFinish
 
@@ -7,6 +7,8 @@ class BatchCommandRecords:
     """Accessor for the CommandRecords of a StoredBatch."""
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]: ...
+
+    def get_summary(self) -> Dict[Type[CommandRecord], int]: ...
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]: ...
 

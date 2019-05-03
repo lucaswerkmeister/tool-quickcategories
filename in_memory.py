@@ -1,7 +1,7 @@
 import datetime
 import mwapi # type: ignore
 import mwoauth # type: ignore
-from typing import Any, Dict, List, Optional, Sequence, Tuple, cast
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
@@ -116,6 +116,13 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         return self.command_records[offset:offset+limit]
+
+    def get_summary(self) -> Dict[Type[CommandRecord], int]:
+        ret = {} # type: Dict[Type[CommandRecord], int]
+        for command_record in self.command_records:
+            t = type(command_record)
+            ret[t] = ret.get(t, 0) + 1
+        return ret
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
         command_pendings = []
