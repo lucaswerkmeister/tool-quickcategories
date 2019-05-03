@@ -14,8 +14,10 @@
 <p>
   {% set summary = batch.command_records.get_summary() %}
   {% set total = summary.values() | sum %}
-  {{ total }}&nbsp;command{% if total > 1 %}s{% endif %}{% for type, count in summary | dictsort(by='value', reverse=true) %},
-  {{ count }}&nbsp;{{ type | render_command_record_type }}{% endfor %}
+  {{ total }}&nbsp;command{% if total > 1 %}s{% endif -%}
+  {%- for type, count in summary | dictsort(by='value', reverse=true) -%}
+  , {{ count }}&nbsp;{{ type | render_command_record_type }}
+  {%- endfor %}
 </p>
 {% if background_run %}
 <form method="post">
