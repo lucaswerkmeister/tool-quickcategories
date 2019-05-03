@@ -14,7 +14,7 @@ import string
 import threading
 import toolforge
 import traceback
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Type
 import yaml
 
 from batch import StoredBatch, OpenBatch
@@ -182,6 +182,23 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
         raise ValueError('Unknown command record type')
 
     return flask.Markup(command_record_markup)
+
+@app.template_filter()
+def render_command_record_type(command_record_type: Type[CommandRecord]) -> flask.Markup:
+    template_names = {
+        CommandPlan: 'command_plan_badge.html',
+        CommandPending: 'command_pending_badge.html',
+        CommandEdit: 'command_edit_badge.html',
+        CommandNoop: 'command_noop_badge.html',
+        CommandPageMissing: 'command_page_missing_badge.html',
+        CommandPageProtected: 'command_page_protected_badge.html',
+        CommandEditConflict: 'command_edit_conflict_badge.html',
+        CommandMaxlagExceeded: 'command_maxlag_exceeded_badge.html',
+        CommandBlocked: 'command_blocked_badge.html',
+        CommandWikiReadOnly: 'command_wiki_read_only_badge.html',
+    }
+    template_name = template_names[command_record_type]
+    return flask.Markup(flask.render_template(template_name))
 
 @app.template_filter()
 def render_datetime(dt: datetime.datetime) -> flask.Markup:
