@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import bs4 # type: ignore
 import cachetools
 import datetime
 import flask
@@ -14,7 +15,7 @@ import string
 import threading
 import toolforge
 import traceback
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type, Union
 import yaml
 
 from batch import StoredBatch, OpenBatch
@@ -226,6 +227,19 @@ def render_batch_title(batch: StoredBatch) -> Optional[flask.Markup]:
     if not batch.title:
         return None
     return parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title)
+
+@app.template_filter()
+def html_text(html: Union[str, flask.Markup]) -> flask.Markup:
+    soup = bs4.BeautifulSoup(html, 'html.parser')
+    text = soup.text
+    return flask.Markup.escape(text)
+
+@app.template_global()
+def render_batch_title_text(batch: StoredBatch) -> Optional[flask.Markup]:
+    title_html = render_batch_title(batch)
+    if not title_html:
+        return None
+    return html_text(title_html)
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
