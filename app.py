@@ -363,6 +363,9 @@ def batch_background_history(id: int):
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
+    if not submitted_request_valid():
+        return 'CSRF error', 400
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -414,6 +417,9 @@ def run_batch_slice(id: int):
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
 def start_batch_background(id: int):
+    if not submitted_request_valid():
+        return 'CSRF error', 400
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -442,6 +448,9 @@ def start_batch_background(id: int):
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
 def stop_batch_background(id: int):
+    if not submitted_request_valid():
+        return 'CSRF error', 400
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
