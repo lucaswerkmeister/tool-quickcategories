@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% block title %}Background run history of QuickCategories batch #{{ batch.id }}{% endblock %}
 {% block main %}
 <h1>Background run history of <a href="{{ url_for('batch', id=batch.id) }}">batch #{{ batch.id }}</a></h1>
 <table class="table">
