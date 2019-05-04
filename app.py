@@ -293,6 +293,11 @@ def new_batch():
     id = batch_store.store_batch(batch, session).id
     return flask.redirect(flask.url_for('batch', id=id))
 
+@app.route('/batch/')
+def batches():
+    offset, limit = slice_from_args(flask.request.args)
+    return flask.render_template('batches.html', batches=batch_store.get_batches_slice(offset=offset, limit=limit))
+
 @app.route('/batch/<int:id>/')
 def batch(id: int):
     batch = batch_store.get_batch(id)
