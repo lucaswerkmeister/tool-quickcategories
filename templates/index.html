@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>QuickCategories</h1>
-<form method="post" action="batch" class="mb-3">
+<h2 id="new-batch">New batch</h2>
+<form method="post" action="batch" class="mb-3" aria-labelledby="new-batch">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <div class="form-group">
     <label for="domain">Wiki domain</label>
@@ -68,7 +69,8 @@
   {% endif %}
 </form>
 {% if batches %}
-<h2>Latest batches</h2>
+<h2 id="latest-batches">Latest batches</h2>
+{% set batch_list_label = "latest-batches" %}
 {% include "batch_list.html" %}
 <a href="{{ url_for('batches') }}" class="btn btn-info">All batches</a>
 {% endif %}

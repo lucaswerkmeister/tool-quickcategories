@@ -1,4 +1,4 @@
-<table class="table">
+<table class="table"{% if batch_list_label is defined %}aria-labelledby="{{ batch_list_label }}" {% endif %}>
   <thead>
     <tr>
       <th scope="col">batch ID</th>
