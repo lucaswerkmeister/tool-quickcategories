@@ -69,5 +69,6 @@
 {% if batches %}
 <h2>Latest batches</h2>
 {% include "batch_list.html" %}
+<a href="{{ url_for('batches') }}" class="btn btn-info">All batches</a>
 {% endif %}
 {% endblock %}
