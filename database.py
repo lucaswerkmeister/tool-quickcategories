@@ -146,6 +146,14 @@ class DatabaseStore(BatchStore):
                                (limit, offset))
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
 
+    def get_batches_count(self) -> int:
+        with self._connect() as connection:
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT COUNT(*) AS `count`
+                                  FROM `batch`''')
+                (count,) = cursor.fetchone()
+        return count
+
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
         started_utc_timestamp = self._datetime_to_utc_timestamp(started)

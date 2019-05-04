@@ -63,6 +63,9 @@ class InMemoryStore(BatchStore):
     def get_batches_slice(self, offset: int, limit: int) -> Sequence[StoredBatch]:
         return [cast(StoredBatch, self.get_batch(id)) for id in sorted(self.batches.keys(), reverse=True)[offset:offset+limit]]
 
+    def get_batches_count(self) -> int:
+        return len(self.batches)
+
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()
         local_user = _local_user_from_session(session)

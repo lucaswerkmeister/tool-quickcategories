@@ -1,6 +1,7 @@
 import datetime
 import mwoauth # type: ignore
 import pytest # type: ignore
+import random
 
 from batch import NewBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -120,6 +121,12 @@ def test_BatchStore_get_batches_slice_other(store):
         open_batches.append(store.store_batch(newBatch1, fake_session))
     open_batches.reverse()
     assert open_batches[5:20] == store.get_batches_slice(offset=5, limit=15)
+
+def test_BatchStore_get_batches_count(store):
+    count = random.randrange(5, 35)
+    for i in range(count):
+        store.store_batch(newBatch1, fake_session)
+    assert store.get_batches_count() == count
 
 def test_BatchStore_stop_background_noop(store):
     open_batch = store.store_batch(newBatch1, fake_session)
