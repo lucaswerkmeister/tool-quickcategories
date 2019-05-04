@@ -107,12 +107,19 @@ def test_BatchStore_closes_batch(store):
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
-def test_BatchStore_get_latest_batches(store):
+def test_BatchStore_get_batches_slice_latest(store):
     open_batches = []
     for i in range(25):
         open_batches.append(store.store_batch(newBatch1, fake_session))
     open_batches.reverse()
-    assert open_batches[:10] == store.get_latest_batches()
+    assert open_batches[:10] == store.get_batches_slice(offset=0, limit=10)
+
+def test_BatchStore_get_batches_slice_other(store):
+    open_batches = []
+    for i in range(25):
+        open_batches.append(store.store_batch(newBatch1, fake_session))
+    open_batches.reverse()
+    assert open_batches[5:20] == store.get_batches_slice(offset=5, limit=15)
 
 def test_BatchStore_stop_background_noop(store):
     open_batch = store.store_batch(newBatch1, fake_session)

@@ -244,7 +244,7 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
 
 @app.route('/')
 def index():
-    return flask.render_template('index.html', latest_batches=batch_store.get_latest_batches())
+    return flask.render_template('index.html', latest_batches=batch_store.get_batches_slice(offset=0, limit=10))
 
 @app.route('/batch', methods=['POST'])
 def new_batch():

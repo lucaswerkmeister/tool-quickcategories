@@ -60,8 +60,8 @@ class InMemoryStore(BatchStore):
             self.batches[id] = stored_batch
         return stored_batch
 
-    def get_latest_batches(self) -> Sequence[StoredBatch]:
-        return [cast(StoredBatch, self.get_batch(id)) for id in sorted(self.batches.keys(), reverse=True)[:10]]
+    def get_batches_slice(self, offset: int, limit: int) -> Sequence[StoredBatch]:
+        return [cast(StoredBatch, self.get_batch(id)) for id in sorted(self.batches.keys(), reverse=True)[offset:offset+limit]]
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
         started = _now()

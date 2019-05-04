@@ -132,7 +132,7 @@ class DatabaseStore(BatchStore):
         else:
             raise ValueError('Unknown batch type')
 
-    def get_latest_batches(self) -> Sequence[StoredBatch]:
+    def get_batches_slice(self, offset: int, limit: int) -> Sequence[StoredBatch]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
@@ -141,7 +141,9 @@ class DatabaseStore(BatchStore):
                                   JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
                                   ORDER BY `batch_id` DESC
-                                  LIMIT 10''')
+                                  LIMIT %s
+                                  OFFSET %s''',
+                               (limit, offset))
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
