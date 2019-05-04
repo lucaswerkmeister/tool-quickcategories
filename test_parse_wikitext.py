@@ -7,7 +7,7 @@ from test_utils import FakeSession
 
 def test_parse_summary_two_wikis():
     title = '[[Kategorie:Wikimedia]]'
-    summary1 = '<a href="/w/index.php?title=Kategorie:Wikimedia&amp;action=edit&amp;redlink=1" class="new" title="Kategorie:Wikimedia (page does not exist)">Kategorie:Wikimedia</a>'
+    summary1 = '<a class="new" href="https://en.wikipedia.org/w/index.php?title=Kategorie:Wikimedia&amp;action=edit&amp;redlink=1" title="Kategorie:Wikimedia (page does not exist)">Kategorie:Wikimedia</a>'
     session1 = FakeSession({
         'parse': {
             'parsedsummary': summary1,
@@ -15,7 +15,7 @@ def test_parse_summary_two_wikis():
     })
     session1.host = 'https://en.wikipedia.org'
     assert parse_wikitext.parse_summary(session1, title) == flask.Markup(summary1)
-    summary2 = '<a href="/wiki/Kategorie:Wikimedia" title="Kategorie:Wikimedia">Kategorie:Wikimedia</a>'
+    summary2 = '<a href="https://de.wikipedia.org/wiki/Kategorie:Wikimedia" title="Kategorie:Wikimedia">Kategorie:Wikimedia</a>'
     session2 = FakeSession({
         'parse': {
             'parsedsummary': summary2,

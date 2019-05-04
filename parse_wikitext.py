@@ -1,3 +1,4 @@
+import bs4 # type: ignore
 import cachetools
 import flask
 import mwapi # type: ignore
@@ -20,4 +21,12 @@ def parse_summary(session: mwapi.Session, summary: str) -> flask.Markup:
                            prop=[],
                            formatversion=2)
     summary_html = response['parse']['parsedsummary']
-    return flask.Markup(summary_html)
+    return fix_markup(summary_html, session.host)
+
+def fix_markup(html: str, host: str) -> flask.Markup:
+    soup = bs4.BeautifulSoup(html, 'html.parser')
+    for link in soup.select('a[href]'):
+        href = link['href']
+        if href.startswith('/') and not href.startswith('//'):
+            link['href'] = host + href
+    return flask.Markup(str(soup))
