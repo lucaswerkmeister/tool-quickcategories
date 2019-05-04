@@ -296,7 +296,11 @@ def new_batch():
 @app.route('/batch/')
 def batches():
     offset, limit = slice_from_args(flask.request.args)
-    return flask.render_template('batches.html', batches=batch_store.get_batches_slice(offset=offset, limit=limit))
+    return flask.render_template('batches.html',
+                                 batches=batch_store.get_batches_slice(offset=offset, limit=limit),
+                                 offset=offset,
+                                 limit=limit,
+                                 count=batch_store.get_batches_count())
 
 @app.route('/batch/<int:id>/')
 def batch(id: int):

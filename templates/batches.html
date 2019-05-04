@@ -1,4 +1,22 @@
 {% extends "base.html" %}
 {% block main %}
+<nav aria-label="batch pages">
+  <ul class="pagination">
+    {% if offset > 0 %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('batches', offset=0, limit=limit) }}">First</a></li>
+    <li class="page-item"><a class="page-link" href="{{ url_for('batches', offset=([0, offset-limit] | max), limit=limit) }}">Previous</a></li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">First</span></li>
+    <li class="page-item disabled"><span class="page-link">Previous</span></li>
+    {% endif %}
+    {% if offset + limit < count %}
+    <li class="page-item"><a class="page-link" href="{{ url_for('batches', offset=offset+limit, limit=limit) }}">Next</a></li>
+    <li class="page-item"><a class="page-link" href="{{ url_for('batches', offset=((count-1) // limit) * limit, limit=limit) }}">Last</a></li>
+    {% else %}
+    <li class="page-item disabled"><span class="page-link">Next</span></li>
+    <li class="page-item disabled"><span class="page-link">Last</span></li>
+    {% endif %}
+  </ul>
+</nav>
 {% include "batch_list.html" %}
 {% endblock %}
