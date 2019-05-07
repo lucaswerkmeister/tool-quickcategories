@@ -8,7 +8,8 @@ from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
 from command import CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
-from store import BatchStore, _local_user_from_session, _now
+from store import BatchStore, _local_user_from_session
+from timestamp import now
 
 
 class InMemoryStore(BatchStore):
@@ -21,7 +22,7 @@ class InMemoryStore(BatchStore):
         self.background_suspensions = {} # type: Dict[int, datetime.datetime]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
-        created = _now()
+        created = now()
         local_user = _local_user_from_session(session)
 
         command_plans = [] # type: List[CommandRecord]
@@ -67,7 +68,7 @@ class InMemoryStore(BatchStore):
         return len(self.batches)
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
-        started = _now()
+        started = now()
         local_user = _local_user_from_session(session)
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
@@ -75,7 +76,7 @@ class InMemoryStore(BatchStore):
             self.background_sessions[batch.id] = session
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
-        stopped = _now()
+        stopped = now()
         if session:
             local_user = _local_user_from_session(session) # type: Optional[LocalUser]
         else:
@@ -95,7 +96,7 @@ class InMemoryStore(BatchStore):
             if not batch.background_runs.currently_running():
                 continue
             if batch.id in self.background_suspensions:
-                if self.background_suspensions[batch.id] < _now():
+                if self.background_suspensions[batch.id] < now():
                     del self.background_suspensions[batch.id]
                 else:
                     continue
@@ -154,7 +155,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
         else:
             raise KeyError('command not found')
 
-        self.store.batches[self.batch_id].last_updated = _now()
+        self.store.batches[self.batch_id].last_updated = now()
 
         if isinstance(command_finish, CommandFailure) and \
            command_finish.can_retry_later():

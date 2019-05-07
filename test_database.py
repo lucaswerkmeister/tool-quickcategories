@@ -1,4 +1,3 @@
-import datetime
 import json
 import os
 import pymysql
@@ -120,27 +119,6 @@ def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
     # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
     reloaded_batch = store.get_batch(stored_batch.id)
     assert reloaded_batch.last_updated > reloaded_batch.created
-
-def test_DatabaseStore_datetime_to_utc_timestamp():
-    store = DatabaseStore({})
-    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, tzinfo=datetime.timezone.utc)
-    assert store._datetime_to_utc_timestamp(dt) == 1552829008
-
-@pytest.mark.parametrize('dt', [
-    datetime.datetime.now(),
-    datetime.datetime.utcnow(),
-    datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=1))),
-    datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
-])
-def test_DatabaseStore_datetime_to_utc_timestamp_invalid_timezone(dt):
-    store = DatabaseStore({})
-    with pytest.raises(AssertionError):
-        store._datetime_to_utc_timestamp(dt)
-
-def test_DatabaseStore_utc_timestamp_to_datetime():
-    store = DatabaseStore({})
-    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, tzinfo=datetime.timezone.utc)
-    assert store._utc_timestamp_to_datetime(1552829008) == dt
 
 def test_DatabaseStore_start_background_inserts_row(database_connection_params):
     store = DatabaseStore(database_connection_params)

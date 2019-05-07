@@ -40,7 +40,3 @@ def _local_user_from_session(session: mwapi.Session) -> LocalUser:
     assert local_user_id > 0
     assert global_user_id > 0
     return LocalUser(user_name, domain, local_user_id, global_user_id)
-
-
-def _now() -> datetime.datetime:
-    return datetime.datetime.now(tz=datetime.timezone.utc).replace(microsecond=0)

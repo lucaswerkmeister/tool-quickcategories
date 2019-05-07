@@ -12,8 +12,9 @@ from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRec
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_tpsv
-from store import BatchStore, _local_user_from_session, _now
+from store import BatchStore, _local_user_from_session
 from stringstore import StringTableStore
+from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
 
 
 class DatabaseStore(BatchStore):
@@ -48,18 +49,9 @@ class DatabaseStore(BatchStore):
         finally:
             connection.close()
 
-    def _datetime_to_utc_timestamp(self, dt: datetime.datetime) -> int:
-        assert dt.tzinfo == datetime.timezone.utc
-        assert dt.microsecond == 0
-        return int(dt.timestamp())
-
-    def _utc_timestamp_to_datetime(self, timestamp: int) -> datetime.datetime:
-        return datetime.datetime.fromtimestamp(timestamp,
-                                               tz=datetime.timezone.utc)
-
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
-        created = _now()
-        created_utc_timestamp = self._datetime_to_utc_timestamp(created)
+        created = now()
+        created_utc_timestamp = datetime_to_utc_timestamp(created)
         local_user = _local_user_from_session(session)
 
         with self._connect() as connection:
@@ -105,8 +97,8 @@ class DatabaseStore(BatchStore):
 
     def _result_to_batch(self, result: tuple) -> StoredBatch:
         id, user_name, local_user_id, global_user_id, domain, title, created_utc_timestamp, last_updated_utc_timestamp, status = result
-        created = self._utc_timestamp_to_datetime(created_utc_timestamp)
-        last_updated = self._utc_timestamp_to_datetime(last_updated_utc_timestamp)
+        created = utc_timestamp_to_datetime(created_utc_timestamp)
+        last_updated = utc_timestamp_to_datetime(last_updated_utc_timestamp)
         local_user = LocalUser(user_name, domain, local_user_id, global_user_id)
         if status == DatabaseStore._BATCH_STATUS_OPEN:
             return OpenBatch(id,
@@ -152,8 +144,8 @@ class DatabaseStore(BatchStore):
         return count
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
-        started = _now()
-        started_utc_timestamp = self._datetime_to_utc_timestamp(started)
+        started = now()
+        started_utc_timestamp = datetime_to_utc_timestamp(started)
         local_user = _local_user_from_session(session)
 
         with self._connect() as connection:
@@ -185,8 +177,8 @@ class DatabaseStore(BatchStore):
         self._stop_background_by_id(batch.id, session)
 
     def _stop_background_by_id(self, batch_id: int, session: Optional[mwapi.Session] = None) -> None:
-        stopped = _now()
-        stopped_utc_timestamp = self._datetime_to_utc_timestamp(stopped)
+        stopped = now()
+        stopped_utc_timestamp = datetime_to_utc_timestamp(stopped)
         with self._connect() as connection:
             if session:
                 local_user = _local_user_from_session(session)
@@ -204,7 +196,7 @@ class DatabaseStore(BatchStore):
                 raise RuntimeError('Should have stopped at most 1 background operation, actually affected %d!' % cursor.rowcount)
 
     def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
-        until_utc_timestamp = self._datetime_to_utc_timestamp(until)
+        until_utc_timestamp = datetime_to_utc_timestamp(until)
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `background`
                               SET `background_suspended_until_utc_timestamp` = %s
@@ -218,8 +210,7 @@ class DatabaseStore(BatchStore):
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
         with self._connect() as connection:
             with connection.cursor() as cursor:
-                now = _now()
-                now_utc_timestamp = self._datetime_to_utc_timestamp(now)
+                now_utc_timestamp = datetime_to_utc_timestamp(now())
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
@@ -280,7 +271,7 @@ class DatabaseStore(BatchStore):
             outcome = {}
         elif isinstance(command_finish, CommandMaxlagExceeded):
             status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
-            outcome = {'retry_after_utc_timestamp': self._datetime_to_utc_timestamp(command_finish.retry_after)}
+            outcome = {'retry_after_utc_timestamp': datetime_to_utc_timestamp(command_finish.retry_after)}
         elif isinstance(command_finish, CommandBlocked):
             status = DatabaseStore._COMMAND_STATUS_BLOCKED
             outcome = {'auto': command_finish.auto, 'blockinfo': command_finish.blockinfo}
@@ -288,7 +279,7 @@ class DatabaseStore(BatchStore):
             status = DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY
             outcome = {'reason': command_finish.reason}
             if command_finish.retry_after:
-                outcome['retry_after_utc_timestamp'] = self._datetime_to_utc_timestamp(command_finish.retry_after)
+                outcome['retry_after_utc_timestamp'] = datetime_to_utc_timestamp(command_finish.retry_after)
         else:
             raise ValueError('Unknown command type')
 
@@ -330,7 +321,7 @@ class DatabaseStore(BatchStore):
         elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
             return CommandMaxlagExceeded(id,
                                          command,
-                                         self._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
+                                         utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
         elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
             return CommandBlocked(id,
                                   command,
@@ -338,7 +329,7 @@ class DatabaseStore(BatchStore):
                                   blockinfo=outcome_dict['blockinfo'])
         elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
             if 'retry_after_utc_timestamp' in outcome_dict:
-                retry_after = self._utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']) # type: Optional[datetime.datetime]
+                retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']) # type: Optional[datetime.datetime]
             else:
                 retry_after = None
             return CommandWikiReadOnly(id,
@@ -470,8 +461,8 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             connection.commit()
 
     def store_finish(self, command_finish: CommandFinish) -> None:
-        last_updated = _now()
-        last_updated_utc_timestamp = self.store._datetime_to_utc_timestamp(last_updated)
+        last_updated = now()
+        last_updated_utc_timestamp = datetime_to_utc_timestamp(last_updated)
         status, outcome = self.store._command_finish_to_row(command_finish)
 
         with self.store._connect() as connection, connection.cursor() as cursor:
@@ -542,13 +533,13 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
                                -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:
-        background_start = (self.store._utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
+        background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
         if stopped_utc_timestamp:
             if stopped_user_name:
                 stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id) # type: Optional[LocalUser]
             else:
                 stopped_local_user = None
-            background_stop = (self.store._utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user) # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
+            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user) # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
         else:
             background_stop = None
         return (background_start, background_stop)

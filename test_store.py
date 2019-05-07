@@ -8,7 +8,7 @@ from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNo
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
-from store import _now
+from timestamp import now
 
 from test_action import addCategory1
 from test_batch import newBatch1
@@ -85,9 +85,9 @@ def test_BatchCommandRecords_get_summary(store):
     batch.command_records.store_finish(CommandPageMissing(cr4.id, cr4.command, "curtimestamp"))
     batch.command_records.store_finish(CommandPageProtected(cr5.id, cr5.command, "curtimestamp"))
     batch.command_records.store_finish(CommandEditConflict(cr6.id, cr6.command))
-    batch.command_records.store_finish(CommandMaxlagExceeded(cr7.id, cr7.command, _now()))
+    batch.command_records.store_finish(CommandMaxlagExceeded(cr7.id, cr7.command, now()))
     batch.command_records.store_finish(CommandBlocked(cr8.id, cr8.command, False, None))
-    batch.command_records.store_finish(CommandWikiReadOnly(cr9.id, cr9.command, None, _now()))
+    batch.command_records.store_finish(CommandWikiReadOnly(cr9.id, cr9.command, None, now()))
     assert batch.command_records.get_summary() == {
         CommandEdit: 2,
         CommandNoop: 1,
@@ -196,8 +196,8 @@ def test_BatchStore_make_plan_pending_background(store, frozen_time):
     store.start_background(batch_6, fake_session)
 
     # batch 5 was suspended until an hour ago, batch 6 is still suspended for another hour
-    store.suspend_background(batch_5, _now() - datetime.timedelta(hours=1))
-    store.suspend_background(batch_6, _now() + datetime.timedelta(hours=1))
+    store.suspend_background(batch_5, now() - datetime.timedelta(hours=1))
+    store.suspend_background(batch_6, now() + datetime.timedelta(hours=1))
 
     # in sum: batch 4 and 5 can be run
 
