@@ -9,8 +9,9 @@ import string
 from typing import List, Optional, Tuple
 
 from command import CommandRecord, CommandEdit, CommandNoop
-from database import DatabaseStore, _StringTableStore, _LocalUserStore
+from database import DatabaseStore, _LocalUserStore
 from localuser import LocalUser
+from stringstore import StringTableStore
 
 from test_batch import newBatch1
 from test_command import commandPlan1, commandPending1, commandEdit1, commandNoop1, commandPageMissing1, commandPageProtected1, commandEditConflict1, commandMaxlagExceeded1, commandBlocked1, blockinfo, commandBlocked2, commandWikiReadOnly1, commandWikiReadOnly2
@@ -253,58 +254,10 @@ def test_DatabaseStore_row_to_command_record(expected_command_record, row):
     assert expected_command_record == actual_command_record
 
 
-@pytest.mark.parametrize('string, expected_hash', [
-    # all hashes obtained in MariaDB via SELECT CAST(CONV(SUBSTRING(SHA2(**string**, 256), 1, 8), 16, 10) AS unsigned int);
-    ('', 3820012610),
-    ('test.wikipedia.org', 3277830609),
-    ('äöü', 3157433791),
-    ('☺', 3752208785),
-    ('🤔', 1622577385),
-])
-def test_StringTableStore_hash(string, expected_hash):
-    store = _StringTableStore('', '', '', '')
-
-    actual_hash = store._hash(string)
-
-    assert expected_hash == actual_hash
-
-def test_StringTableStore_acquire_id_database(database_connection_params):
-    connection = pymysql.connect(**database_connection_params)
-    try:
-        store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
-
-        store.acquire_id(connection, 'test.wikipedia.org')
-
-        with connection.cursor() as cursor:
-            cursor.execute('SELECT domain_name FROM domain WHERE domain_hash = 3277830609')
-            result = cursor.fetchone()
-            assert result == ('test.wikipedia.org',)
-
-        with store._cache_lock:
-            store._cache.clear()
-
-        store.acquire_id(connection, 'test.wikipedia.org')
-
-        with connection.cursor() as cursor:
-            cursor.execute('SELECT COUNT(*) FROM domain')
-            result = cursor.fetchone()
-            assert result == (1,)
-    finally:
-        connection.close()
-
-def test_StringTableStore_acquire_id_cached():
-    store = _StringTableStore('', '', '', '')
-
-    with store._cache_lock:
-        store._cache['test.wikipedia.org'] = 1
-
-    assert store.acquire_id(None, 'test.wikipedia.org') == 1
-
-
 def test_LocalUserStore_store_two_users(database_connection_params):
     connection = pymysql.connect(**database_connection_params)
     try:
-        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         local_user_store = _LocalUserStore(domain_store)
 
         localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)
@@ -331,7 +284,7 @@ def test_LocalUserStore_store_two_users(database_connection_params):
 def test_LocalUserStore_store_same_user_twice(database_connection_params):
     connection = pymysql.connect(**database_connection_params)
     try:
-        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         local_user_store = _LocalUserStore(domain_store)
 
         localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)
@@ -351,7 +304,7 @@ def test_LocalUserStore_store_same_user_twice(database_connection_params):
 def test_LocalUserStore_store_renamed_user(database_connection_params):
     connection = pymysql.connect(**database_connection_params)
     try:
-        domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         local_user_store = _LocalUserStore(domain_store)
 
         localuser_id_1 = local_user_store.acquire_localuser_id(connection, localUser1)

@@ -1,15 +1,11 @@
-import cachetools
 import contextlib
 import datetime
-import hashlib
 import itertools
 import json
 import mwapi # type: ignore
 import mwoauth # type: ignore
-import operator
 import pymysql
 import requests_oauthlib # type: ignore
-import threading
 from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Type
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
@@ -17,6 +13,7 @@ from command import Command, CommandPlan, CommandPending, CommandRecord, Command
 from localuser import LocalUser
 import parse_tpsv
 from store import BatchStore, _local_user_from_session, _now
+from stringstore import StringTableStore
 
 
 class DatabaseStore(BatchStore):
@@ -38,9 +35,9 @@ class DatabaseStore(BatchStore):
     def __init__(self, connection_params: dict):
         connection_params.setdefault('charset', 'utf8mb4')
         self.connection_params = connection_params
-        self.domain_store = _StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
-        self.title_store = _StringTableStore('title', 'title_id', 'title_hash', 'title_text')
-        self.actions_store = _StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
+        self.domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
+        self.title_store = StringTableStore('title', 'title_id', 'title_hash', 'title_text')
+        self.actions_store = StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
         self.local_user_store = _LocalUserStore(self.domain_store)
 
     @contextlib.contextmanager
@@ -589,65 +586,13 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             self.batch_id == value.batch_id
 
 
-class _StringTableStore:
-    """Encapsulates access to a string that has been extracted into a separate table.
-
-    The separate table is expected to have three columns:
-    an automatically incrementing ID,
-    an unsigned integer hash (the first four bytes of the SHA2-256 hash of the string),
-    and the string itself.
-
-    IDs for the least recently used strings are cached,
-    but to look up the string for an ID,
-    callers should use a plain SQL JOIN for now."""
-
-    def __init__(self,
-                 table_name: str,
-                 id_column_name: str,
-                 hash_column_name: str,
-                 string_column_name: str):
-        self.table_name = table_name
-        self.id_column_name = id_column_name
-        self.hash_column_name = hash_column_name
-        self.string_column_name = string_column_name
-        self._cache = cachetools.LRUCache(maxsize=1024) # type: cachetools.LRUCache[str, int]
-        self._cache_lock = threading.RLock()
-
-    def _hash(self, string: str) -> int:
-        hex = hashlib.sha256(string.encode('utf8')).hexdigest()
-        return int(hex[:8], base=16)
-
-    @cachetools.cachedmethod(operator.attrgetter('_cache'), key=lambda connection, string: string, lock=operator.attrgetter('_cache_lock'))
-    def acquire_id(self, connection: pymysql.connections.Connection, string: str) -> int:
-        hash = self._hash(string)
-
-        with connection.cursor() as cursor:
-            cursor.execute('''SELECT `%s`
-                              FROM `%s`
-                              WHERE `%s` = %%s
-                              FOR UPDATE''' % (self.id_column_name, self.table_name, self.hash_column_name),
-                           (hash,))
-            result = cursor.fetchone()
-        if result:
-            connection.commit() # finish the FOR UPDATE
-            return result[0]
-
-        with connection.cursor() as cursor:
-            cursor.execute('''INSERT INTO `%s` (`%s`, `%s`)
-                              VALUES (%%s, %%s)''' % (self.table_name, self.string_column_name, self.hash_column_name),
-                           (string, hash))
-            string_id = cursor.lastrowid
-        connection.commit()
-        return string_id
-
-
 class _LocalUserStore:
     """Encapsulates access to a local user account in the localuser table.
 
        When a user has been renamed, the same ID will still be used
        and the name will be updated once the user is stored the next time."""
 
-    def __init__(self, domain_store: _StringTableStore):
+    def __init__(self, domain_store: StringTableStore):
         self.domain_store = domain_store
 
     def acquire_localuser_id(self, connection: pymysql.connections.Connection, local_user: LocalUser) -> int:
