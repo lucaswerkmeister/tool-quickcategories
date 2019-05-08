@@ -13,7 +13,6 @@ from timestamp import now
 from test_action import addCategory1
 from test_batch import newBatch1
 from test_command import command1
-from test_database import fresh_database_connection_params, database_connection_params # NOQA F401 “unused” imports needed for store fixture
 from test_utils import FakeSession
 
 

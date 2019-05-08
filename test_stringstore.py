@@ -3,8 +3,6 @@ import pytest # type: ignore
 
 from stringstore import StringTableStore
 
-from test_database import fresh_database_connection_params, database_connection_params # NOQA F401 “unused” imports needed for store fixture
-
 
 @pytest.mark.parametrize('string, expected_hash', [
     # all hashes obtained in MariaDB via SELECT CAST(CONV(SUBSTRING(SHA2(**string**, 256), 1, 8), 16, 10) AS unsigned int);
