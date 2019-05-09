@@ -42,7 +42,7 @@ class DatabaseStore(BatchStore):
         self.local_user_store = _LocalUserStore(self.domain_store)
 
     @contextlib.contextmanager
-    def _connect(self) -> Generator[pymysql.connections.Connection, None, None]:
+    def connect(self) -> Generator[pymysql.connections.Connection, None, None]:
         connection = pymysql.connect(**self.connection_params)
         try:
             yield connection
@@ -54,7 +54,7 @@ class DatabaseStore(BatchStore):
         created_utc_timestamp = datetime_to_utc_timestamp(created)
         local_user = _local_user_from_session(session)
 
-        with self._connect() as connection:
+        with self.connect() as connection:
             domain_id = self.domain_store.acquire_id(connection, local_user.domain)
             if new_batch.title:
                 title_id = self.title_store.acquire_id(connection, new_batch.title)
@@ -82,7 +82,7 @@ class DatabaseStore(BatchStore):
                          _BatchBackgroundRunsDatabase(batch_id, local_user.domain, self))
 
     def get_batch(self, id: int) -> Optional[StoredBatch]:
-        with self._connect() as connection:
+        with self.connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
@@ -122,7 +122,7 @@ class DatabaseStore(BatchStore):
             raise ValueError('Unknown batch type')
 
     def get_batches_slice(self, offset: int, limit: int) -> Sequence[StoredBatch]:
-        with self._connect() as connection:
+        with self.connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
@@ -136,7 +136,7 @@ class DatabaseStore(BatchStore):
                 return [self._result_to_batch(result) for result in cursor.fetchall()]
 
     def get_batches_count(self) -> int:
-        with self._connect() as connection:
+        with self.connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT COUNT(*) AS `count`
                                   FROM `batch`''')
@@ -148,7 +148,7 @@ class DatabaseStore(BatchStore):
         started_utc_timestamp = datetime_to_utc_timestamp(started)
         local_user = _local_user_from_session(session)
 
-        with self._connect() as connection:
+        with self.connect() as connection:
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT 1
                                   FROM `background`
@@ -179,7 +179,7 @@ class DatabaseStore(BatchStore):
     def _stop_background_by_id(self, batch_id: int, session: Optional[mwapi.Session] = None) -> None:
         stopped = now()
         stopped_utc_timestamp = datetime_to_utc_timestamp(stopped)
-        with self._connect() as connection:
+        with self.connect() as connection:
             if session:
                 local_user = _local_user_from_session(session)
                 localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user) # type: Optional[int]
@@ -197,7 +197,7 @@ class DatabaseStore(BatchStore):
 
     def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
         until_utc_timestamp = datetime_to_utc_timestamp(until)
-        with self._connect() as connection, connection.cursor() as cursor:
+        with self.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `background`
                               SET `background_suspended_until_utc_timestamp` = %s
                               WHERE `background_batch` = %s
@@ -208,7 +208,7 @@ class DatabaseStore(BatchStore):
                 raise RuntimeError('Should have suspended at most 1 background run, actually affected %d!' % cursor.rowcount)
 
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
-        with self._connect() as connection:
+        with self.connect() as connection:
             with connection.cursor() as cursor:
                 now_utc_timestamp = datetime_to_utc_timestamp(now())
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
@@ -372,7 +372,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         command_records = []
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
                               FROM `command`
                               JOIN `actions` ON `command_actions_id` = `actions_id`
@@ -384,7 +384,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         return command_records
 
     def get_summary(self) -> Dict[Type[CommandRecord], int]:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_status`, COUNT(*) AS `count`
                               FROM `command`
                               WHERE `command_batch` = %s
@@ -393,13 +393,13 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             return {self.store._status_to_command_record_type(status): count for status, count in cursor.fetchall()}
 
     def __len__(self) -> int:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('SELECT COUNT(*) FROM `command` WHERE `command_batch` = %s', (self.batch_id,))
             (count,) = cursor.fetchone()
         return count
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
-        with self.store._connect() as connection:
+        with self.store.connect() as connection:
             command_ids = [] # List[int]
 
             with connection.cursor() as cursor:
@@ -449,7 +449,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         return command_records
 
     def make_pendings_planned(self, command_record_ids: List[int]) -> None:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             parameters = [DatabaseStore._COMMAND_STATUS_PLAN] # in Python 3.5+, replace that with [DS._C_S_PLAN, *c_r_ids, DS._C_S_PENDING]
             parameters.extend(command_record_ids)
             parameters.append(DatabaseStore._COMMAND_STATUS_PENDING)
@@ -465,7 +465,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         last_updated_utc_timestamp = datetime_to_utc_timestamp(last_updated)
         status, outcome = self.store._command_finish_to_row(command_finish)
 
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''UPDATE `command`
                               SET `command_status` = %s, `command_outcome` = %s
                               WHERE `command_id` = %s AND `command_batch` = %s''',
@@ -520,7 +520,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
         self.store = store
 
     def currently_running(self) -> bool:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT 1
                               FROM `background`
                               WHERE `background_batch` = %s
@@ -545,7 +545,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
         return (background_start, background_stop)
 
     def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
                               JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
@@ -561,7 +561,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
                 return None
 
     def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
-        with self.store._connect() as connection, connection.cursor() as cursor:
+        with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
                               JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
