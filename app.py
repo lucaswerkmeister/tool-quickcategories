@@ -16,6 +16,7 @@ import threading
 import toolforge
 import traceback
 from typing import Any, List, Optional, Tuple, Type, Union
+import werkzeug.wsgi
 import yaml
 
 from batch import StoredBatch, OpenBatch
@@ -23,6 +24,7 @@ from command import Command, CommandRecord, CommandPlan, CommandPending, Command
 from localuser import LocalUser
 import parse_wikitext
 import parse_tpsv
+from querytime import QueryTimingCursor, flush_querytime
 from runner import Runner
 from store import BatchStore
 
@@ -44,7 +46,22 @@ if 'oauth' in app.config:
 
 if 'database' in app.config:
     from database import DatabaseStore
+    app.config['database']['cursorclass'] = QueryTimingCursor
     batch_store = DatabaseStore(app.config['database']) # type: BatchStore
+
+    def sometimes_flush_querytime():
+        if random.randrange(128) == 0:
+            with batch_store.connect() as connection:
+                flush_querytime(connection)
+
+    class SometimesFlushQuerytimeMiddleware:
+        def __init__(self, app):
+            self.app = app
+
+        def __call__(self, environ, start_response):
+            return werkzeug.wsgi.ClosingIterator(self.app(environ, start_response), sometimes_flush_querytime)
+
+    app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app) # type: ignore # “cannot assign to a method”
 else:
     from in_memory import InMemoryStore
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
