@@ -4,6 +4,7 @@
 import datetime
 import mwoauth # type: ignore
 import os
+import random
 import signal
 import sys
 import time
@@ -12,6 +13,7 @@ import yaml
 
 from command import CommandFailure
 from database import DatabaseStore
+from querytime import QueryTimingCursor, flush_querytime
 from runner import Runner
 
 
@@ -32,6 +34,7 @@ else:
     sys.exit(1)
 
 if 'database' in config:
+    config['database']['cursorclass'] = QueryTimingCursor
     batch_store = DatabaseStore(config['database'])
 else:
     print('No database configuration, cannot run in background')
@@ -49,10 +52,17 @@ signal.signal(signal.SIGTERM, on_sigterm) # NOQA: E305 (no blank lines after fun
 while not stopped:
     pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
     if not pending:
+        if random.randrange(16) == 0:
+            with batch_store.connect() as connection:
+                flush_querytime(connection)
         # TODO would be nicer to switch to some better notification mechanism for the app to let the runner know there’s work again
         # (but note that suspended background commands can start yielding pending commands at basically any time again)
         time.sleep(10)
         continue
+    else:
+        if random.randrange(128) == 0:
+            with batch_store.connect() as connection:
+                flush_querytime(connection)
     batch, command_pending, session = pending
 
     try:
