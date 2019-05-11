@@ -20,7 +20,7 @@ import werkzeug.wsgi
 import yaml
 
 from batch import StoredBatch, OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_wikitext
 import parse_tpsv
@@ -177,6 +177,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
         command_record_markup = flask.render_template('command_page_missing.html',
                                                       domain=domain,
                                                       command_page_missing=command_record)
+    elif isinstance(command_record, CommandTitleInvalid):
+        command_record_markup = flask.render_template('command_title_invalid.html',
+                                                      domain=domain,
+                                                      command_title_invalid=command_record)
     elif isinstance(command_record, CommandPageProtected):
         command_record_markup = flask.render_template('command_page_protected.html',
                                                       domain=domain,
@@ -210,6 +214,7 @@ def render_command_record_type(command_record_type: Type[CommandRecord]) -> flas
         CommandEdit: 'command_edit_badge.html',
         CommandNoop: 'command_noop_badge.html',
         CommandPageMissing: 'command_page_missing_badge.html',
+        CommandTitleInvalid: 'command_title_invalid_badge.html',
         CommandPageProtected: 'command_page_protected_badge.html',
         CommandEditConflict: 'command_edit_conflict_badge.html',
         CommandMaxlagExceeded: 'command_maxlag_exceeded_badge.html',

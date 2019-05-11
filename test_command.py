@@ -2,7 +2,7 @@ import datetime
 import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 
 from test_action import addCategory1, removeCategory2, addCategory3
 
@@ -183,6 +183,7 @@ def test_CommandPageMissing_eq_equal():
 
 def test_CommandPageMissing_eq_different_type():
     assert commandPageMissing1 != commandPageProtected1
+    assert commandPageMissing1 != commandTitleInvalid1
 
 def test_CommandPageMissing_eq_different_id():
     assert commandPageMissing1 != CommandPageMissing(43, commandPageMissing1.command, commandPageMissing1.curtimestamp)
@@ -198,6 +199,45 @@ def test_CommandPageMissing_str():
 
 def test_CommandPageMissing_repr():
     assert eval(repr(commandPageMissing1)) == commandPageMissing1
+
+
+commandWithInvalidTitle = Command('Category:', command2.actions)
+commandTitleInvalid1 = CommandTitleInvalid(42, commandWithInvalidTitle, '2019-03-11T23:26:02Z')
+
+
+def test_CommandTitleInvalid_can_retry_immediately():
+    assert not commandTitleInvalid1.can_retry_immediately()
+
+def test_CommandTitleInvalid_can_retry_later():
+    assert not commandTitleInvalid1.can_retry_later()
+
+def test_CommandTitleInvalid_can_continue_batch():
+    assert commandTitleInvalid1.can_continue_batch()
+
+def test_CommandTitleInvalid_eq_same():
+    assert commandTitleInvalid1 == commandTitleInvalid1
+
+def test_CommandTitleInvalid_eq_equal():
+    assert commandTitleInvalid1 == CommandTitleInvalid(42, commandWithInvalidTitle, '2019-03-11T23:26:02Z')
+
+def test_CommandTitleInvalid_eq_different_type():
+    assert commandTitleInvalid1 != commandPageProtected1
+    assert commandTitleInvalid1 != commandPageMissing1
+
+def test_CommandTitleInvalid_eq_different_id():
+    assert commandTitleInvalid1 != CommandTitleInvalid(43, commandTitleInvalid1.command, commandTitleInvalid1.curtimestamp)
+
+def test_CommandTitleInvalid_eq_different_command():
+    assert commandTitleInvalid1 != CommandTitleInvalid(commandTitleInvalid1.id, command2, commandTitleInvalid1.curtimestamp)
+
+def test_CommandTitleInvalid_eq_different_curtimestamp():
+    assert commandTitleInvalid1 != CommandTitleInvalid(commandTitleInvalid1.id, commandTitleInvalid1.command, '2019-03-11T23:28:12Z')
+
+def test_CommandTitleInvalid_str():
+    assert str(commandTitleInvalid1) == '# ' + str(commandWithInvalidTitle)
+
+def test_CommandTitleInvalid_repr():
+    assert eval(repr(commandTitleInvalid1)) == commandTitleInvalid1
 
 
 commandWithProtectedPage = Command('Main Page', command2.actions)

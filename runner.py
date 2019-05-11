@@ -2,7 +2,7 @@ import datetime
 import mwapi # type: ignore
 from typing import Dict, List, Optional
 
-from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 import siteinfo
 
 
@@ -36,6 +36,12 @@ class Runner():
                     'curtimestamp': response['curtimestamp'],
                 }
                 continue
+            if 'invalid' in page:
+                self.prepared_pages[title] = {
+                    'invalid': True,
+                    'curtimestamp': response['curtimestamp'],
+                }
+                continue
             revision = page['revisions'][0]
             slot = revision['slots']['main']
             if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
@@ -60,6 +66,8 @@ class Runner():
 
         if 'missing' in prepared_page:
             return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=prepared_page['curtimestamp'])
+        if 'invalid' in prepared_page:
+            return CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp=prepared_page['curtimestamp'])
 
         wikitext, actions = command_pending.command.apply(prepared_page['wikitext'], category_info)
         summary = ''

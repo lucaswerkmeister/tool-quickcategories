@@ -4,7 +4,7 @@ import os
 import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from runner import Runner
 
 from test_utils import FakeSession
@@ -249,6 +249,59 @@ def test_with_missing_page_unnormalized():
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_invalid_title():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'title': 'Invalid%20title',
+                    'invalidreason': 'The requested page title contains invalid characters: "%20".',
+                    'invalid': True,
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    runner.prepare_pages(['Invalid%20title'])
+
+    assert runner.prepared_pages['Invalid%20title'] == {
+        'invalid': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command('Invalid%20title', [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
 
 def test_with_protected_page():
     curtimestamp = '2019-03-11T23:33:30Z'
