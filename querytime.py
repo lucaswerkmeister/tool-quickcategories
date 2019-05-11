@@ -5,7 +5,7 @@ import time
 from typing import Any, List, Optional, Tuple
 
 from stringstore import StringTableStore
-from timestamp import now, datetime_to_utc_timestamp
+from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
 
 
 _querytext_store = StringTableStore('querytext',
@@ -67,3 +67,19 @@ def flush_querytime(connection: Connection) -> None:
                               VALUES (%s, %s, %s)''',
                            querytime_values)
     connection.commit()
+
+
+def slow_queries(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[datetime.datetime, float, str]]:
+    with connection.cursor() as cursor:
+        cursor.execute('''SELECT `querytime_utc_timestamp`, `querytime_duration`, `querytext_sql`
+                          FROM `querytime`
+                          JOIN `querytext` ON `querytime_querytext` = `querytext_id`
+                          WHERE `querytime_utc_timestamp` >= %s
+                          AND `querytime_utc_timestamp` < %s
+                          ORDER BY `querytime_duration` DESC
+                          LIMIT 50''',
+                       (datetime_to_utc_timestamp(since), datetime_to_utc_timestamp(until)))
+        ret = [] # type: List[Tuple[datetime.datetime, float, str]]
+        for utc_timestamp, duration, sql in cursor.fetchall():
+            ret.append((utc_timestamp_to_datetime(utc_timestamp), duration, sql))
+        return ret
