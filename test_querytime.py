@@ -3,7 +3,7 @@ import freezegun # type: ignore
 import pymysql
 import pytest # type: ignore
 
-from querytime import QueryTimingCursor, flush_querytime, slow_queries, _querytext_store, _query_times
+from querytime import QueryTimingCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
 from timestamp import now, utc_timestamp_to_datetime
 
 
@@ -91,3 +91,20 @@ def test_slow_queries(database_connection_params):
     for i in range(3, 50):
         assert queries[i][1] == 0.01
         assert queries[i][2] == '''SELECT "0.01 seconds"'''
+
+def test_query_summary(database_connection_params):
+    _query_times.append((now(), '''SELECT "query 1"''', 1.0))
+    _query_times.append((now(), '''SELECT "query 2"''', 1.0))
+    _query_times.append((now(), '''SELECT "query 1"''', 3.0))
+    _query_times.append((now(), '''SELECT "query 2"''', 3.0))
+    _query_times.append((now(), '''SELECT "query 1"''', 8.0))
+    connection = pymysql.connect(**database_connection_params)
+    flush_querytime(connection)
+
+    summary = query_summary(connection,
+                            since=now() - datetime.timedelta(days=7),
+                            until=now() + datetime.timedelta(days=7))
+    assert summary == [
+        ('''SELECT "query 1"''', {'count': 3, 'avg': 4.0, 'min': 1.0, 'max': 8.0, 'sum': 12.0}),
+        ('''SELECT "query 2"''', {'count': 2, 'avg': 2.0, 'min': 1.0, 'max': 3.0, 'sum': 4.0}),
+    ]

@@ -2,7 +2,7 @@ import datetime
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor
 import time
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -83,3 +83,23 @@ def slow_queries(connection: Connection, since: datetime.datetime, until: dateti
         for utc_timestamp, duration, sql in cursor.fetchall():
             ret.append((utc_timestamp_to_datetime(utc_timestamp), duration, sql))
         return ret
+
+
+def query_summary(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[str, Dict[str, Union[float, int]]]]:
+    with connection.cursor() as cursor:
+        cursor.execute('''SELECT `querytext_sql`,
+                          COUNT(*) AS `count`,
+                          AVG(`querytime_duration`) AS `avg`,
+                          MIN(`querytime_duration`) AS `min`,
+                          MAX(`querytime_duration`) AS `max`,
+                          SUM(`querytime_duration`) AS `sum`
+                          FROM `querytime`
+                          JOIN `querytext` ON `querytime_querytext` = `querytext_id`
+                          WHERE `querytime_utc_timestamp` >= %s
+                          AND `querytime_utc_timestamp` < %s
+                          GROUP BY `querytext_sql`''',
+                       (datetime_to_utc_timestamp(since), datetime_to_utc_timestamp(until)))
+        summary = [(sql, {'count': count, 'avg': avg, 'min': min, 'max': max, 'sum': sum})
+                   for sql, count, avg, min, max, sum in cursor.fetchall()]
+    summary.sort(key=lambda result: result[1]['avg'], reverse=True)
+    return summary
