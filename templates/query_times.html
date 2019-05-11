@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block main_tag_attributes %}class="container-fluid mt-3"{% endblock %}
+{% block main %}
+<h1>SQL query performance</h1>
+<p class="lead">Since {{ since | render_datetime }} until {{ until | render_datetime }}.</p>
+<h2>Slowest queries</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">when</th>
+      <th scope="col">duration</th>
+      <th scope="col">SQL</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for datetime, duration, query in slowest_queries %}
+    <tr>
+      <td>{{ datetime | render_datetime }}</td>
+      <td>{{ duration }}&nbsp;s</td>
+      <td><pre>{{ query }}</pre></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

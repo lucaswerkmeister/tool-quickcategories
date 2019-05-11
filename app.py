@@ -24,9 +24,10 @@ from command import Command, CommandRecord, CommandPlan, CommandPending, Command
 from localuser import LocalUser
 import parse_wikitext
 import parse_tpsv
-from querytime import QueryTimingCursor, flush_querytime
+from querytime import QueryTimingCursor, flush_querytime, slow_queries
 from runner import Runner
 from store import BatchStore
+from timestamp import now
 
 
 app = flask.Flask(__name__)
@@ -520,6 +521,37 @@ def oauth_callback():
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
     return flask.redirect(flask.url_for('index'))
+
+@app.route('/debug/query_times')
+def query_times():
+    session = authenticated_session()
+    if not session:
+        return 'not logged in', 403
+
+    allowed_global_user_ids = [
+        46054761,
+    ]
+    userinfo = session.get(action='query',
+                           meta='userinfo',
+                           uiprop=['centralids'])['query']['userinfo']
+    if userinfo['centralids']['CentralAuth'] not in allowed_global_user_ids:
+        return 'not allowed', 403
+
+    if not isinstance(batch_store, DatabaseStore):
+        return '', 204 # no content
+
+    until = now()
+    since = until - datetime.timedelta(days=7)
+
+    leading_spaces = re.compile(r'^\s+', re.MULTILINE)
+    with batch_store.connect() as connection:
+        flush_querytime(connection)
+        slowest_queries = [(t, duration, re.sub(leading_spaces, '', sql))
+                           for t, duration, sql in slow_queries(connection, since, until)]
+    return flask.render_template('query_times.html',
+                                 since=since,
+                                 until=until,
+                                 slowest_queries=slowest_queries)
 
 
 def is_wikimedia_domain(domain: str) -> bool:
