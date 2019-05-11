@@ -24,7 +24,7 @@ from command import Command, CommandRecord, CommandPlan, CommandPending, Command
 from localuser import LocalUser
 import parse_wikitext
 import parse_tpsv
-from querytime import QueryTimingCursor, flush_querytime, slow_queries
+from querytime import QueryTimingCursor, flush_querytime, slow_queries, query_summary
 from runner import Runner
 from store import BatchStore
 from timestamp import now
@@ -548,10 +548,15 @@ def query_times():
         flush_querytime(connection)
         slowest_queries = [(t, duration, re.sub(leading_spaces, '', sql))
                            for t, duration, sql in slow_queries(connection, since, until)]
+        summary = query_summary(connection, since, until)
+        for index, (sql, stats) in enumerate(summary):
+            sql = re.sub(leading_spaces, '', sql)
+            summary[index] = (sql, stats)
     return flask.render_template('query_times.html',
                                  since=since,
                                  until=until,
-                                 slowest_queries=slowest_queries)
+                                 slowest_queries=slowest_queries,
+                                 summary=summary)
 
 
 def is_wikimedia_domain(domain: str) -> bool:

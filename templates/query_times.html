@@ -22,4 +22,29 @@
     {% endfor %}
   </tbody>
 </table>
+<h2>Query summary</h2>
+<table class="table">
+  <thead>
+    <tr>
+      <th scope="col">count</th>
+      <th scope="col">average</th>
+      <th scope="col">minimum</th>
+      <th scope="col">maximum</th>
+      <th scope="col">sum</th>
+      <th scope="col">SQL</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for query, stats in summary %}
+    <tr>
+      <td>{{ stats.count }}</td>
+      <td>{{ stats.avg }}&nbsp;s</td>
+      <td>{{ stats.min }}&nbsp;s</td>
+      <td>{{ stats.max }}&nbsp;s</td>
+      <td>{{ stats.sum }}&nbsp;s</td>
+      <td><pre>{{ query }}</pre></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% endblock %}
