@@ -3,8 +3,8 @@
 {% block main %}
 <h1>SQL query performance</h1>
 <p class="lead">Since {{ since | render_datetime }} until {{ until | render_datetime }}.</p>
-<h2>Slowest queries</h2>
-<table class="table">
+<h2 id="slowest_queries">Slowest queries</h2>
+<table class="table" aria-labelledby="slowest_queries">
   <thead>
     <tr>
       <th scope="col">when</th>
@@ -22,8 +22,8 @@
     {% endfor %}
   </tbody>
 </table>
-<h2>Query summary</h2>
-<table class="table">
+<h2 id="query_summary">Query summary</h2>
+<table class="table" aria-labelledby="query_summary">
   <thead>
     <tr>
       <th scope="col">count</th>
