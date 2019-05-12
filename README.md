@@ -1,8 +1,6 @@
 # QuickCategories
 
 [This tool](https://tools.wmflabs.org/quickcategories/) allows users to add and remove categories from pages in batches.
-It is currently work-in-progress, and not usable yet.
-
 For more information,
 please see the tool’s [on-wiki documentation page](https://meta.wikimedia.org/wiki/User:Lucas_Werkmeister/QuickCategories).
 
