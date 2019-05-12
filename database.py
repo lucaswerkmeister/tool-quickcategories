@@ -459,6 +459,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         return command_records
 
     def make_pendings_planned(self, command_record_ids: List[int]) -> None:
+        if not command_record_ids:
+            return
+
         with self.store.connect() as connection, connection.cursor() as cursor:
             parameters = [DatabaseStore._COMMAND_STATUS_PLAN] # in Python 3.5+, replace that with [DS._C_S_PLAN, *c_r_ids, DS._C_S_PENDING]
             parameters.extend(command_record_ids)

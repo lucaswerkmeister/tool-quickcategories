@@ -166,6 +166,10 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
     command_records.make_pendings_planned([id_2, id_4])
     assert [CommandPlan, CommandPlan, CommandPlan, CommandPlan] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
 
+def test_BatchStore_make_pendings_planned_empty(store):
+    batch = store.store_batch(newBatch1, fake_session)
+    batch.command_records.make_pendings_planned([])
+
 def test_BatchStore_make_plan_pending_background(store, frozen_time):
     batch_1 = store.store_batch(newBatch1, fake_session)
     frozen_time.tick()
