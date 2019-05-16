@@ -39,23 +39,9 @@
     </small>
   </div>
   <div class="form-group">
-    <label for="commands">Commands</label>
-    <div id="commands-description" class="form-text text-muted">
-      <p>
-        Each line describes one command and is split into multiple fields at <kbd>|</kbd> or <kbd>Tab</kbd> characters.
-        The first field of each line specifies the page on which to operate,
-        the remaining fields list categories to add (<kbd>+</kbd>) or remove (<kbd>-</kbd>) from that page.
-      </p>
-      <p>
-        Categories to be added that are already present on the page,
-        or categories to be removed that are not present on the page,
-        are ignored:
-        the commands describe the state into which the page should be brought,
-        and if it is already in that state, that’s not an error.
-      </p>
-    </div>
+    <label for="commands">Commands <small class="text-muted">(<a href="https://meta.wikimedia.org/wiki/User:Lucas_Werkmeister/QuickCategories#Submitting_batches">format help</a>)</small></label>
     <textarea
-      id="commands" class="form-control" aria-describedby="commands-description"
+      id="commands" class="form-control"
       name="commands"
       rows="20"
       required
