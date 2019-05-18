@@ -5,7 +5,7 @@ python:
   # QuickCategories CI Test/1, QuickCategories CI Test/2, etc. –
   # and since the bot password does not have permission to create pages,
   # when adding a new job you’ll have to create that page manually first.
-  - "3.4"
+  # (This may not apply when jobs were removed in the meantime.)
   - "3.5"
 addons:
   mariadb: "10.1"

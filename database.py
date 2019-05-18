@@ -463,14 +463,13 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             return
 
         with self.store.connect() as connection, connection.cursor() as cursor:
-            parameters = [DatabaseStore._COMMAND_STATUS_PLAN] # in Python 3.5+, replace that with [DS._C_S_PLAN, *c_r_ids, DS._C_S_PENDING]
-            parameters.extend(command_record_ids)
-            parameters.append(DatabaseStore._COMMAND_STATUS_PENDING)
             cursor.execute('''UPDATE `command`
                               SET `command_status` = %%s
                               WHERE `command_id` IN (%s)
                               AND `command_status` = %%s''' % ', '.join(['%s'] * len(command_record_ids)),
-                           parameters)
+                           [DatabaseStore._COMMAND_STATUS_PLAN,
+                            *command_record_ids,
+                            DatabaseStore._COMMAND_STATUS_PENDING])
             connection.commit()
 
     def store_finish(self, command_finish: CommandFinish) -> None:
