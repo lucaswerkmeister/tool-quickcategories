@@ -74,11 +74,30 @@
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <input name="offset" type="hidden" value="{{ offset }}">
   <input name="limit" type="hidden" value="{{ limit }}">
+  {% if can_start_new_background and offset == 0 %}{# common case: on the first page, we emphasize the background running and tuck the foreground run button away #}
+  <div class="mt-2">
+    <button class="btn btn-primary btn-lg" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run whole batch in background</button>
+  </div>
+  <div class="mt-2">
+    <button class="btn btn-secondary" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run these commands</button>
+    {% if offset + limit < command_records_length %}{# new users often don’t notice that the rest of the batch isn’t run in this mode #}
+    <span class="alert alert-warning">This will not run the other commands in the batch.</span>
+    {% endif %}
+  </div>
+  {% else %}{# on pages other than the first one, put the foreground run first under the assumption that users care about this particular page; but to avoid confusing them, primary/secondary aren’t swapped (background is still primary)#}
   {% if can_run_command_records %}
-  <button class="btn btn-primary" formaction="{{ url_for('run_batch_slice', id=batch.id) }}">Run these commands</button>
+  <div class="mt-2">
+    <button class="btn btn-secondary" formaction="{{ url_for('run_batch_slice', id=batch.id) }}">Run these commands</button>
+    {% if offset > 0 or offset + limit < command_records_length %}
+    <span class="alert alert-warning">This will not run the other commands in the batch.</span>
+    {% endif %}
+  </div>
   {% endif %}
   {% if can_start_new_background %}
-  <button class="btn btn-secondary" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run whole batch in background</button>
+  <div class="mt-2">
+    <button class="btn btn-primary" formaction="{{ url_for('start_batch_background', id=batch.id) }}">Run whole batch in background</button>
+  </div>
+  {% endif %}
   {% endif %}
 </form>
 {% endif %}
