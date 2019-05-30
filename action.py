@@ -1,5 +1,5 @@
 import mwparserfromhell # type: ignore
-from typing import Any
+from typing import Any, Union
 
 from siteinfo import CategoryInfo
 
@@ -81,10 +81,10 @@ class AddCategoryAction(CategoryAction):
         for wikilink in wikicode.ifilter_wikilinks():
             if not self._is_category(wikilink, category_info):
                 continue
-            if self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info):
-                return wikitext
+            if self._accept_category_link(wikilink, category_info):
+                return str(wikicode)
             last_category = wikilink
-        wikilink = mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category)
+        wikilink = self._make_category_link(category_info)
         if last_category:
             wikicode.insert_after(last_category, wikilink)
             wikicode.insert_before(wikilink, '\n')
@@ -94,11 +94,114 @@ class AddCategoryAction(CategoryAction):
             wikicode.append(wikilink)
         return str(wikicode)
 
+    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+        return self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info)
+
+    def _make_category_link(self, category_info: CategoryInfo):
+        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category)
+
     def is_minor(self) -> bool:
         return True
 
     def __repr__(self) -> str:
         return 'AddCategoryAction(' + repr(self.category) + ')'
+
+
+class AddCategoryAndSortKeyAction(AddCategoryAction):
+    """An action to add a category to the wikitext of a page, including a sort key."""
+
+    sort_key_symbol = ''
+
+    def __init__(self, category: str, sort_key: Union[str, None]):
+        assert sort_key != '', 'sort key cannot be the empty string'
+        self.sort_key = sort_key
+        super().__init__(category)
+
+    def summary(self, category_info: CategoryInfo) -> str:
+        return '+[[' + category_info[0] + ':' + self.category + '|' + \
+            category_info[0] + ':' + self.category + '|' + (self.sort_key or '') + ']]'
+
+    def __eq__(self, value: Any) -> bool:
+        return type(self) is type(value) and \
+            self.category == value.category and \
+            self.sort_key == value.sort_key
+
+    def __str__(self) -> str:
+        return super().__str__() + type(self).sort_key_symbol + (self.sort_key or '')
+
+
+class AddCategoryWithSortKeyAction(AddCategoryAndSortKeyAction):
+    """An action to add a category with a certain sort key to the wikitext of a page.
+
+    If no category link for that category exists yet, it is added with that sort key.
+    If such a category link exists, with or without any sort key, no change is made."""
+
+    sort_key_symbol = '#'
+
+    def _make_category_link(self, category_info: CategoryInfo):
+        if not self.sort_key:
+            return super()._make_category_link(category_info)
+        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
+                                                        self.sort_key)
+
+    def __repr__(self) -> str:
+        return 'AddCategoryWithSortKeyAction(' + \
+            repr(self.category) + ', ' + \
+            repr(self.sort_key) + ')'
+
+
+class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
+    """An action to provide a category with a certain sort key in the wikitext of a page.
+
+    If no category link for that category exists yet, it is added with that sort key.
+    If such a category link exists, but without a sort key, the sort key is added.
+    If the existing category specifies a different sort key, no change is made."""
+
+    sort_key_symbol = '##'
+
+    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+        if super()._accept_category_link(wikilink, category_info):
+            if wikilink.text is None:
+                wikilink.text = self.sort_key
+            return True
+        else:
+            return False
+
+    def _make_category_link(self, category_info: CategoryInfo):
+        if not self.sort_key:
+            return super()._make_category_link(category_info)
+        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
+                                                        self.sort_key)
+
+    def __repr__(self) -> str:
+        return 'AddCategoryProvideSortKeyAction(' + \
+            repr(self.category) + ', ' + \
+            repr(self.sort_key) + ')'
+
+
+class AddCategoryReplaceSortKeyAction(AddCategoryAndSortKeyAction):
+    """An action to replace a category’s sort key in the wikitext of a page.
+
+    If no category link for that category exists yet, it is added with that sort key.
+    If such a category link exists, with or without any sort key, its sort key is replaced with the given one."""
+
+    sort_key_symbol = '###'
+
+    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+        if super()._accept_category_link(wikilink, category_info):
+            wikilink.text = self.sort_key
+            return True
+        else:
+            return False
+
+    def _make_category_link(self, category_info: CategoryInfo):
+        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
+                                                        self.sort_key)
+
+    def __repr__(self) -> str:
+        return 'AddCategoryReplaceSortKeyAction(' + \
+            repr(self.category) + ', ' + \
+            repr(self.sort_key) + ')'
 
 
 class RemoveCategoryAction(CategoryAction):
@@ -113,7 +216,7 @@ class RemoveCategoryAction(CategoryAction):
                 continue
             if not self._is_category(wikilink, category_info):
                 continue
-            if self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info):
+            if self._reject_category_link(wikilink, category_info):
                 # also remove preceding line break
                 if index-1 >= 0 and \
                    isinstance(wikicode.nodes[index-1], mwparserfromhell.nodes.text.Text) and \
@@ -128,8 +231,41 @@ class RemoveCategoryAction(CategoryAction):
                 break
         return str(wikicode)
 
+    def _reject_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+        return self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info)
+
     def is_minor(self) -> bool:
         return False
 
     def __repr__(self) -> str:
         return 'RemoveCategoryAction(' + repr(self.category) + ')'
+
+
+class RemoveCategoryWithSortKeyAction(RemoveCategoryAction):
+    """An action to remove a category from the wikitext of a page if it matches a certain sort key."""
+
+    def __init__(self, category: str, sort_key: Union[str, None]):
+        assert sort_key != '', 'sort key cannot be the empty string'
+        self.sort_key = sort_key
+        super().__init__(category)
+
+    def _reject_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+        return super()._reject_category_link(wikilink, category_info) and \
+            wikilink.text == self.sort_key
+
+    def summary(self, category_info: CategoryInfo) -> str:
+        return '-[[' + category_info[0] + ':' + self.category + '|' + \
+            category_info[0] + ':' + self.category + '|' + (self.sort_key or '') + ']]'
+
+    def __eq__(self, value: Any) -> bool:
+        return type(self) is type(value) and \
+            self.category == value.category and \
+            self.sort_key == value.sort_key
+
+    def __str__(self) -> str:
+        return super().__str__() + '#' + (self.sort_key or '')
+
+    def __repr__(self) -> str:
+        return 'RemoveCategoryWithSortKeyAction(' + \
+            repr(self.category) + ', ' + \
+            repr(self.sort_key) + ')'
