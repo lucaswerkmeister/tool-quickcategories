@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from action import Action, AddCategoryAction, RemoveCategoryAction
+from action import Action, AddCategoryAction, AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction, RemoveCategoryAction, RemoveCategoryWithSortKeyAction
 from batch import NewBatch
 from command import Command
 
@@ -41,9 +41,27 @@ def parse_command(line: str) -> Command:
 
 def parse_action(field: str) -> Action:
     if field.startswith('+Category:'):
-        return AddCategoryAction(field[10:])
+        title_and_sort_key = field[10:].split('#', maxsplit=1)
+        if len(title_and_sort_key) == 1:
+            title = title_and_sort_key[0]
+            return AddCategoryAction(title)
+        [title, sort_key] = title_and_sort_key
+        if sort_key.startswith('###'):
+            raise ValueError('too many #s')
+        if sort_key.startswith('##'):
+            return AddCategoryReplaceSortKeyAction(title, sort_key[2:] or None)
+        if sort_key.startswith('#'):
+            return AddCategoryProvideSortKeyAction(title, sort_key[1:] or None)
+        return AddCategoryWithSortKeyAction(title, sort_key or None)
     elif field.startswith('-Category:'):
-        return RemoveCategoryAction(field[10:])
+        title_and_sort_key = field[10:].split('#', maxsplit=1)
+        if len(title_and_sort_key) == 1:
+            title = title_and_sort_key[0]
+            return RemoveCategoryAction(title)
+        [title, sort_key] = title_and_sort_key
+        if sort_key.startswith('#'):
+            raise ValueError('too many #s')
+        return RemoveCategoryWithSortKeyAction(title, sort_key)
     else:
         raise ValueError("invalid field '%s'" % field)
 
