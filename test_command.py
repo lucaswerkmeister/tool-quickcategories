@@ -4,11 +4,11 @@ import pytest # type: ignore
 from action import AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 
-from test_action import addCategory1, removeCategory2, addCategory3
+from test_action import addCategory1, removeCategory1, addCategory2
 
 
-command1 = Command('Page 1', [addCategory1, removeCategory2])
-command2 = Command('Page 2', [addCategory3])
+command1 = Command('Page 1', [addCategory1, removeCategory1])
+command2 = Command('Page 2', [addCategory2])
 
 
 def test_Command_apply():
@@ -30,7 +30,7 @@ def test_Command_cleanup():
     assert command == Command('Page from URL', [AddCategoryAction('Category from URL')])
 
 def test_Command_actions_tpsv():
-    assert command1.actions_tpsv() == '+Category:Cat 1|-Category:Cat 2'
+    assert command1.actions_tpsv() == '+Category:Cat 1|-Category:Cat 1'
 
 def test_Command_eq_same():
     assert command1 == command1
@@ -49,7 +49,7 @@ def test_Command_eq_different_actions():
     assert command1 != Command(command1.page, [addCategory1])
 
 def test_Command_str():
-    assert str(command1) == 'Page 1|+Category:Cat 1|-Category:Cat 2'
+    assert str(command1) == 'Page 1|+Category:Cat 1|-Category:Cat 1'
 
 def test_Command_repr():
     assert eval(repr(command1)) == command1

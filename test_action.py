@@ -4,8 +4,8 @@ from action import AddCategoryAction, RemoveCategoryAction
 
 
 addCategory1 = AddCategoryAction('Cat 1')
-removeCategory2 = RemoveCategoryAction('Cat 2')
-addCategory3 = AddCategoryAction('Cat 3')
+addCategory2 = AddCategoryAction('Cat 2')
+removeCategory1 = RemoveCategoryAction('Cat 1')
 
 
 @pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
@@ -91,7 +91,7 @@ def test_AddCategoryAction_eq_different_type():
     assert addCategory1 != RemoveCategoryAction(addCategory1.category)
 
 def test_AddCategoryAction_eq_different_category():
-    assert addCategory1 != addCategory3
+    assert addCategory1 != addCategory2
 
 def test_AddCategoryAction_eq_different_category_normalization():
     assert AddCategoryAction('Foo Bar') != AddCategoryAction('Foo_Bar')
@@ -142,22 +142,22 @@ def test_RemoveCategoryAction_cleanup():
     assert action == RemoveCategoryAction('User input from URL')
 
 def test_RemoveCategoryAction_eq_same():
-    assert removeCategory2 == removeCategory2
+    assert removeCategory1 == removeCategory1
 
 def test_RemoveCategoryAction_eq_equal():
-    assert removeCategory2 == RemoveCategoryAction(removeCategory2.category)
+    assert removeCategory1 == RemoveCategoryAction(removeCategory1.category)
 
 def test_RemoveCategoryAction_eq_different_type():
-    assert removeCategory2 != AddCategoryAction(removeCategory2.category)
+    assert removeCategory1 != AddCategoryAction(removeCategory1.category)
 
 def test_RemoveCategoryAction_eq_different_category():
-    assert removeCategory2 != RemoveCategoryAction('Cat 4')
+    assert removeCategory1 != RemoveCategoryAction('Cat 2')
 
 def test_RemoveCategoryAction_eq_different_category_normalization():
     assert RemoveCategoryAction('Foo Bar') != RemoveCategoryAction('Foo_Bar')
 
 def test_RemoveCategoryAction_str():
-    assert str(removeCategory2) == '-Category:Cat 2'
+    assert str(removeCategory1) == '-Category:Cat 1'
 
 def test_RemoveCategoryAction_repr():
-    assert eval(repr(removeCategory2)) == removeCategory2
+    assert eval(repr(removeCategory1)) == removeCategory1

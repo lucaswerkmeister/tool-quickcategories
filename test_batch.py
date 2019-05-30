@@ -42,8 +42,8 @@ def test_NewBatch_eq_different_title():
 def test_NewBatch_str():
     assert str(newBatch1) == '''
 # Test batch 1
-Page 1|+Category:Cat 1|-Category:Cat 2
-Page 2|+Category:Cat 3
+Page 1|+Category:Cat 1|-Category:Cat 1
+Page 2|+Category:Cat 2
 '''.strip()
 
 def test_NewBatch_repr():
