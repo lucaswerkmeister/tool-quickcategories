@@ -2,7 +2,7 @@
 {% block main %}
 <h1>QuickCategories</h1>
 <h2 id="new-batch">New batch</h2>
-<form method="post" action="{{ url_for('new_batch') }}" class="mb-3" aria-labelledby="new-batch">
+<form method="post" action="{{ url_for('new_batch_from_commands') }}" class="mb-3" aria-labelledby="new-batch">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <div class="form-group">
     <label for="domain">Wiki domain</label>

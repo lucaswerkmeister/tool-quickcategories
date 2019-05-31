@@ -283,8 +283,8 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
 def index():
     return flask.render_template('index.html', batches=batch_store.get_batches_slice(offset=0, limit=10))
 
-@app.route('/batch', methods=['POST'])
-def new_batch():
+@app.route('/batch/new/commands', methods=['POST'])
+def new_batch_from_commands():
     if not submitted_request_valid():
         return 'CSRF error', 400
 

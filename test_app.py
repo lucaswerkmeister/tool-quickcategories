@@ -28,7 +28,7 @@ import app as quickcategories
     ('starwars.wikia.com', False),
     ('example.com', False),
     ('en.wikipedia.org.google', False),
-    # fallback used in new_batch() if form parameter is missing
+    # fallback used in new_batch_from_commands() if form parameter is missing
     ('(not provided)', False),
 ])
 def test_is_wikimedia_domain(domain, expected):
