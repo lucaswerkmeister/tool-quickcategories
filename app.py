@@ -287,40 +287,37 @@ def index():
 def new_batch_from_commands():
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
-        return flask.Markup.escape(domain) + flask.Markup(' is not recognized as a Wikimedia domain'), 400
+        return flask.render_template('new_batch_error_domain_unrecognized.html',
+                                     domain=domain), 400
 
     title = flask.request.form.get('title')
     if title is not None and len(title) > 800:
-        return flask.Markup('Title "') + flask.Markup.escape(title) + flask.Markup('" is too long for a summary'), 400
+        return flask.render_template('new_batch_error_title_too_long.html',
+                                     title=title), 400
 
     session = authenticated_session(domain)
     if not session:
-        return 'not logged in', 403 # Forbidden; 401 Unauthorized would be inappropriate because we don’t send WWW-Authenticate
+        return flask.render_template('new_batch_error.html',
+                                     message='You are not logged in.'), 403
 
     try:
         response = session.get(action='query',
                                meta='siteinfo')
         servername = response['query']['general']['servername']
         if servername != domain:
-            message = (flask.Markup(r'The server at <code>') +
-                       flask.Markup.escape(domain) +
-                       flask.Markup(r'</code> indicates its actual name is <code>') +
-                       flask.Markup.escape(servername) +
-                       flask.Markup(r'</code>.'))
-            return flask.render_template('new_batch_error.html',
-                                         message=message), 400
+            return flask.render_template('new_batch_error_domain_mismatch.html',
+                                         domain=domain,
+                                         servername=servername), 400
     except Exception:
         traceback.print_exc() # for possible later manual inspection
-        message = (flask.Markup(r'Could not connect to the server at <code>') +
-                   flask.Markup.escape(domain) +
-                   flask.Markup(r'</code>.'))
-        return flask.render_template('new_batch_error.html',
-                                     message=message), 400
+        return flask.render_template('new_batch_error_domain_unreachable.html',
+                                     domain=domain), 400
 
     try:
         batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=title)
     except parse_tpsv.ParseBatchError as e:
-        return str(e)
+        return flask.render_template('new_batch_error.html',
+                                     message=str(e))
 
     batch.cleanup()
 

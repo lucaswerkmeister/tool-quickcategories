@@ -2,7 +2,7 @@
 {% block main %}
 <div class="alert alert-danger" role="alert">
   <strong>An error occurred while creating your batch.</strong>
-  <p>{{ message }}</p>
+  <p>{% block message %}{{ message }}{% endblock message %}</p>
   <p>Please go back to the previous page, correct your input if necessary, and try again.</p>
 </div>
 {% endblock %}
