@@ -12,6 +12,7 @@ mypy
 pymysql
 pytest
 pyyaml
+requests
 requests_oauthlib
 toolforge
 werkzeug
