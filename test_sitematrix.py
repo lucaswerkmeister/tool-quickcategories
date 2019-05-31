@@ -3,7 +3,7 @@ import pytest # type: ignore
 
 from sitematrix import dbname_to_domain, _sitematrix_cache, _sitematrix_cache_lock
 
-from test_utils import FakeSession, internet_test
+from test_utils import FakeSession
 
 
 @pytest.fixture(autouse=True)
@@ -96,8 +96,7 @@ def test_dbname_to_domain_warns_for_fake_session_with_too_many_sites():
         dbname_to_domain(session, 'enwiki') == 'en.wikipedia.org'
 
 
-@internet_test
-def test_dbname_to_domain_real_session():
+def test_dbname_to_domain_real_session(internet_connection):
     session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
     assert dbname_to_domain(session, 'enwiki') == 'en.wikipedia.org'

@@ -1,4 +1,5 @@
 import freezegun # type: ignore
+import mwapi # type: ignore
 import os
 import pymysql
 import pytest # type: ignore
@@ -11,6 +12,15 @@ import string
 def frozen_time():
     with freezegun.freeze_time() as frozen_time:
         yield frozen_time
+
+
+@pytest.fixture
+def internet_connection():
+    """No-value fixture to skip tests if no internet connection is available."""
+    try:
+        yield
+    except mwapi.errors.ConnectionError:
+        pytest.skip('no internet connection')
 
 
 @pytest.fixture(scope="module")
