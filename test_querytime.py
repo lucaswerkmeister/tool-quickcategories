@@ -3,7 +3,7 @@ import freezegun # type: ignore
 import pymysql
 import pytest # type: ignore
 
-from querytime import QueryTimingCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
+from querytime import QueryTimingCursor, QueryTimingSSCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
 from timestamp import now, utc_timestamp_to_datetime
 
 
@@ -18,9 +18,15 @@ def clean_querytime():
     _query_times.clear()
 
 
-def test_QueryTimingCursor_no_write_without_flush(database_connection_params):
-    connection = pymysql.connect(cursorclass=QueryTimingCursor,
-                                 **database_connection_params)
+@pytest.fixture(params=[QueryTimingCursor, QueryTimingSSCursor])
+def database_connection_params_with_cursorclass(database_connection_params, request):
+    params = database_connection_params.copy()
+    params['cursorclass'] = request.param
+    yield params
+
+
+def test_QueryTimingCursor_no_write_without_flush(database_connection_params_with_cursorclass):
+    connection = pymysql.connect(**database_connection_params_with_cursorclass)
     with connection.cursor() as cursor:
         cursor.execute('''SELECT 1''')
     # no flush
@@ -32,10 +38,9 @@ def test_QueryTimingCursor_no_write_without_flush(database_connection_params):
                           FROM `querytext`''')
         assert cursor.fetchone() == (0,)
 
-def test_flush_querytime(database_connection_params):
+def test_flush_querytime(database_connection_params_with_cursorclass):
     with freezegun.freeze_time(utc_timestamp_to_datetime(1557340918)):
-        connection = pymysql.connect(cursorclass=QueryTimingCursor,
-                                     **database_connection_params)
+        connection = pymysql.connect(**database_connection_params_with_cursorclass)
         with connection.cursor() as cursor:
             cursor.execute('''SELECT 1''')
         flush_querytime(connection)
@@ -48,9 +53,8 @@ def test_flush_querytime(database_connection_params):
         assert sql == '''SELECT 1'''
         assert cursor.fetchone() is None
 
-def test_flush_querytime_twice_records_querytime_times(database_connection_params):
-    connection = pymysql.connect(cursorclass=QueryTimingCursor,
-                                 **database_connection_params)
+def test_flush_querytime_twice_records_querytime_times(database_connection_params_with_cursorclass):
+    connection = pymysql.connect(**database_connection_params_with_cursorclass)
     with connection.cursor() as cursor:
         cursor.execute('''SELECT 1''')
     flush_querytime(connection)

@@ -1,6 +1,6 @@
 import datetime
 from pymysql.connections import Connection
-from pymysql.cursors import Cursor
+from pymysql.cursors import Cursor, SSCursor
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -51,6 +51,10 @@ class QueryTimingCursor(Cursor):
             return ret
         finally:
             self._in_executemany = False
+
+
+class QueryTimingSSCursor(QueryTimingCursor, SSCursor):
+    """An unbuffered cursor that records query execution time."""
 
 
 def flush_querytime(connection: Connection) -> None:
