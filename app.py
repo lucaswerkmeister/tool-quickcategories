@@ -22,7 +22,7 @@ import yaml
 from batch import StoredBatch, OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
-from pagepile import load_pagepile
+from pagepile import load_pagepile, create_pagepile
 import parse_wikitext
 import parse_tpsv
 from querytime import flush_querytime, slow_queries, query_summary
@@ -492,6 +492,17 @@ def batch_export_all_titles(id: int):
     return app.response_class(stream(), mimetype='text/plain'), {
         'Content-Disposition': 'inline; filename="batch_%d.txt"' % id,
     }
+
+@app.route('/batch/<int:id>/export/titles/all-pagepile', methods=['POST'])
+def batch_export_all_pagepile(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+    pile_id = create_pagepile(anonymous_session('meta.wikimedia.org'),
+                              batch.domain,
+                              batch.command_records.stream_pages())
+    return flask.redirect('https://tools.wmflabs.org/pagepile/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
