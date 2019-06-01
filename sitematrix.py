@@ -1,7 +1,7 @@
 import cachetools
 import mwapi # type: ignore
 import threading
-from typing import Any
+from typing import Any, Dict
 import warnings
 
 
@@ -13,7 +13,10 @@ _sitematrix_cache_lock = threading.RLock()
                    key=lambda session: '#sitematrix',
                    lock=_sitematrix_cache_lock)
 def _get_sitematrix(session: mwapi.Session) -> dict:
-    sitematrix = {}
+    sitematrix = {
+        'by_dbname': {},
+        'by_url': {},
+    } # type: Dict[str, Dict[str, dict]]
     result = session.get(action='sitematrix',
                          formatversion=2)
     for k, v in result['sitematrix'].items():
@@ -26,12 +29,18 @@ def _get_sitematrix(session: mwapi.Session) -> dict:
         else:
             sites = v['site']
         for site in sites:
-            sitematrix[site['dbname']] = site
+            sitematrix['by_dbname'][site['dbname']] = site
+            sitematrix['by_url'][site['url']] = site
     return sitematrix
 
 
 def dbname_to_domain(session: mwapi.Session, dbname: str) -> str:
     sitematrix = _get_sitematrix(session)
-    url = sitematrix[dbname]['url']
+    url = sitematrix['by_dbname'][dbname]['url']
     assert url.startswith('https://')
     return url[len('https://'):]
+
+
+def domain_to_dbname(session: mwapi.Session, domain: str) -> str:
+    sitematrix = _get_sitematrix(session)
+    return sitematrix['by_url']['https://' + domain]['dbname']
