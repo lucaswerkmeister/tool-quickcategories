@@ -4,5 +4,6 @@
 <h1>Export options for <a href="{{ url_for('batch', id=batch.id) }}">batch #{{ batch.id }}</a></h1>
 <ul>
   <li><a href="{{ url_for('batch_export_metadata', id=batch.id) }}">Metadata (JSON)</a></li>
+  <li><a href="{{ url_for('batch_export_all_titles', id=batch.id) }}">Page titles (plain text)</a></li>
 </ul>
 {% endblock %}

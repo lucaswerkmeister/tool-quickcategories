@@ -479,6 +479,20 @@ def batch_export_metadata(id: int):
         'Content-Disposition': 'inline; filename="batch_%d.json"' % id,
     }
 
+@app.route('/batch/<int:id>/export/titles/all.txt')
+def batch_export_all_titles(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    def stream():
+        for page in batch.command_records.stream_pages():
+            yield page + '\n'
+    return app.response_class(stream(), mimetype='text/plain'), {
+        'Content-Disposition': 'inline; filename="batch_%d.txt"' % id,
+    }
+
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
     batch = batch_store.get_batch(id)
