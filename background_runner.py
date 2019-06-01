@@ -13,7 +13,7 @@ import yaml
 
 from command import CommandFailure
 from database import DatabaseStore
-from querytime import QueryTimingCursor, flush_querytime
+from querytime import flush_querytime
 from runner import Runner
 
 
@@ -34,7 +34,6 @@ else:
     sys.exit(1)
 
 if 'database' in config:
-    config['database']['cursorclass'] = QueryTimingCursor
     batch_store = DatabaseStore(config['database'])
 else:
     print('No database configuration, cannot run in background')

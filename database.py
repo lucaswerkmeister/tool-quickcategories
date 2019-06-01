@@ -12,6 +12,7 @@ from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRec
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_tpsv
+from querytime import QueryTimingCursor
 from store import BatchStore, _local_user_from_session
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -44,7 +45,8 @@ class DatabaseStore(BatchStore):
 
     @contextlib.contextmanager
     def connect(self) -> Generator[pymysql.connections.Connection, None, None]:
-        connection = pymysql.connect(**self.connection_params)
+        connection = pymysql.connect(cursorclass=QueryTimingCursor,
+                                     **self.connection_params)
         try:
             yield connection
         finally:

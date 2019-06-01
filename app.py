@@ -25,7 +25,7 @@ from localuser import LocalUser
 from pagepile import load_pagepile
 import parse_wikitext
 import parse_tpsv
-from querytime import QueryTimingCursor, flush_querytime, slow_queries, query_summary
+from querytime import flush_querytime, slow_queries, query_summary
 from runner import Runner
 from store import BatchStore
 from timestamp import now
@@ -48,7 +48,6 @@ if 'oauth' in app.config:
 
 if 'database' in app.config:
     from database import DatabaseStore
-    app.config['database']['cursorclass'] = QueryTimingCursor
     batch_store = DatabaseStore(app.config['database']) # type: BatchStore
 
     def sometimes_flush_querytime():
