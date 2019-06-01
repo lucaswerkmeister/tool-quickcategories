@@ -1,4 +1,4 @@
-from typing import Dict, List, Type
+from typing import Dict, Iterator, List, Type
 
 from command import CommandRecord, CommandPending, CommandFinish
 
@@ -9,6 +9,8 @@ class BatchCommandRecords:
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]: ...
 
     def get_summary(self) -> Dict[Type[CommandRecord], int]: ...
+
+    def stream_pages(self) -> Iterator[str]: ...
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]: ...
 

@@ -99,6 +99,10 @@ def test_BatchCommandRecords_get_summary(store):
         CommandPlan: 4, # retries: CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
     }
 
+def test_BatchCommandRecords_stream_pages(store):
+    batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
+    assert list(batch.command_records.stream_pages()) == [command1.page]*9
+
 def test_BatchStore_closes_batch(store):
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)

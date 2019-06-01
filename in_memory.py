@@ -1,7 +1,7 @@
 import datetime
 import mwapi # type: ignore
 import mwoauth # type: ignore
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Type, cast
+from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
@@ -127,6 +127,10 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             t = type(command_record)
             ret[t] = ret.get(t, 0) + 1
         return ret
+
+    def stream_pages(self) -> Iterator[str]:
+        for command_record in self.command_records:
+            yield command_record.command.page
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
         command_pendings = []

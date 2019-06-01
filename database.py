@@ -6,13 +6,13 @@ import mwapi # type: ignore
 import mwoauth # type: ignore
 import pymysql
 import requests_oauthlib # type: ignore
-from typing import Any, Dict, Generator, List, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 import parse_tpsv
-from querytime import QueryTimingCursor
+from querytime import QueryTimingCursor, QueryTimingSSCursor
 from store import BatchStore, _local_user_from_session
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -46,6 +46,15 @@ class DatabaseStore(BatchStore):
     @contextlib.contextmanager
     def connect(self) -> Generator[pymysql.connections.Connection, None, None]:
         connection = pymysql.connect(cursorclass=QueryTimingCursor,
+                                     **self.connection_params)
+        try:
+            yield connection
+        finally:
+            connection.close()
+
+    @contextlib.contextmanager
+    def connect_streaming(self) -> Generator[pymysql.connections.Connection, None, None]:
+        connection = pymysql.connect(cursorclass=QueryTimingSSCursor,
                                      **self.connection_params)
         try:
             yield connection
@@ -403,6 +412,17 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               GROUP BY `command_status`''',
                            (self.batch_id,))
             return {self.store._status_to_command_record_type(status): count for status, count in cursor.fetchall()}
+
+    def stream_pages(self) -> Iterator[str]:
+        with self.store.connect_streaming() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `command_page`
+                              FROM `command`
+                              WHERE `command_batch` = %s
+                              ORDER BY `command_id` ASC''',
+                           (self.batch_id,))
+            for row in cursor.fetchall_unbuffered():
+                (page,) = row
+                yield page
 
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
