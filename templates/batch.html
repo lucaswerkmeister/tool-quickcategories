@@ -18,8 +18,8 @@
   {{ total }}&nbsp;command{% if total > 1 %}s{% endif -%}
   {%- for type, count in summary | dictsort(by='value', reverse=true) -%}
   , {{ count }}&nbsp;{{ type | render_command_record_type }}
-  {%- endfor -%}
-  .
+  {%- endfor %}
+  (<a href="{{ url_for('batch_export', id=batch.id) }}">export</a>).
 </p>
 {% if background_run %}
 <form method="post">
