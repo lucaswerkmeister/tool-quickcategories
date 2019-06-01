@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Export options for QuickCategories batch #{{ batch.id }}{% endblock %}
+{% block main %}
+<h1>Export options for <a href="{{ url_for('batch', id=batch.id) }}">batch #{{ batch.id }}</a></h1>
+<ul>
+  <li><a href="{{ url_for('batch_export_metadata', id=batch.id) }}">Metadata (JSON)</a></li>
+</ul>
+{% endblock %}

@@ -445,6 +445,41 @@ def batch_background_history(id: int):
     return flask.render_template('background_history.html',
                                  batch=batch)
 
+@app.route('/batch/<int:id>/export/')
+def batch_export(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    return flask.render_template('export.html',
+                                 batch=batch)
+
+@app.route('/batch/<int:id>/export/metadata.json')
+def batch_export_metadata(id: int):
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    return flask.jsonify({
+        'id': batch.id,
+        'domain': batch.domain,
+        'user': {
+            'name': batch.local_user.user_name,
+            'local_user_id': batch.local_user.local_user_id,
+            'global_user_id': batch.local_user.global_user_id,
+        },
+        'title_wikitext': batch.title,
+        'title_html': render_batch_title(batch),
+        'created': batch.created.isoformat(),
+        'last_updated': batch.last_updated.isoformat(),
+        'summary': {type.__name__: count
+                    for type, count in batch.command_records.get_summary().items()},
+    }), {
+        'Content-Disposition': 'inline; filename="batch_%d.json"' % id,
+    }
+
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int):
     batch = batch_store.get_batch(id)
