@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block main %}
+<h1 id="new-batch-from-pagepile">New batch from PagePile</h1>
+<form method="post" action="{{ url_for('new_batch_from_pagepile') }}" class="mb-3" aria-labelledby="new-batch-from-pagepile">
+  <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+  <div class="form-group">
+    <label for="page_pile_id">PagePile ID</label>
+    <input
+      id="page_pile_id" class="form-control"
+      name="page_pile_id" type="number"
+      required
+      {% if page_pile_id %}
+      value="{{ page_pile_id }}"
+      {% else %}
+      autofocus
+      {% endif %}
+      placeholder="12345">
+  </div>
+  <div class="form-group">
+    <label for="actions">Actions <small class="text-muted">(<a href="https://meta.wikimedia.org/wiki/User:Lucas_Werkmeister/QuickCategories#Submitting_batches" tabindex="-1">format help</a>)</small></label>
+    <input
+      id="actions" class="form-control"
+      name="actions" type="text"
+      required
+      {% if page_pile_id %}
+      autofocus
+      {% endif %}
+      placeholder="+Category:Test|-Category:Other test|+Category:Sandbox##sort key"></textarea>
+  </div>
+  <div class="form-group">
+    <label for="title">Title</label>
+    <input
+      id="title" class="form-control"
+      name="title" type="text"
+      aria-describedby="titleHelp"
+      maxlength="800"
+      placeholder="based on Wikidata [[d:P:P1532|country for sport]]">
+    <small id="titleHelp" class="form-text text-muted">
+      Optional.
+      Will be included in edit summaries.
+      Only limited formatting support
+      (see <a href="https://meta.wikimedia.org/wiki/Special:MyLanguage/Help:Edit_summary" tabindex="-1">Help:Edit summary</a>).
+    </small>
+  </div>
+  <button type="submit" class="btn btn-primary" {% if not user_logged_in() %} disabled {% endif %}>Submit batch</button>
+  {% if not user_logged_in() %}
+  <span class="alert alert-warning">
+    You need to <a href="{{ url_for('login') }}">log in</a> before you can submit batches.
+  </span>
+  {% endif %}
+</form>
+{% endblock %}

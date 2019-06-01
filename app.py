@@ -22,6 +22,7 @@ import yaml
 from batch import StoredBatch, OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
+from pagepile import load_pagepile
 import parse_wikitext
 import parse_tpsv
 from querytime import QueryTimingCursor, flush_querytime, slow_queries, query_summary
@@ -315,6 +316,58 @@ def new_batch_from_commands():
 
     try:
         batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=title)
+    except parse_tpsv.ParseBatchError as e:
+        return flask.render_template('new_batch_error.html',
+                                     message=str(e))
+
+    batch.cleanup()
+
+    id = batch_store.store_batch(batch, session).id
+    return flask.redirect(flask.url_for('batch', id=id))
+
+@app.route('/batch/new/pagepile', methods=['GET', 'POST'])
+def new_batch_from_pagepile():
+    if flask.request.method == 'GET':
+        return flask.render_template('new_batch_from_pagepile.html',
+                                     page_pile_id=flask.request.args.get('page_pile_id'))
+
+    pile_id = flask.request.form.get('page_pile_id')
+    if not pile_id:
+        return flask.render_template('new_batch_error.html',
+                                     message='The PagePile ID is missing.'), 400
+
+    pile = load_pagepile(anonymous_session('meta.wikimedia.org'), pile_id)
+    if not pile:
+        return flask.render_template('new_batch_error.html',
+                                     message='No PagePile found for that ID.'), 404
+    domain, pages = pile
+
+    if not is_wikimedia_domain(domain): # might be an obscure wiki we don’t support
+        return flask.render_template('new_batch_error_domain_unrecognized.html',
+                                     domain=domain), 400
+
+    if not pages:
+        return flask.render_template('new_batch_error.html',
+                                     message='That PagePile does not appear to contain any pages.'), 400
+
+    title = flask.request.form.get('title')
+    if title is not None and len(title) > 800:
+        return flask.render_template('new_batch_error_title_too_long.html',
+                                     title=title), 400
+
+    session = authenticated_session(domain)
+    if not session:
+        return flask.render_template('new_batch_error.html',
+                                     message='You are not logged in.'), 403
+
+    actions = flask.request.form.get('actions')
+    if not actions:
+        return flask.render_template('new_batch_errort.html',
+                                     'The actions for this batch are missing.'), 400
+    try:
+        batch = parse_tpsv.parse_batch('\n'.join([page + '|' + actions
+                                                  for page in pages]),
+                                       title=title)
     except parse_tpsv.ParseBatchError as e:
         return flask.render_template('new_batch_error.html',
                                      message=str(e))
