@@ -1,6 +1,6 @@
 import mwapi # type: ignore
 import requests
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterator, Optional, Sequence, Tuple, Union
 
 import sitematrix
 
@@ -19,3 +19,13 @@ def load_pagepile(session: mwapi.Session, id: int) -> Optional[Tuple[str, Sequen
     domain = sitematrix.dbname_to_domain(session, pile['wiki'])
     pages = [page.replace('_', ' ') for page in pile['pages']]
     return domain, pages
+
+
+def create_pagepile(session: mwapi.Session, domain: str, pages: Iterator[str]) -> int:
+    r = requests.post('https://tools.wmflabs.org/pagepile/api.php', data={
+        'action': 'create_pile_with_data',
+        'wiki': sitematrix.domain_to_dbname(session, domain),
+        'data': '\n'.join([page + '\t-999' # -999 means “detect namespace” to PagePile::addPage(), default would force main namespace
+                           for page in pages]),
+    })
+    return r.json()['pile']['id']
