@@ -123,19 +123,34 @@ def authentication_area() -> flask.Markup:
     if 'oauth' not in app.config:
         return flask.Markup()
 
-    if 'oauth_access_token' not in flask.session:
+    session = authenticated_session()
+    if not session:
         return (flask.Markup(r'<a id="login" class="navbar-text" href="') +
                 flask.Markup.escape(flask.url_for('login')) +
                 flask.Markup(r'">Log in</a>'))
 
-    access_token = mwoauth.AccessToken(**flask.session['oauth_access_token'])
-    identity = mwoauth.identify('https://meta.wikimedia.org/w/index.php',
-                                consumer_token,
-                                access_token)
+    response = session.get(action='query',
+                           meta=['userinfo', 'notifications'],
+                           notcrosswikisummary='', # TODO use =True after next mwapi release
+                           notprop=['count'])
+    user_name = response['query']['userinfo']['name']
+    notifications = response['query']['notifications']['rawcount']
 
-    return (flask.Markup(r'<span class="navbar-text">Logged in as ') +
-            user_link(identity['username']) +
-            flask.Markup(r'</span>'))
+    area = (flask.Markup(r'<span class="navbar-text">Logged in as ') +
+            user_link(user_name))
+
+    if notifications:
+        number = '99+' if notifications >= 99 else str(notifications)
+        word = 'notification' if notifications == 1 else 'notifications'
+        area += (flask.Markup(r' (<a href="https://meta.wikimedia.org/wiki/Special:Notifications">') +
+                 flask.Markup(r'<span class="badge badge-light">') +
+                 flask.Markup.escape(number) +
+                 flask.Markup(r'</span><span class="d-md-none d-lg-inline"> ') +
+                 flask.Markup.escape(word) +
+                 flask.Markup(r'</span></a>)'))
+
+    area += flask.Markup(r'</span>')
+    return area
 
 @app.template_global()
 def can_run_commands(command_records: List[CommandRecord]) -> bool:
