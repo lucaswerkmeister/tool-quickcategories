@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}QuickCategories batches{% endblock %}
 {% block main %}
+{% set nav %}
 <nav aria-label="batch pages">
   <ul class="pagination">
     {% if offset > 0 %}
@@ -19,5 +20,8 @@
     {% endif %}
   </ul>
 </nav>
+{% endset %}
+{{ nav }}
 {% include "batch_list.html" %}
+{{ nav }}
 {% endblock %}

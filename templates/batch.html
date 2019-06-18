@@ -42,6 +42,8 @@
   </p>
 </form>
 {% endif %}
+{% set command_records_length = batch.command_records | length %}
+{% set nav %}
 <nav aria-label="command pages">
   <ul class="pagination">
     {% if offset > 0 %}
@@ -51,7 +53,6 @@
     <li class="page-item disabled"><span class="page-link">First</span></li>
     <li class="page-item disabled"><span class="page-link">Previous</span></li>
     {% endif %}
-    {% set command_records_length = batch.command_records | length %}
     {% if offset + limit < command_records_length %}
     <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=offset+limit, limit=limit) }}">Next</a></li>
     <li class="page-item"><a class="page-link" href="{{ url_for('batch', id=batch.id, offset=((command_records_length-1) // limit) * limit, limit=limit) }}">Last</a></li>
@@ -61,12 +62,17 @@
     {% endif %}
   </ul>
 </nav>
+{% endset %}
+{{ nav }}
 {% set command_records = batch.command_records.get_slice(offset, limit) %}
-{% for command_record in command_records %}
-<div>
-  {{ render_command_record(command_record, batch.domain) }}
+<div class="mb-3">
+  {% for command_record in command_records %}
+  <div>
+    {{ render_command_record(command_record, batch.domain) }}
+  </div>
+  {% endfor %}
 </div>
-{% endfor %}
+{{ nav }}
 {% set can_run_command_records = can_run_commands(command_records) %}
 {% set can_start_new_background = can_start_background() and not currently_running %}
 {% if can_run_command_records or can_start_new_background %}
