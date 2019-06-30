@@ -139,7 +139,7 @@ def authentication_area() -> flask.Markup:
     area = (flask.Markup(r'<span class="navbar-text">Logged in as ') +
             user_link(user_name))
 
-    if notifications:
+    if notifications and flask.session.get('notifications', True):
         number = '99+' if notifications >= 99 else str(notifications)
         word = 'notification' if notifications == 1 else 'notifications'
         area += (flask.Markup(r' (<a href="https://meta.wikimedia.org/wiki/Special:Notifications">') +
@@ -629,7 +629,13 @@ def stop_batch_background(id: int):
 @app.route('/preferences', methods=['GET', 'POST'])
 def preferences():
     if flask.request.method == 'GET':
-        return flask.render_template('preferences.html')
+        return flask.render_template('preferences.html',
+                                     notifications=flask.session.get('notifications', True))
+
+    if 'notifications' in flask.request.form:
+        flask.session.pop('notifications', None) # True is the default
+    else:
+        flask.session['notifications'] = False
 
     return flask.redirect(flask.url_for('index'))
 

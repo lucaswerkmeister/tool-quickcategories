@@ -4,6 +4,13 @@
 <h1>Preferences</h1>
 <form method="post" action="{{ url_for('preferences') }}">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+  <div class="form-check">
+    <input
+      id="notifications" class="form-check-input"
+      name="notifications" type="checkbox"
+      {% if notifications %}checked{% endif %}>
+    <label for="notifications">Show on-wiki notifications when logged in</label>
+  </div>
   <button class="btn btn-primary">Update preferences</button>
 </form>
 {% endblock %}
