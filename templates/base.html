@@ -16,6 +16,7 @@
         <li><a href="//tools.wmflabs.org/" class="nav-link">Wikimedia Toolforge</a></li>
         <li><a href="https://phabricator.wikimedia.org/source/tool-quickcategories/" class="nav-link">Source code</a></li>
       </ul>
+      <span class="navbar-text px-2"><a href="{{ url_for('preferences') }}">Preferences</a></span>
       {{ authentication_area() }}
     </nav>
     <main {% block main_tag_attributes %}class="container mt-3"{% endblock main_tag_attributes %}>

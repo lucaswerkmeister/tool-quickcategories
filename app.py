@@ -125,9 +125,9 @@ def authentication_area() -> flask.Markup:
 
     session = authenticated_session()
     if not session:
-        return (flask.Markup(r'<a id="login" class="navbar-text" href="') +
+        return (flask.Markup(r'<span class="navbar-text pl-2"><a id="login" href="') +
                 flask.Markup.escape(flask.url_for('login')) +
-                flask.Markup(r'">Log in</a>'))
+                flask.Markup(r'">Log in</a></span>'))
 
     response = session.get(action='query',
                            meta=['userinfo', 'notifications'],
@@ -136,7 +136,7 @@ def authentication_area() -> flask.Markup:
     user_name = response['query']['userinfo']['name']
     notifications = response['query']['notifications']['rawcount']
 
-    area = (flask.Markup(r'<span class="navbar-text">Logged in as ') +
+    area = (flask.Markup(r'<span class="navbar-text pl-2">Logged in as ') +
             user_link(user_name))
 
     if notifications and flask.session.get('notifications', True):
