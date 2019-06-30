@@ -62,7 +62,7 @@
                               {% if default_domain %}value: '{{ default_domain }}',{% endif %}
                           }),
                           {
-                              label: 'Default wiki domain for new batches',
+                              label: 'Default wiki domain for new batches:',
                               align: 'top',
                           },
                       ),
@@ -75,7 +75,7 @@
                               {% if suggested_domains %}value: "{{ suggested_domains | join('\\n') }}",{% endif %}
                           }),
                           {
-                              label: 'Suggested wiki domains for new batches',
+                              label: 'Suggested wiki domains for new batches:',
                               align: 'top',
                           }
                       ),
