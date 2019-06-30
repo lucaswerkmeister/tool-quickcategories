@@ -298,6 +298,7 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
 def index():
     return flask.render_template('index.html',
                                  default_domain=flask.session.get('default-domain', None),
+                                 suggested_domains=flask.session.get('suggested-domains', []),
                                  batches=batch_store.get_batches_slice(offset=0, limit=10))
 
 @app.route('/batch/new/commands', methods=['POST'])
@@ -633,6 +634,7 @@ def preferences():
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
                                      default_domain=flask.session.get('default-domain', None),
+                                     suggested_domains=flask.session.get('suggested-domains', []),
                                      notifications=flask.session.get('notifications', True))
 
     if flask.request.form.get('default-domain', None):
@@ -641,6 +643,14 @@ def preferences():
         # otherwise, don’t change whatever is currently in the session
     else:
         flask.session.pop('default-domain', None)
+
+    suggested_domains = [domain
+                         for domain in flask.request.form.get('suggested-domains', '').split('\r\n')
+                         if is_wikimedia_domain(domain)]
+    if suggested_domains:
+        flask.session['suggested-domains'] = suggested_domains
+    else:
+        flask.session.pop('suggested-domains', None)
 
     if 'notifications' in flask.request.form:
         flask.session.pop('notifications', None) # True is the default

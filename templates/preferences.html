@@ -13,6 +13,14 @@
       placeholder="commons.wikimedia.org"
       {% if default_domain %}value="{{ default_domain }}"{% endif %}>
   </div>
+  <div class="form-group">
+    <label for="suggested-domains">Suggested wiki domains for new batches <small class="text-muted">(optional)</small></label>
+    <textarea
+      id="suggested-domains" class="form-control"
+      name="suggested-domains"
+      rows="5"
+      placeholder="commons.wikimedia.org&#x0A;en.wikipedia.org">{{ suggested_domains | join('\n') }}</textarea>
+  </div>
   <div class="form-check">
     <input
       id="notifications" class="form-check-input"

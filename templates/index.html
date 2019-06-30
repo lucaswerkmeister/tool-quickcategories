@@ -18,6 +18,9 @@
       list="domains"
       placeholder="commons.wikimedia.org">
     <datalist id="domains">
+      {% for domain in suggested_domains %}
+      <option value="{{ domain }}">
+      {% else %}
       <option value="commons.wikimedia.org">
       <option value="en.wikipedia.org">
       <option value="de.wikipedia.org">
@@ -25,6 +28,7 @@
       <option value="es.wikipedia.org">
       <option value="ru.wikipedia.org">
       <option value="ja.wikipedia.org">
+      {% endfor %}
     </datalist>
   </div>
   <div class="form-group">
