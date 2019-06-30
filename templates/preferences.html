@@ -4,6 +4,15 @@
 <h1>Preferences</h1>
 <form method="post" action="{{ url_for('preferences') }}">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+  <div class="form-group">
+    <label for="default-domain">Default wiki domain for new batches <small class="text-muted">(optional)</small></label>
+    <input
+      id="default-domain" class="form-control"
+      name="default-domain" type="text"
+      pattern="[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org"
+      placeholder="commons.wikimedia.org"
+      {% if default_domain %}value="{{ default_domain }}"{% endif %}>
+  </div>
   <div class="form-check">
     <input
       id="notifications" class="form-check-input"

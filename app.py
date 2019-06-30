@@ -296,7 +296,9 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
 
 @app.route('/')
 def index():
-    return flask.render_template('index.html', batches=batch_store.get_batches_slice(offset=0, limit=10))
+    return flask.render_template('index.html',
+                                 default_domain=flask.session.get('default-domain', None),
+                                 batches=batch_store.get_batches_slice(offset=0, limit=10))
 
 @app.route('/batch/new/commands', methods=['POST'])
 def new_batch_from_commands():
@@ -630,7 +632,15 @@ def stop_batch_background(id: int):
 def preferences():
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
+                                     default_domain=flask.session.get('default-domain', None),
                                      notifications=flask.session.get('notifications', True))
+
+    if flask.request.form.get('default-domain', None):
+        if is_wikimedia_domain(flask.request.form['default-domain']):
+            flask.session['default-domain'] = flask.request.form['default-domain']
+        # otherwise, don’t change whatever is currently in the session
+    else:
+        flask.session.pop('default-domain', None)
 
     if 'notifications' in flask.request.form:
         flask.session.pop('notifications', None) # True is the default

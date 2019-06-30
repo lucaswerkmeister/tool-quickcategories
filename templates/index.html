@@ -10,7 +10,11 @@
       id="domain" class="form-control"
       name="domain" type="text"
       required pattern="[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org"
+      {% if default_domain %}
+      value="{{ default_domain }}"
+      {% else %}
       autofocus
+      {% endif %}
       list="domains"
       placeholder="commons.wikimedia.org">
     <datalist id="domains">
@@ -45,6 +49,9 @@
       name="commands"
       rows="10"
       required
+      {% if default_domain %}
+      autofocus
+      {% endif %}
       placeholder="Commons:Sandbox|+Category:Test|-Category:Other test&#x0A;Other page|+Category:Sandbox##sort key"></textarea>
   </div>
   <button type="submit" class="btn btn-primary" {% if not user_logged_in() %} disabled {% endif %}>Submit batch</button>
