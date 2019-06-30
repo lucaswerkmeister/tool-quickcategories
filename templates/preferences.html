@@ -45,7 +45,6 @@
       const noscript = document.currentScript.previousElementSibling;
       document.currentScript.outerHTML = noscript.innerHTML;
   } else {
-      debugger;
       document.currentScript.replaceWith(new OO.ui.FormLayout({
           items: [
               new OO.ui.HiddenInputWidget({
