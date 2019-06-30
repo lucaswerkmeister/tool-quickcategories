@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Preferences – QuickCategories{% endblock %}
+{% block main %}
+<h1>Preferences</h1>
+<form method="post" action="{{ url_for('preferences') }}">
+  <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
+  <button class="btn btn-primary">Update preferences</button>
+</form>
+{% endblock %}

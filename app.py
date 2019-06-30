@@ -626,6 +626,13 @@ def stop_batch_background(id: int):
                                         offset=offset,
                                         limit=limit))
 
+@app.route('/preferences', methods=['GET', 'POST'])
+def preferences():
+    if flask.request.method == 'GET':
+        return flask.render_template('preferences.html')
+
+    return flask.redirect(flask.url_for('index'))
+
 @app.route('/login')
 def login():
     redirect, request_token = mwoauth.initiate('https://meta.wikimedia.org/w/index.php', consumer_token, user_agent=user_agent)
