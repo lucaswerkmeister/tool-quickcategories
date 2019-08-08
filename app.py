@@ -215,7 +215,7 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
     elif isinstance(command_record, CommandWikiReadOnly):
         command_record_markup = flask.render_template('command_wiki_read_only.html',
                                                       domain=domain,
-                                                      command_blocked=command_record)
+                                                      command_wiki_read_only=command_record)
     else:
         raise ValueError('Unknown command record type')
 
