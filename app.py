@@ -803,7 +803,7 @@ def submitted_request_valid() -> bool:
 @app.before_request
 def require_valid_submitted_request():
     if flask.request.method == 'POST' and not submitted_request_valid():
-        return 'CSRF error', 400
+        return flask.render_template('csrf_error.html'), 400
 
 @app.after_request
 def deny_frame(response: flask.Response) -> flask.Response:

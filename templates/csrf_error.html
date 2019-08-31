@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="alert alert-danger" role="alert">
+  <h1><abbr title="Cross-Site Request Forgery">CSRF</abbr> protection failed</h1>
+  <p>
+    Most likely, you were working in several tabs at once,
+    or went back to a form without reloading it.
+  </p>
+  <p>
+    Please <strong>go back</strong>
+    (<kbd><kbd>Backspace</kbd></kbd> or <kbd><kbd>Alt</kbd>+<kbd>Left</kbd></kbd> on most systems),
+    <strong>soft reload</strong> the page
+    (<kbd><kbd>F5</kbd></kbd>, <kbd><kbd>Ctrl</kbd>+<kbd>R</kbd></kbd> or <kbd><kbd>⌘ Cmd</kbd>+<kbd>R</kbd></kbd> on most systems),
+    then <strong>submit the form again</strong>.
+    Hopefully, it will work that time.
+  </p>
+  <p>
+    Do <em>not</em> hard-reload the page (<kbd><kbd>Ctrl</kbd>+<kbd>F5</kbd></kbd> on most systems)
+    or navigate away –
+    that discards your form inputs.
+    With a soft-reload, the browser should keep your inputs intact,
+    and you can immediately submit the form again.
+  </p>
+</div>
+{% endblock %}
