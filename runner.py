@@ -131,10 +131,10 @@ class Runner():
                 return CommandBlocked(command_pending.id, command_pending.command, auto, blockinfo)
             elif e.code == 'readonly':
                 reason = None # the API returns this in a 'readonlyreason' member of the 'error' object, but mwapi hides that from us :(
-                # announced read-only times are usually scheduled for one hour,
-                # though the actual read-only time is often much shorter, only a few minutes;
-                # guess half an hour as a compromise
-                retry_after_minutes = 30
+                # maintenance-related read-only times are usually done within a few minutes (though scheduled for an hour),
+                # and MediaWiki automatically enters temporary read-only mode if replication lag exceeds 30 seconds,
+                # so guess a fairly short retry time
+                retry_after_minutes = 5
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=retry_after_minutes)
                 retry_after = retry_after.replace(microsecond=0)
                 return CommandWikiReadOnly(command_pending.id, command_pending.command, reason, retry_after)
