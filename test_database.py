@@ -40,7 +40,7 @@ def test_DatabaseStore_store_batch(database_connection_params):
 
     with store.connect() as connection:
         with connection.cursor() as cursor:
-            cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions_id` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
+            cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
             command2_page, command2_actions_tpsv = cursor.fetchone()
             assert command2_page == command2.command.page
             assert command2_actions_tpsv == command2.command.actions_tpsv()
@@ -74,7 +74,7 @@ def test_DatabaseStore_start_background_inserts_row(database_connection_params):
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser_id` = `localuser_id`')
+        cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
         user_name, auth = cursor.fetchone()
         assert user_name == 'Lucas Werkmeister'
@@ -101,7 +101,7 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser_id` = `localuser_id`')
+        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
         auth, stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
         assert stopped_utc_timestamp > 0
@@ -114,18 +114,18 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser_id` FROM `background`')
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser_id = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser = cursor.fetchone()
         assert stopped_utc_timestamp > 0
-        assert stopped_localuser_id is None
+        assert stopped_localuser is None
 
 def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id` FROM `background`')
+        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser` FROM `background`')
         connection.commit()
     with pytest.raises(RuntimeError, match='Should have stopped at most 1 background operation, actually affected 2!'):
         store.stop_background(open_batch)
@@ -143,11 +143,11 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
     open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser_id` FROM `background`')
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser_id = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser = cursor.fetchone()
         assert stopped_utc_timestamp > 0
-        assert stopped_localuser_id is None
+        assert stopped_localuser is None
 
 
 command_unfinishes_and_rows = [

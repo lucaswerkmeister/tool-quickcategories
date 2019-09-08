@@ -74,12 +74,12 @@ class DatabaseStore(BatchStore):
                 title_id = None
             localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
             with connection.cursor() as cursor:
-                cursor.execute('INSERT INTO `batch` (`batch_localuser_id`, `batch_domain_id`, `batch_title`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s)',
+                cursor.execute('INSERT INTO `batch` (`batch_localuser`, `batch_domain`, `batch_title`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s)',
                                (localuser_id, domain_id, title_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
-                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page`, `command_actions_id`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, NULL)',
+                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page`, `command_actions`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, NULL)',
                                    [(batch_id, command.page, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
 
             connection.commit()
@@ -98,8 +98,8 @@ class DatabaseStore(BatchStore):
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
-                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
-                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  JOIN `domain` ON `batch_domain` = `domain_id`
+                                  JOIN `localuser` ON `batch_localuser` = `localuser_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `batch_id` = %s''', (id,))
                 result = cursor.fetchone()
@@ -138,8 +138,8 @@ class DatabaseStore(BatchStore):
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`
                                   FROM `batch`
-                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
-                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  JOIN `domain` ON `batch_domain` = `domain_id`
+                                  JOIN `localuser` ON `batch_localuser` = `localuser_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
                                   ORDER BY `batch_id` DESC
                                   LIMIT %s
@@ -180,7 +180,7 @@ class DatabaseStore(BatchStore):
 
             with connection.cursor() as cursor:
                 cursor.execute('''INSERT INTO `background`
-                                  (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser_id`)
+                                  (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser`)
                                   VALUES (%s, %s, %s, %s)''',
                                (batch.id, json.dumps(auth), started_utc_timestamp, localuser_id))
             connection.commit()
@@ -199,7 +199,7 @@ class DatabaseStore(BatchStore):
                 localuser_id = None
             with connection.cursor() as cursor:
                 cursor.execute('''UPDATE `background`
-                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser_id` = %s, `background_suspended_until_utc_timestamp` = NULL
+                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser` = %s, `background_suspended_until_utc_timestamp` = NULL
                                   WHERE `background_batch` = %s
                                   AND `background_stopped_utc_timestamp` IS NULL''',
                                (stopped_utc_timestamp, localuser_id, batch_id))
@@ -227,9 +227,9 @@ class DatabaseStore(BatchStore):
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
-                                  JOIN `domain` ON `batch_domain_id` = `domain_id`
-                                  JOIN `actions` ON `command_actions_id` = `actions_id`
-                                  JOIN `localuser` ON `batch_localuser_id` = `localuser_id`
+                                  JOIN `domain` ON `batch_domain` = `domain_id`
+                                  JOIN `actions` ON `command_actions` = `actions_id`
+                                  JOIN `localuser` ON `batch_localuser` = `localuser_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `background_stopped_utc_timestamp` IS NULL
                                   AND COALESCE(`background_suspended_until_utc_timestamp`, 0) < %s
@@ -396,7 +396,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
                               FROM `command`
-                              JOIN `actions` ON `command_actions_id` = `actions_id`
+                              JOIN `actions` ON `command_actions` = `actions_id`
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, limit, offset))
@@ -469,7 +469,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
                                   FROM `command`
-                                  JOIN `actions` ON `command_actions_id` = `actions_id`
+                                  JOIN `actions` ON `command_actions` = `actions_id`
                                   WHERE `command_id` IN (%s)''' % ', '.join(['%s'] * len(command_ids)),
                                command_ids)
             for id, page, actions_tpsv, status, outcome in cursor.fetchall():
@@ -513,8 +513,8 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                command_finish.can_retry_later():
                 # append a fresh plan for the same command
                 cursor.execute('''INSERT INTO `command`
-                                  (`command_batch`, `command_page`, `command_actions_id`, `command_status`, `command_outcome`)
-                                  SELECT `command_batch`, `command_page`, `command_actions_id`, %s, NULL
+                                  (`command_batch`, `command_page`, `command_actions`, `command_status`, `command_outcome`)
+                                  SELECT `command_batch`, `command_page`, `command_actions`, %s, NULL
                                   FROM `command`
                                   WHERE `command_id` = %s''',
                                (DatabaseStore._COMMAND_STATUS_PLAN, command_finish.id))
@@ -582,8 +582,8 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
-                              JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
-                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser_id` = `stopped`.`localuser_id`
+                              JOIN `localuser` AS `started` ON `background_started_localuser` = `started`.`localuser_id`
+                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser` = `stopped`.`localuser_id`
                               WHERE `background_batch` = %s
                               ORDER BY `background_id` DESC
                               LIMIT 1''',
@@ -598,8 +598,8 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
-                              JOIN `localuser` AS `started` ON `background_started_localuser_id` = `started`.`localuser_id`
-                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser_id` = `stopped`.`localuser_id`
+                              JOIN `localuser` AS `started` ON `background_started_localuser` = `started`.`localuser_id`
+                              LEFT JOIN `localuser` AS `stopped` ON `background_stopped_localuser` = `stopped`.`localuser_id`
                               WHERE `background_batch` = %s
                               ORDER BY `background_id` ASC''',
                            (self.batch_id,))
@@ -625,7 +625,7 @@ class _LocalUserStore:
 
         with connection.cursor() as cursor:
             cursor.execute('''INSERT INTO `localuser`
-                              (`localuser_user_name`, `localuser_domain_id`, `localuser_local_user_id`, `localuser_global_user_id`)
+                              (`localuser_user_name`, `localuser_domain`, `localuser_local_user_id`, `localuser_global_user_id`)
                               VALUES (%s, %s, %s, %s)
                               ON DUPLICATE KEY UPDATE `localuser_user_name` = %s''',
                            (local_user.user_name, domain_id, local_user.local_user_id, local_user.global_user_id,
@@ -635,7 +635,7 @@ class _LocalUserStore:
                 cursor.execute('''SELECT `localuser_id`
                                   FROM `localuser`
                                   WHERE `localuser_local_user_id` = %s
-                                  AND `localuser_domain_id` = %s''',
+                                  AND `localuser_domain` = %s''',
                                (local_user.local_user_id, domain_id))
                 (localuser_id,) = cursor.fetchone()
                 assert cursor.fetchone() is None
