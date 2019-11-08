@@ -16,6 +16,7 @@ import threading
 import toolforge
 import traceback
 from typing import Any, List, Optional, Tuple, Type, Union
+import warnings
 import werkzeug.wsgi
 import yaml
 
@@ -70,6 +71,11 @@ else:
 
 stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60) # type: cachetools.TTLCache[Any, List[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
+
+
+warnings.filterwarnings('ignore',
+                        message='.*looks like a URL.*',
+                        module='bs4')
 
 
 def log(type, message):
