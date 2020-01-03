@@ -6,7 +6,7 @@ import mwapi # type: ignore
 import mwoauth # type: ignore
 import pymysql
 import requests_oauthlib # type: ignore
-from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type
+from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -152,7 +152,9 @@ class DatabaseStore(BatchStore):
             with connection.cursor() as cursor:
                 cursor.execute('''SELECT COUNT(*) AS `count`
                                   FROM `batch`''')
-                (count,) = cursor.fetchone()
+                result = cursor.fetchone()
+                assert result, "COUNT(*) must return a result"
+                (count,) = result
         return count
 
     def start_background(self, batch: OpenBatch, session: mwapi.Session) -> None:
@@ -414,7 +416,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             return {self.store._status_to_command_record_type(status): count for status, count in cursor.fetchall()}
 
     def stream_pages(self) -> Iterator[str]:
-        with self.store.connect_streaming() as connection, connection.cursor() as cursor:
+        with self.store.connect_streaming() as connection, cast(pymysql.cursors.SSCursor, connection.cursor()) as cursor:
             cursor.execute('''SELECT `command_page`
                               FROM `command`
                               WHERE `command_batch` = %s
@@ -427,7 +429,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('SELECT COUNT(*) FROM `command` WHERE `command_batch` = %s', (self.batch_id,))
-            (count,) = cursor.fetchone()
+            result = cursor.fetchone()
+            assert result, "COUNT(*) must return a result"
+            (count,) = result
         return count
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
@@ -637,7 +641,9 @@ class _LocalUserStore:
                                   WHERE `localuser_local_user_id` = %s
                                   AND `localuser_domain` = %s''',
                                (local_user.local_user_id, domain_id))
-                (localuser_id,) = cursor.fetchone()
+                result = cursor.fetchone()
+                assert result, "COUNT(*) must return a result"
+                (localuser_id,) = result
                 assert cursor.fetchone() is None
         connection.commit()
         return localuser_id
