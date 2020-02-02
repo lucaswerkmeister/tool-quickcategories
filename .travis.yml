@@ -7,6 +7,7 @@ python:
   # when adding a new job you’ll have to create that page manually first.
   # (This may not apply when jobs were removed in the meantime.)
   - "3.5"
+  - "3.7.0a2"
 addons:
   mariadb: "10.1"
 env:
