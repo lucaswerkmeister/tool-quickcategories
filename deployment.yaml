@@ -1,18 +1,26 @@
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: quickcategories.background-runner
-  namespace: quickcategories
+  labels:
+    name: quickcategories.background-runner
+    namespace: tool-quickcategories
+    toolforge: tool
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      name: quickcategories.background-runner
+      toolforge: tool
   template:
     metadata:
       labels:
         name: quickcategories.background-runner
+        toolforge: tool
     spec:
       containers:
         - name: background-runner
-          image: docker-registry.tools.wmflabs.org/toollabs-python35-base:latest
+          image: docker-registry.tools.wmflabs.org/toolforge-python37-sssd-base:latest
           command: [ '/bin/bash', '-c' ]
           args:
             # venvs are not position-independent, so we build our own instead of
