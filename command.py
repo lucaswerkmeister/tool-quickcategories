@@ -289,7 +289,7 @@ class CommandEditConflict(CommandFailure):
 
 
 class CommandMaxlagExceeded(CommandFailure):
-    """A command that failed replication lag in the database cluster was too high."""
+    """A command that failed because replication lag in the database cluster was too high."""
 
     def __init__(self, id: int, command: Command, retry_after: datetime.datetime):
         super().__init__(id, command)
