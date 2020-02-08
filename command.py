@@ -2,13 +2,14 @@ import datetime
 from typing import Any, List, Optional, Tuple, Union
 
 from action import Action
+from page import Page
 from siteinfo import CategoryInfo
 
 
 class Command:
     """A list of actions to perform on a page."""
 
-    def __init__(self, page: str, actions: List['Action']):
+    def __init__(self, page: Page, actions: List['Action']):
         self.page = page
         self.actions = actions
 
@@ -32,7 +33,7 @@ class Command:
         This should not be used as a replacement for full
         normalization via the MediaWiki API.
         """
-        self.page = self.page.replace('_', ' ')
+        self.page.cleanup()
         for action in self.actions:
             action.cleanup()
 
@@ -45,7 +46,7 @@ class Command:
             self.actions == value.actions
 
     def __str__(self) -> str:
-        return self.page + '|' + self.actions_tpsv()
+        return str(self.page) + '|' + self.actions_tpsv()
 
     def __repr__(self) -> str:
         return 'Command(' + repr(self.page) + ', ' + repr(self.actions) + ')'

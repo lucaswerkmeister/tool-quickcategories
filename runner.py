@@ -1,8 +1,9 @@
 import datetime
 import mwapi # type: ignore
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, cast
 
 from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from page import Page
 import siteinfo
 
 
@@ -14,11 +15,16 @@ class Runner():
                                       meta='tokens')['query']['tokens']['csrftoken']
         self.summary_batch_title = summary_batch_title
         self.summary_batch_link = summary_batch_link
-        self.prepared_pages = {} # type: Dict[str, dict]
 
-    def prepare_pages(self, titles: List[str]):
-        assert titles
-        assert len(titles) <= 50
+    def resolve_pages(self, pages: List[Page]):
+        assert pages
+        assert len(pages) <= 50
+
+        pages_by_title: Dict[str, Page] = {}
+        titles: List[str] = []
+        for page in pages:
+            pages_by_title[page.title] = page
+            titles.append(page.title)
 
         response = self.session.get(action='query',
                                     titles=titles,
@@ -28,48 +34,49 @@ class Runner():
                                     curtimestamp=True,
                                     formatversion=2)
 
-        for page in response['query']['pages']:
-            title = page['title']
-            if 'missing' in page:
-                self.prepared_pages[title] = {
+        for normalization in response['query'].get('normalized', {}):
+            pages_by_title[normalization['to']] = pages_by_title[normalization['from']]
+
+        for response_page in response['query']['pages']:
+            title = response_page['title']
+            page = pages_by_title[title]
+            if 'missing' in response_page:
+                page.resolution = {
                     'missing': True,
                     'curtimestamp': response['curtimestamp'],
                 }
                 continue
-            if 'invalid' in page:
-                self.prepared_pages[title] = {
+            if 'invalid' in response_page:
+                page.resolution = {
                     'invalid': True,
                     'curtimestamp': response['curtimestamp'],
                 }
                 continue
-            revision = page['revisions'][0]
+            revision = response_page['revisions'][0]
             slot = revision['slots']['main']
             if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
                 raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], title))
-            self.prepared_pages[title] = {
+            page.resolution = {
                 'wikitext': slot['content'],
-                'page_id': page['pageid'],
+                'page_id': response_page['pageid'],
                 'base_timestamp': revision['timestamp'],
                 'base_revid': revision['revid'],
                 'start_timestamp': response['curtimestamp'],
             }
 
-        for normalization in response['query'].get('normalized', {}):
-            self.prepared_pages[normalization['from']] = self.prepared_pages[normalization['to']]
-
     def run_command(self, command_pending: CommandPending) -> CommandFinish:
-        title = command_pending.command.page
-        if title not in self.prepared_pages:
-            self.prepare_pages([title])
-        prepared_page = self.prepared_pages[title]
+        page = command_pending.command.page
+        if page.resolution is None:
+            self.resolve_pages([page])
+        resolution = cast(dict, page.resolution)
         category_info = siteinfo.category_info(self.session)
 
-        if 'missing' in prepared_page:
-            return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=prepared_page['curtimestamp'])
-        if 'invalid' in prepared_page:
-            return CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp=prepared_page['curtimestamp'])
+        if 'missing' in resolution:
+            return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
+        if 'invalid' in resolution:
+            return CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
 
-        wikitext, actions = command_pending.command.apply(prepared_page['wikitext'], category_info)
+        wikitext, actions = command_pending.command.apply(resolution['wikitext'], category_info)
         summary = ''
         major_commands, minor_commands = 0, 0
         for action, noop in actions:
@@ -95,16 +102,16 @@ class Runner():
             summary += siteinfo.semicolon_separator(self.session)
             summary += self.summary_batch_link
 
-        if wikitext == prepared_page['wikitext']:
-            return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
+        if wikitext == resolution['wikitext']:
+            return CommandNoop(command_pending.id, command_pending.command, resolution['base_revid'])
         try:
             params = {'action': 'edit',
-                      'pageid': prepared_page['page_id'],
+                      'pageid': resolution['page_id'],
                       'text': wikitext,
                       'summary': summary,
                       'bot': True,
-                      'basetimestamp': prepared_page['base_timestamp'],
-                      'starttimestamp': prepared_page['start_timestamp'],
+                      'basetimestamp': resolution['base_timestamp'],
+                      'starttimestamp': resolution['start_timestamp'],
                       'contentformat': 'text/x-wiki',
                       'contentmodel': 'wikitext',
                       'token': self.csrf_token,
@@ -116,10 +123,10 @@ class Runner():
             response = self.session.post(**params)
         except mwapi.errors.APIError as e:
             if e.code == 'editconflict':
-                del self.prepared_pages[title] # this must be outdated now
+                page.resolution = None # this must be outdated now
                 return CommandEditConflict(command_pending.id, command_pending.command)
             elif e.code == 'protectedpage':
-                return CommandPageProtected(command_pending.id, command_pending.command, curtimestamp=prepared_page['start_timestamp'])
+                return CommandPageProtected(command_pending.id, command_pending.command, curtimestamp=resolution['start_timestamp'])
             elif e.code == 'maxlag':
                 retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
@@ -142,9 +149,9 @@ class Runner():
                 raise e
 
         if 'nochange' in response['edit']:
-            del self.prepared_pages[title] # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
-            return CommandNoop(command_pending.id, command_pending.command, prepared_page['base_revid'])
+            page.resolution = None # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
+            return CommandNoop(command_pending.id, command_pending.command, resolution['base_revid'])
 
-        assert response['edit']['oldrevid'] == prepared_page['base_revid']
-        del self.prepared_pages[title] # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
+        assert response['edit']['oldrevid'] == resolution['base_revid']
+        page.resolution = None # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
         return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])

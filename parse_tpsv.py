@@ -5,6 +5,7 @@ from typing import List, Optional
 from action import Action, AddCategoryAction, AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction, RemoveCategoryAction, RemoveCategoryWithSortKeyAction
 from batch import NewBatch
 from command import Command
+from page import Page
 
 
 def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
@@ -24,9 +25,10 @@ def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
 
 
 def parse_command(line: str) -> Command:
-    [page, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
+    [title, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
     if not other_fields:
-        raise ValueError("no actions for page '%s'" % page)
+        raise ValueError("no actions for page '%s'" % title)
+    page = Page(title)
     actions = []
     errors = []
     for field in other_fields:
@@ -75,7 +77,7 @@ class ParseBatchError(ValueError):
 
 class ParseCommandError(ValueError):
 
-    def __init__(self, page: str, errors: List[Exception]):
+    def __init__(self, page: Page, errors: List[Exception]):
         self.page = page
         self.errors = errors
-        super().__init__("errors parsing command for page '%s': %s" % (page, ', '.join(map(str, errors))))
+        super().__init__("errors parsing command for page '%s': %s" % (str(page), ', '.join(map(str, errors))))

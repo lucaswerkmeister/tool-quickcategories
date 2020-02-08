@@ -11,6 +11,7 @@ from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tup
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
+from page import Page
 import parse_tpsv
 from querytime import QueryTimingCursor, QueryTimingSSCursor
 from store import BatchStore, _local_user_from_session
@@ -80,7 +81,7 @@ class DatabaseStore(BatchStore):
 
             with connection.cursor() as cursor:
                 cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page`, `command_actions`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, NULL)',
-                                   [(batch_id, command.page, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
+                                   [(batch_id, command.page.title, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
 
             connection.commit()
 
@@ -302,11 +303,11 @@ class DatabaseStore(BatchStore):
 
         return status, outcome
 
-    def _row_to_command_record(self, id: int, page: str, actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
+    def _row_to_command_record(self, id: int, title: str, actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
         if outcome:
             outcome_dict = json.loads(outcome)
 
-        command = Command(page,
+        command = Command(Page(title),
                           [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
 
         if status == DatabaseStore._COMMAND_STATUS_PLAN:
@@ -402,8 +403,8 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, limit, offset))
-            for id, page, actions_tpsv, status, outcome in cursor.fetchall():
-                command_records.append(self.store._row_to_command_record(id, page, actions_tpsv, status, outcome))
+            for id, title, actions_tpsv, status, outcome in cursor.fetchall():
+                command_records.append(self.store._row_to_command_record(id, title, actions_tpsv, status, outcome))
         return command_records
 
     def get_summary(self) -> Dict[Type[CommandRecord], int]:
@@ -415,7 +416,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                            (self.batch_id,))
             return {self.store._status_to_command_record_type(status): count for status, count in cursor.fetchall()}
 
-    def stream_pages(self) -> Iterator[str]:
+    def stream_pages(self) -> Iterator[Page]:
         with self.store.connect_streaming() as connection, cast(pymysql.cursors.SSCursor, connection.cursor()) as cursor:
             cursor.execute('''SELECT `command_page`
                               FROM `command`
@@ -423,8 +424,8 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               ORDER BY `command_id` ASC''',
                            (self.batch_id,))
             for row in cursor.fetchall_unbuffered():
-                (page,) = row
-                yield page
+                (title,) = row
+                yield Page(title)
 
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
@@ -476,10 +477,10 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                                   JOIN `actions` ON `command_actions` = `actions_id`
                                   WHERE `command_id` IN (%s)''' % ', '.join(['%s'] * len(command_ids)),
                                command_ids)
-            for id, page, actions_tpsv, status, outcome in cursor.fetchall():
+            for id, title, actions_tpsv, status, outcome in cursor.fetchall():
                 assert status == DatabaseStore._COMMAND_STATUS_PENDING
                 assert outcome is None
-                command_record = self.store._row_to_command_record(id, page, actions_tpsv, status, outcome)
+                command_record = self.store._row_to_command_record(id, title, actions_tpsv, status, outcome)
                 assert isinstance(command_record, CommandPending)
                 command_records.append(command_record)
         return command_records

@@ -5,6 +5,7 @@ import pytest # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from page import Page
 from runner import Runner
 
 from test_utils import FakeSession
@@ -26,15 +27,15 @@ def test_run_command():
         job_number = os.environ['TRAVIS_JOB_NUMBER']
         title += '/' + job_number[job_number.index('.')+1:]
 
-    command = Command(title, [AddCategoryAction('Added cat'),
-                              AddCategoryAction('Already present cat'),
-                              RemoveCategoryAction('Removed cat'),
-                              RemoveCategoryAction('Not present cat')])
+    command = Command(Page(title), [AddCategoryAction('Added cat'),
+                                    AddCategoryAction('Already present cat'),
+                                    RemoveCategoryAction('Removed cat'),
+                                    RemoveCategoryAction('Not present cat')])
     runner = Runner(session, summary_batch_title='QuickCategories CI test')
     csrftoken = session.get(action='query',
                             meta='tokens')['query']['tokens']['csrftoken']
     setup_edit = session.post(**{'action': 'edit',
-                                 'title': command.page,
+                                 'title': command.page.title,
                                  'text': 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
                                  'summary': 'setup',
                                  'token': csrftoken,
@@ -43,7 +44,7 @@ def test_run_command():
 
     assert isinstance(edit, CommandEdit)
     assert edit.base_revision == setup_edit['edit']['newrevid']
-    assert command.page not in runner.prepared_pages
+    assert command.page.resolution is None
 
     actual_revision = session.get(action='query',
                                   revids=[edit.revision],
@@ -54,7 +55,7 @@ def test_run_command():
     actual_content = actual_revision['slots']['main']['content']
     actual_comment = actual_revision['comment']
     session.post(**{'action': 'edit',
-                    'title': command.page,
+                    'title': command.page.title,
                     'text': 'Test page for the QuickCategories tool.',
                     'summary': 'teardown',
                     'token': csrftoken,
@@ -131,12 +132,13 @@ def test_with_nochange():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command = Command(Page('Main page'), [AddCategoryAction('Added cat')])
+    command_pending = CommandPending(0, command)
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandNoop)
     assert command_record.revision == 195259
-    assert 'Main page' not in runner.prepared_pages
+    assert command.page.resolution is None
 
 def test_with_missing_page():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -179,14 +181,17 @@ def test_with_missing_page():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Missing page'])
+    page = Page('Missing page')
 
-    assert runner.prepared_pages['Missing page'] == {
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
     }
 
-    command_pending = CommandPending(0, Command('Missing page', [AddCategoryAction('Added cat')]))
+    command = Command(page, [AddCategoryAction('Added cat')])
+    command_pending = CommandPending(0, command)
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
@@ -238,14 +243,16 @@ def test_with_missing_page_unnormalized():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['missing page'])
+    page = Page('missing page')
 
-    assert runner.prepared_pages['missing page'] == {
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
     }
 
-    command_pending = CommandPending(0, Command('missing page', [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
@@ -291,14 +298,16 @@ def test_with_invalid_title():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Invalid%20title'])
+    page = Page('Invalid%20title')
 
-    assert runner.prepared_pages['Invalid%20title'] == {
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
         'invalid': True,
         'curtimestamp': curtimestamp,
     }
 
-    command_pending = CommandPending(0, Command('Invalid%20title', [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
@@ -361,7 +370,7 @@ def test_with_protected_page():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(Page('Main page'), [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
@@ -424,15 +433,17 @@ def test_with_edit_conflict():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Main page'])
+    page = Page('Main page')
 
-    assert 'Main page' in runner.prepared_pages
+    runner.resolve_pages([page])
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    assert page.resolution is not None
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandEditConflict(command_pending.id, command_pending.command)
-    assert 'Main page' not in runner.prepared_pages
+    assert page.resolution is None
 
 def test_with_maxlag_exceeded():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -492,16 +503,18 @@ def test_with_maxlag_exceeded():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Main page'])
+    page = Page('Main page')
 
-    assert 'Main page' in runner.prepared_pages
+    runner.resolve_pages([page])
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    assert page.resolution is not None
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandMaxlagExceeded)
     assert command_record.retry_after.tzinfo == datetime.timezone.utc
-    assert 'Main page' in runner.prepared_pages
+    assert page.resolution is not None
 
 def test_with_blocked():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -561,11 +574,13 @@ def test_with_blocked():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Main page'])
+    page = Page('Main page')
 
-    assert 'Main page' in runner.prepared_pages
+    runner.resolve_pages([page])
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    assert page.resolution is not None
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandBlocked)
@@ -630,11 +645,13 @@ def test_with_autoblocked():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Main page'])
+    page = Page('Main page')
 
-    assert 'Main page' in runner.prepared_pages
+    runner.resolve_pages([page])
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    assert page.resolution is not None
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandBlocked)
@@ -699,11 +716,13 @@ def test_with_readonly():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    runner.prepare_pages(['Main page'])
+    page = Page('Main page')
 
-    assert 'Main page' in runner.prepared_pages
+    runner.resolve_pages([page])
 
-    command_pending = CommandPending(0, Command('Main page', [AddCategoryAction('Added cat')]))
+    assert page.resolution is not None
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandWikiReadOnly)

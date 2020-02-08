@@ -8,6 +8,7 @@ from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNo
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
+from page import Page
 from timestamp import now
 
 from test_action import addCategory1
@@ -152,10 +153,10 @@ def test_BatchStore_retry(store):
     assert command_record_3.id != command_record_4.id
 
 def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
-    command_1 = Command('Page 1', [addCategory1])
-    command_2 = Command('Page 2', [addCategory1])
-    command_3 = Command('Page 3', [addCategory1])
-    command_4 = Command('Page 4', [addCategory1])
+    command_1 = Command(Page('Page 1'), [addCategory1])
+    command_2 = Command(Page('Page 2'), [addCategory1])
+    command_3 = Command(Page('Page 3'), [addCategory1])
+    command_4 = Command(Page('Page 4'), [addCategory1])
     open_batch = store.store_batch(NewBatch([command_1, command_2, command_3, command_4], 'test batch'), fake_session)
     command_records = open_batch.command_records
     [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]

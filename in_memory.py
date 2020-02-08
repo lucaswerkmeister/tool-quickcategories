@@ -8,6 +8,7 @@ from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
 from command import CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
+from page import Page
 from store import BatchStore, _local_user_from_session
 from timestamp import now
 
@@ -128,7 +129,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             ret[t] = ret.get(t, 0) + 1
         return ret
 
-    def stream_pages(self) -> Iterator[str]:
+    def stream_pages(self) -> Iterator[Page]:
         for command_record in self.command_records:
             yield command_record.command.page
 

@@ -512,7 +512,7 @@ def batch_export_all_titles(id: int):
 
     def stream():
         for page in batch.command_records.stream_pages():
-            yield page + '\n'
+            yield page.title + '\n'
     return app.response_class(stream(), mimetype='text/plain'), {
         'Content-Disposition': 'inline; filename="batch_%d.txt"' % id,
     }
@@ -525,7 +525,7 @@ def batch_export_all_pagepile(id: int):
                                      id=id), 404
     pile_id = create_pagepile(anonymous_session('meta.wikimedia.org'),
                               batch.domain,
-                              batch.command_records.stream_pages())
+                              map(lambda page: page.title, batch.command_records.stream_pages()))
     return flask.redirect('https://tools.wmflabs.org/pagepile/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
@@ -554,7 +554,7 @@ def run_batch_slice(id: int):
     command_pendings = batch.command_records.make_plans_pending(offset, limit)
 
     try:
-        runner.prepare_pages([command_pending.command.page for command_pending in command_pendings])
+        runner.resolve_pages([command_pending.command.page for command_pending in command_pendings])
         for command_pending in command_pendings:
             for attempt in range(5):
                 command_finish = runner.run_command(command_pending)

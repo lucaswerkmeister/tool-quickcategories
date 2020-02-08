@@ -7,6 +7,7 @@ from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
 from command import Command, CommandPlan, CommandEdit # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
 from localuser import LocalUser # NOQA “unused” import LocalUser needed for eval(repr) test
+from page import Page
 
 from test_command import command1, command2, commandPlan1, commandEdit1
 from test_localuser import localUser1, localUser2
@@ -16,12 +17,12 @@ newBatch1 = NewBatch([command1, command2], 'Test batch 1')
 
 
 def test_NewBatch_cleanup():
-    batch = NewBatch([Command('Page_1_from_URL', [AddCategoryAction('Category_from_URL')]),
-                      Command('Page_2_from_URL', [AddCategoryAction('Category_from_URL')])],
+    batch = NewBatch([Command(Page('Page_1_from_URL'), [AddCategoryAction('Category_from_URL')]),
+                      Command(Page('Page_2_from_URL'), [AddCategoryAction('Category_from_URL')])],
                      '   test batch\t ')
     batch.cleanup()
-    assert batch == NewBatch([Command('Page 1 from URL', [AddCategoryAction('Category from URL')]),
-                              Command('Page 2 from URL', [AddCategoryAction('Category from URL')])],
+    assert batch == NewBatch([Command(Page('Page 1 from URL'), [AddCategoryAction('Category from URL')]),
+                              Command(Page('Page 2 from URL'), [AddCategoryAction('Category from URL')])],
                              'test batch')
 
 def test_NewBatch_eq_same():
