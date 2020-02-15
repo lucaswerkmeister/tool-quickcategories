@@ -34,7 +34,7 @@ class Runner():
                                     curtimestamp=True,
                                     formatversion=2)
 
-        for normalization in response['query'].get('normalized', {}):
+        for normalization in response['query'].get('normalized', []):
             pages_by_title[normalization['to']] = pages_by_title[normalization['from']]
 
         for response_page in response['query']['pages']:
