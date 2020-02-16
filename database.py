@@ -577,7 +577,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
     def _row_to_background_run(self,
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
-                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:
+                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]: # NOQA: E127 (indentation)
         background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
         if stopped_utc_timestamp:
             if stopped_user_name:

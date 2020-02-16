@@ -223,9 +223,9 @@ class RemoveCategoryAction(CategoryAction):
                    wikicode.nodes[index-1].value.endswith('\n'):
                     wikicode.nodes[index-1].value = wikicode.nodes[index-1].value[:-1]
                 # or following line break
-                elif index+1 < len(wikicode.nodes) and \
-                     isinstance(wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and \
-                     wikicode.nodes[index+1].value.startswith('\n'):
+                elif (index+1 < len(wikicode.nodes) and
+                      isinstance(wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and
+                      wikicode.nodes[index+1].value.startswith('\n')):
                     wikicode.nodes[index+1].value = wikicode.nodes[index+1].value[1:]
                 del wikicode.nodes[index] # this should happen *after* the above blocks, otherwise the indices get confusing
                 break
