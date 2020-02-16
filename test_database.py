@@ -40,9 +40,10 @@ def test_DatabaseStore_store_batch(database_connection_params):
 
     with store.connect() as connection:
         with connection.cursor() as cursor:
-            cursor.execute('SELECT `command_page`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
-            command2_page, command2_actions_tpsv = cursor.fetchone()
-            assert command2_page == command2.command.page.title
+            cursor.execute('SELECT `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
+            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cursor.fetchone()
+            assert command2_page_title == command2.command.page.title
+            assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
 def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
@@ -177,7 +178,7 @@ def test_DatabaseStore_command_finish_to_row(command_finish, expected_row):
 def test_DatabaseStore_row_to_command_record(expected_command_record, row):
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
-    full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.actions_tpsv(), status, outcome_json
+    full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json
     actual_command_record = DatabaseStore({})._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 

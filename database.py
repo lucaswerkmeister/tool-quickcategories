@@ -80,8 +80,8 @@ class DatabaseStore(BatchStore):
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
-                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page`, `command_actions`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, NULL)',
-                                   [(batch_id, command.page.title, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
+                cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page_title`, `command_page_resolve_redirects`, `command_actions`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, %s, NULL)',
+                                   [(batch_id, command.page.title, command.page.resolve_redirects, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
 
             connection.commit()
 
@@ -226,7 +226,7 @@ class DatabaseStore(BatchStore):
         with self.connect() as connection:
             with connection.cursor() as cursor:
                 now_utc_timestamp = datetime_to_utc_timestamp(now())
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page`, `actions_tpsv`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
@@ -260,6 +260,7 @@ class DatabaseStore(BatchStore):
         command_pending = self._row_to_command_record(result[10],
                                                       result[11],
                                                       result[12],
+                                                      result[13],
                                                       DatabaseStore._COMMAND_STATUS_PENDING,
                                                       outcome=None)
         batch = self._result_to_batch(result[0:9])
@@ -303,11 +304,11 @@ class DatabaseStore(BatchStore):
 
         return status, outcome
 
-    def _row_to_command_record(self, id: int, title: str, actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
+    def _row_to_command_record(self, id: int, title: str, resolve_redirects: Optional[int], actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
         if outcome:
             outcome_dict = json.loads(outcome)
 
-        command = Command(Page(title),
+        command = Command(Page(title, self._tinyint_to_bool(resolve_redirects)),
                           [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
 
         if status == DatabaseStore._COMMAND_STATUS_PLAN:
@@ -387,6 +388,12 @@ class DatabaseStore(BatchStore):
         else:
             raise ValueError('Unknown command status %d' % status)
 
+    def _tinyint_to_bool(self, val: Optional[int]) -> Optional[bool]:
+        if val is None:
+            return None
+        else:
+            return bool(val)
+
 
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
@@ -397,14 +404,14 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         command_records = []
         with self.store.connect() as connection, connection.cursor() as cursor:
-            cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
+            cursor.execute('''SELECT `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`, `command_status`, `command_outcome`
                               FROM `command`
                               JOIN `actions` ON `command_actions` = `actions_id`
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC
                               LIMIT %s OFFSET %s''', (self.batch_id, limit, offset))
-            for id, title, actions_tpsv, status, outcome in cursor.fetchall():
-                command_records.append(self.store._row_to_command_record(id, title, actions_tpsv, status, outcome))
+            for id, title, resolve_redirects, actions_tpsv, status, outcome in cursor.fetchall():
+                command_records.append(self.store._row_to_command_record(id, title, resolve_redirects, actions_tpsv, status, outcome))
         return command_records
 
     def get_summary(self) -> Dict[Type[CommandRecord], int]:
@@ -418,14 +425,13 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     def stream_pages(self) -> Iterator[Page]:
         with self.store.connect_streaming() as connection, cast(pymysql.cursors.SSCursor, connection.cursor()) as cursor:
-            cursor.execute('''SELECT `command_page`
+            cursor.execute('''SELECT `command_page_title`, `command_page_resolve_redirects`
                               FROM `command`
                               WHERE `command_batch` = %s
                               ORDER BY `command_id` ASC''',
                            (self.batch_id,))
-            for row in cursor.fetchall_unbuffered():
-                (title,) = row
-                yield Page(title)
+            for title, resolve_redirects in cursor.fetchall_unbuffered():
+                yield Page(title, self.store._tinyint_to_bool(resolve_redirects))
 
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
@@ -472,15 +478,15 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
             command_records = []
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `command_id`, `command_page`, `actions_tpsv`, `command_status`, `command_outcome`
+                cursor.execute('''SELECT `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`, `command_status`, `command_outcome`
                                   FROM `command`
                                   JOIN `actions` ON `command_actions` = `actions_id`
                                   WHERE `command_id` IN (%s)''' % ', '.join(['%s'] * len(command_ids)),
                                command_ids)
-            for id, title, actions_tpsv, status, outcome in cursor.fetchall():
+            for id, title, resolve_redirects, actions_tpsv, status, outcome in cursor.fetchall():
                 assert status == DatabaseStore._COMMAND_STATUS_PENDING
                 assert outcome is None
-                command_record = self.store._row_to_command_record(id, title, actions_tpsv, status, outcome)
+                command_record = self.store._row_to_command_record(id, title, resolve_redirects, actions_tpsv, status, outcome)
                 assert isinstance(command_record, CommandPending)
                 command_records.append(command_record)
         return command_records
@@ -518,8 +524,8 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                command_finish.can_retry_later():
                 # append a fresh plan for the same command
                 cursor.execute('''INSERT INTO `command`
-                                  (`command_batch`, `command_page`, `command_actions`, `command_status`, `command_outcome`)
-                                  SELECT `command_batch`, `command_page`, `command_actions`, %s, NULL
+                                  (`command_batch`, `command_page_title`, `command_page_resolve_redirects`, `command_actions`, `command_status`, `command_outcome`)
+                                  SELECT `command_batch`, `command_page_title`, `command_page_resolve_redirects`, `command_actions`, %s, NULL
                                   FROM `command`
                                   WHERE `command_id` = %s''',
                                (DatabaseStore._COMMAND_STATUS_PLAN, command_finish.id))

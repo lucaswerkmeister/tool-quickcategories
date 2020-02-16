@@ -5,10 +5,14 @@ class Page:
     """A specifier for a page on a wiki, optionally resolved."""
 
     title: str
+    resolve_redirects: Optional[bool]
     resolution: Optional[dict] = None
 
-    def __init__(self, title: str):
+    def __init__(self, title: str, resolve_redirects: Optional[bool]):
+        if title.startswith('!'):
+            raise ValueError("page title '%s' cannot start with ! (ambiguous str)" % title)
         self.title = title
+        self.resolve_redirects = resolve_redirects
 
     def cleanup(self) -> None:
         """Partially normalize the page, as a convenience for users.
@@ -20,10 +24,14 @@ class Page:
 
     def __eq__(self, value: Any) -> bool:
         return type(value) is Page and \
-            self.title == value.title
+            self.title == value.title and \
+            self.resolve_redirects is value.resolve_redirects
 
     def __str__(self) -> str:
-        return self.title
+        if self.resolve_redirects is False:
+            return '!' + self.title
+        else:
+            return self.title
 
     def __repr__(self) -> str:
-        return 'Page(' + repr(self.title) + ')'
+        return 'Page(' + repr(self.title) + ', ' + repr(self.resolve_redirects) + ')'

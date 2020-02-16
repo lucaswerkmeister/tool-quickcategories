@@ -2,6 +2,7 @@ import datetime
 import mwapi # type: ignore
 import os
 import pytest # type: ignore
+from typing import Optional
 
 from action import AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -10,7 +11,7 @@ from runner import Runner
 
 from test_utils import FakeSession
 
-def test_run_command():
+def test_resolve_pages_and_run_commands():
     if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
         pytest.skip('MediaWiki credentials not provided')
     session = mwapi.Session('https://test.wikipedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
@@ -22,49 +23,111 @@ def test_run_command():
                  lgpassword=os.environ['MW_PASSWORD'],
                  lgtoken=lgtoken)
 
-    title = 'QuickCategories CI Test'
+    suffix = ''
     if 'TRAVIS_JOB_NUMBER' in os.environ:
         job_number = os.environ['TRAVIS_JOB_NUMBER']
-        title += '/' + job_number[job_number.index('.')+1:]
+        suffix = '/' + job_number[job_number.index('.')+1:]
 
-    command = Command(Page(title), [AddCategoryAction('Added cat'),
-                                    AddCategoryAction('Already present cat'),
-                                    RemoveCategoryAction('Removed cat'),
-                                    RemoveCategoryAction('Not present cat')])
+    title_A = 'QuickCategories CI Test' + suffix
+    title_B = 'QuickCategories CI Test Redirect' + suffix
+    title_B2 = 'QuickCategories CI Test Redirect Target' + suffix
+    title_C = 'QuickCategories CI Test Other Redirect' + suffix
+    title_C2 = 'QuickCategories CI Test Other Redirect Target' + suffix
+
+    actions = [AddCategoryAction('Added cat'),
+               AddCategoryAction('Already present cat'),
+               RemoveCategoryAction('Removed cat'),
+               RemoveCategoryAction('Not present cat')]
+    command_A = Command(Page(title_A, True), actions)
+    command_B = Command(Page(title_B, True), actions)
+    command_C = Command(Page(title_C, False), actions)
     runner = Runner(session, summary_batch_title='QuickCategories CI test')
-    csrftoken = session.get(action='query',
-                            meta='tokens')['query']['tokens']['csrftoken']
-    setup_edit = session.post(**{'action': 'edit',
-                                 'title': command.page.title,
-                                 'text': 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
-                                 'summary': 'setup',
-                                 'token': csrftoken,
-                                 'assert': 'user'})
-    edit = runner.run_command(CommandPending(0, command))
+    base_A = set_page_wikitext('setup',
+                               title_A,
+                               'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
+                               runner)
+    base_B = set_page_wikitext('setup', # NOQA: F841 (unused)
+                               title_B,
+                               '#REDIRECT [[' + title_B2 + ']]\n\n[[Category:Unchanged cat]]',
+                               runner)
+    base_B2 = set_page_wikitext('setup',
+                                title_B2,
+                                'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
+                                runner)
+    base_C = set_page_wikitext('setup',
+                               title_C,
+                               '#REDIRECT [[' + title_C2 + ']]\n\n[[Category:Already present cat]]\n[[Category:Removed cat]]',
+                               runner)
+    base_C2 = set_page_wikitext('setup', # NOQA: F841 (unused)
+                                title_C2,
+                                'Test page for the QuickCategories tool.\n[[Category:Unchanged cat]]\nBottom text',
+                                runner)
 
-    assert isinstance(edit, CommandEdit)
-    assert edit.base_revision == setup_edit['edit']['newrevid']
-    assert command.page.resolution is None
+    runner.resolve_pages([command_A.page,
+                          command_B.page,
+                          command_C.page])
+    edit_A = runner.run_command(CommandPending(0, command_A))
+    edit_B = runner.run_command(CommandPending(0, command_B))
+    edit_C = runner.run_command(CommandPending(0, command_C))
 
-    actual_revision = session.get(action='query',
-                                  revids=[edit.revision],
-                                  prop=['revisions'],
-                                  rvprop=['content', 'flags', 'comment'],
-                                  rvslots=['main'],
-                                  formatversion=2)['query']['pages'][0]['revisions'][0]
-    actual_content = actual_revision['slots']['main']['content']
-    actual_comment = actual_revision['comment']
-    session.post(**{'action': 'edit',
-                    'title': command.page.title,
-                    'text': 'Test page for the QuickCategories tool.',
-                    'summary': 'teardown',
-                    'token': csrftoken,
-                    'assert': 'user'})
-    expected_content = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
-    assert expected_content == actual_content
-    assert not actual_revision['minor']
+    assert isinstance(edit_A, CommandEdit)
+    assert edit_A.base_revision == base_A
+    assert command_A.page.resolution is None
+
+    assert isinstance(edit_B, CommandEdit)
+    assert edit_B.base_revision == base_B2
+    assert command_B.page.resolution is None
+
+    assert isinstance(edit_C, CommandEdit)
+    assert edit_C.base_revision == base_C
+    assert command_C.page.resolution is None
+
+    revision_A = get_page_revision(title_A, runner)
+    revision_B = get_page_revision(title_B, runner)
+    revision_B2 = get_page_revision(title_B2, runner)
+    revision_C = get_page_revision(title_C, runner)
+    revision_C2 = get_page_revision(title_C2, runner)
+
     expected_comment = '+[[Category:Added cat]], (+[[Category:Already present cat]]), -[[Category:Removed cat]], (-[[Category:Not present cat]]); QuickCategories CI test'
-    assert expected_comment == actual_comment
+    for revision in [revision_A, revision_B2, revision_C]:
+        assert revision['comment'] == expected_comment
+        assert not revision['minor']
+
+    expected_page_content = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
+    for revision in [revision_A, revision_B2]:
+        assert revision['slots']['main']['content'] == expected_page_content
+    expected_redirect_content = '#REDIRECT [[' + title_C2 + ']]\n\n[[Category:Already present cat]]\n[[Category:Added cat]]'
+    assert revision_C['slots']['main']['content'] == expected_redirect_content
+
+    assert revision_B['slots']['main']['content'] == '#REDIRECT [[' + title_B2 + ']]\n\n[[Category:Unchanged cat]]'
+    assert revision_C2['slots']['main']['content'] == 'Test page for the QuickCategories tool.\n[[Category:Unchanged cat]]\nBottom text'
+
+    set_page_wikitext('teardown', title_A, 'Test page for the QuickCategories tool.', runner)
+    set_page_wikitext('teardown', title_B, '#REDIRECT [[' + title_B2 + ']]', runner)
+    set_page_wikitext('teardown', title_B2, 'Test page for the QuickCategories tool.', runner)
+    set_page_wikitext('teardown', title_C, '#REDIRECT [[' + title_C2 + ']]', runner)
+    set_page_wikitext('teardown', title_C2, 'Test page for the QuickCategories tool.', runner)
+
+def set_page_wikitext(summary, title: str, wikitext: str, runner: Runner) -> int:
+    response = runner.session.post(**{'action': 'edit',
+                                      'title': title,
+                                      'text': wikitext,
+                                      'summary': summary,
+                                      'token': runner.csrf_token,
+                                      'assert': 'user'})
+    if 'nochange' in response['edit']:
+        return get_page_revision(title, runner)['revid']
+    else:
+        return response['edit']['newrevid']
+
+def get_page_revision(title: str, runner: Runner) -> dict:
+    response = runner.session.get(action='query',
+                                  titles=[title],
+                                  prop=['revisions'],
+                                  rvprop=['content', 'flags', 'comment', 'ids'],
+                                  rvslots=['main'],
+                                  formatversion=2)
+    return response['query']['pages'][0]['revisions'][0]
 
 def test_with_nochange():
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -132,7 +195,7 @@ def test_with_nochange():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    command = Command(Page('Main page'), [AddCategoryAction('Added cat')])
+    command = Command(Page('Main page', True), [AddCategoryAction('Added cat')])
     command_pending = CommandPending(0, command)
     command_record = runner.run_command(command_pending)
 
@@ -181,7 +244,7 @@ def test_with_missing_page():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Missing page')
+    page = Page('Missing page', True)
 
     runner.resolve_pages([page])
 
@@ -243,7 +306,203 @@ def test_with_missing_page_unnormalized():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('missing page')
+    page = Page('missing page', True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_missing_page_redirect_resolve():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'ns': 0,
+                    'title': 'Redirect to missing page',
+                    'invalid': True, # if Runner doesn’t resolve redirect, it’ll return CommandTitleInvalid instead of CommandPageMissing
+                },
+                {
+                    'ns': 0,
+                    'title': 'Missing page',
+                    'missing': True,
+                },
+            ],
+            'redirects': [
+                {
+                    'from': 'Redirect to missing page',
+                    'to': 'Missing page',
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('Redirect to missing page', True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+@pytest.mark.parametrize('resolve_redirects', [False, None])
+def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[bool]):
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'ns': 0,
+                    'title': 'Redirect to missing page',
+                    'missing': True,
+                },
+                # no entry for Missing page, if Runner resolves redirect it should crash
+            ],
+            'redirects': [
+                {
+                    'from': 'Redirect to missing page',
+                    'to': 'Missing page',
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('Redirect to missing page', resolve_redirects)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_missing_page_unnormalized_redirect():
+    curtimestamp = '2019-03-11T23:33:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'pages': [
+                {
+                    'ns': 0,
+                    'title': 'Missing page',
+                    'missing': True,
+                },
+            ],
+            'normalized': [
+                {
+                    'from': 'redirect to missing page',
+                    'to': 'Redirect to missing page',
+                },
+            ],
+            'redirects': [
+                {
+                    'from': 'Redirect to missing page',
+                    'to': 'Missing page',
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('redirect to missing page', True)
 
     runner.resolve_pages([page])
 
@@ -298,7 +557,7 @@ def test_with_invalid_title():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Invalid%20title')
+    page = Page('Invalid%20title', True)
 
     runner.resolve_pages([page])
 
@@ -370,7 +629,7 @@ def test_with_protected_page():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    command_pending = CommandPending(0, Command(Page('Main page'), [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(Page('Main page', True), [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
@@ -433,7 +692,7 @@ def test_with_edit_conflict():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Main page')
+    page = Page('Main page', True)
 
     runner.resolve_pages([page])
 
@@ -503,7 +762,7 @@ def test_with_maxlag_exceeded():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Main page')
+    page = Page('Main page', True)
 
     runner.resolve_pages([page])
 
@@ -574,7 +833,7 @@ def test_with_blocked():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Main page')
+    page = Page('Main page', True)
 
     runner.resolve_pages([page])
 
@@ -645,7 +904,7 @@ def test_with_autoblocked():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Main page')
+    page = Page('Main page', True)
 
     runner.resolve_pages([page])
 
@@ -716,7 +975,7 @@ def test_with_readonly():
     session.host = 'test.wikidata.org'
     runner = Runner(session)
 
-    page = Page('Main page')
+    page = Page('Main page', True)
 
     runner.resolve_pages([page])
 

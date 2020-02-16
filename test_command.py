@@ -15,10 +15,10 @@ command2 = Command(page2, [addCategory2])
 
 def test_Command_apply():
     wikitext = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text'
-    command = Command(Page('Page title'), [AddCategoryAction('Added cat'),
-                                           AddCategoryAction('Already present cat'),
-                                           RemoveCategoryAction('Removed cat'),
-                                           RemoveCategoryAction('Not present cat')])
+    command = Command(Page('Page title', True), [AddCategoryAction('Added cat'),
+                                                 AddCategoryAction('Already present cat'),
+                                                 RemoveCategoryAction('Removed cat'),
+                                                 RemoveCategoryAction('Not present cat')])
     new_wikitext, actions = command.apply(wikitext, ('Category', ['Category'], 'first-letter'))
     assert new_wikitext == 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert actions == [(command.actions[0], False),
@@ -27,9 +27,9 @@ def test_Command_apply():
                        (command.actions[3], True)]
 
 def test_Command_cleanup():
-    command = Command(Page('Page_from_URL'), [AddCategoryAction('Category_from_URL')])
+    command = Command(Page('Page_from_URL', True), [AddCategoryAction('Category_from_URL')])
     command.cleanup()
-    assert command == Command(Page('Page from URL'), [AddCategoryAction('Category from URL')])
+    assert command == Command(Page('Page from URL', True), [AddCategoryAction('Category from URL')])
 
 def test_Command_actions_tpsv():
     assert command1.actions_tpsv() == '+Category:Cat 1|-Category:Cat 1'
@@ -44,8 +44,9 @@ def test_Command_eq_different_type():
     assert command1 != addCategory1
 
 def test_Command_eq_different_page():
-    assert command1 != Command(Page('Page A'), command1.actions)
-    assert command1 != Command(Page('Page_1'), command1.actions)
+    assert command1 != Command(Page('Page A', True), command1.actions)
+    assert command1 != Command(Page('Page_1', True), command1.actions)
+    assert command1 != Command(Page('Page 1', False), command1.actions)
 
 def test_Command_eq_different_actions():
     assert command1 != Command(command1.page, [addCategory1])
@@ -164,7 +165,7 @@ def test_CommandNoop_repr():
     assert eval(repr(commandNoop1)) == commandNoop1
 
 
-commandWithMissingPage = Command(Page('Page that definitely does not exist'), command2.actions)
+commandWithMissingPage = Command(Page('Page that definitely does not exist', True), command2.actions)
 commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
 
 
@@ -203,7 +204,7 @@ def test_CommandPageMissing_repr():
     assert eval(repr(commandPageMissing1)) == commandPageMissing1
 
 
-commandWithInvalidTitle = Command(Page('Category:'), command2.actions)
+commandWithInvalidTitle = Command(Page('Category:', True), command2.actions)
 commandTitleInvalid1 = CommandTitleInvalid(42, commandWithInvalidTitle, '2019-03-11T23:26:02Z')
 
 
@@ -242,7 +243,7 @@ def test_CommandTitleInvalid_repr():
     assert eval(repr(commandTitleInvalid1)) == commandTitleInvalid1
 
 
-commandWithProtectedPage = Command(Page('Main Page'), command2.actions)
+commandWithProtectedPage = Command(Page('Main Page', True), command2.actions)
 commandPageProtected1 = CommandPageProtected(42, commandWithProtectedPage, '2019-03-11T23:26:02Z')
 
 

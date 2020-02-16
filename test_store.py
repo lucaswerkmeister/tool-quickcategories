@@ -72,6 +72,19 @@ def test_BatchStore_store_get_with_title(store):
     assert stored_batch.title == 'Test batch'
     assert loaded_batch.title == 'Test batch'
 
+def test_BatchStore_store_get_with_resolve_redirect_flags(store):
+    command_True = Command(Page(command1.page.title, resolve_redirects=True), command1.actions)
+    command_False = Command(Page(command1.page.title, resolve_redirects=False), command1.actions)
+    command_None = Command(Page(command1.page.title, resolve_redirects=None), command1.actions)
+
+    stored_batch = store.store_batch(NewBatch([command_True, command_False, command_None], title=None), fake_session)
+    loaded_batch = store.get_batch(stored_batch.id)
+
+    [loaded_True, loaded_False, loaded_None] = loaded_batch.command_records.get_slice(0, 3)
+    assert loaded_True.command.page.resolve_redirects is True
+    assert loaded_False.command.page.resolve_redirects is False
+    assert loaded_None.command.page.resolve_redirects is None
+
 def test_BatchStore_get_batch_missing(store):
     loaded_batch = store.get_batch(1)
     assert loaded_batch is None
@@ -153,10 +166,10 @@ def test_BatchStore_retry(store):
     assert command_record_3.id != command_record_4.id
 
 def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
-    command_1 = Command(Page('Page 1'), [addCategory1])
-    command_2 = Command(Page('Page 2'), [addCategory1])
-    command_3 = Command(Page('Page 3'), [addCategory1])
-    command_4 = Command(Page('Page 4'), [addCategory1])
+    command_1 = Command(Page('Page 1', True), [addCategory1])
+    command_2 = Command(Page('Page 2', True), [addCategory1])
+    command_3 = Command(Page('Page 3', True), [addCategory1])
+    command_4 = Command(Page('Page 4', True), [addCategory1])
     open_batch = store.store_batch(NewBatch([command_1, command_2, command_3, command_4], 'test batch'), fake_session)
     command_records = open_batch.command_records
     [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]

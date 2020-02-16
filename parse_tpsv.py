@@ -25,10 +25,16 @@ def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
 
 
 def parse_command(line: str) -> Command:
-    [title, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
+    [title_field, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
     if not other_fields:
-        raise ValueError("no actions for page '%s'" % title)
-    page = Page(title)
+        raise ValueError("no actions for page '%s'" % title_field)
+    if title_field.startswith('!'):
+        title = title_field[1:]
+        resolve_redirects = False
+    else:
+        title = title_field
+        resolve_redirects = True
+    page = Page(title, resolve_redirects)
     actions = []
     errors = []
     for field in other_fields:

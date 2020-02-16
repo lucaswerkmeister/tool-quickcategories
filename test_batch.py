@@ -17,12 +17,12 @@ newBatch1 = NewBatch([command1, command2], 'Test batch 1')
 
 
 def test_NewBatch_cleanup():
-    batch = NewBatch([Command(Page('Page_1_from_URL'), [AddCategoryAction('Category_from_URL')]),
-                      Command(Page('Page_2_from_URL'), [AddCategoryAction('Category_from_URL')])],
+    batch = NewBatch([Command(Page('Page_1_from_URL', True), [AddCategoryAction('Category_from_URL')]),
+                      Command(Page('Page_2_from_URL', True), [AddCategoryAction('Category_from_URL')])],
                      '   test batch\t ')
     batch.cleanup()
-    assert batch == NewBatch([Command(Page('Page 1 from URL'), [AddCategoryAction('Category from URL')]),
-                              Command(Page('Page 2 from URL'), [AddCategoryAction('Category from URL')])],
+    assert batch == NewBatch([Command(Page('Page 1 from URL', True), [AddCategoryAction('Category from URL')]),
+                              Command(Page('Page 2 from URL', True), [AddCategoryAction('Category from URL')])],
                              'test batch')
 
 def test_NewBatch_eq_same():
@@ -44,7 +44,7 @@ def test_NewBatch_str():
     assert str(newBatch1) == '''
 # Test batch 1
 Page 1|+Category:Cat 1|-Category:Cat 1
-Page 2|+Category:Cat 2
+!Page 2|+Category:Cat 2
 '''.strip()
 
 def test_NewBatch_repr():

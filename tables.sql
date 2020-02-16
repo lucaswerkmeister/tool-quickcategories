@@ -16,7 +16,8 @@ COLLATE = 'utf8mb4_bin';
 CREATE TABLE command (
   command_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
   command_batch int unsigned NOT NULL, -- referencing batch.batch_id
-  command_page text NOT NULL,
+  command_page_title text NOT NULL,
+  command_page_resolve_redirects bool,
   command_actions int unsigned NOT NULL, -- referencing actions.actions_id
   command_status int unsigned NOT NULL,
   command_outcome text

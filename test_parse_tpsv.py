@@ -17,6 +17,9 @@ Page 2|-Category:Dog''',
     '''Page|+Category:Cat#sort key with # embedded hash''',
     '''Page|+Category:Cat##sort key with # embedded hash''',
     '''Page|+Category:Cat###sort key with # embedded hash''',
+    '''!Redirect|+Category:Cat''',
+    '''!Redirect|+Category:Cat
+No Redirect|+Category:Dog''',
 ])
 def test_parse_batch_roundtrip(tpsv):
     batch = parse_tpsv.parse_batch(tpsv, title=None)
