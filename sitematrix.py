@@ -1,11 +1,11 @@
 import cachetools
-import mwapi # type: ignore
+import mwapi  # type: ignore
 import threading
 from typing import Any, Dict
 import warnings
 
 
-_sitematrix_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60) # type: cachetools.TTLCache[Any, dict]
+_sitematrix_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, dict]
 _sitematrix_cache_lock = threading.RLock()
 
 
@@ -16,7 +16,7 @@ def _get_sitematrix(session: mwapi.Session) -> dict:
     sitematrix = {
         'by_dbname': {},
         'by_url': {},
-    } # type: Dict[str, Dict[str, dict]]
+    }  # type: Dict[str, Dict[str, dict]]
     result = session.get(action='sitematrix',
                          formatversion=2)
     for k, v in result['sitematrix'].items():

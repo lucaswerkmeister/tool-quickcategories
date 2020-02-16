@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import mwoauth # type: ignore
+import mwoauth  # type: ignore
 import os
 import random
 import signal
@@ -45,7 +45,7 @@ def on_sigterm(signalnum, frame):
     global stopped
     stopped = True
     print('Received SIGTERM, will stop once the current command is done', flush=True)
-signal.signal(signal.SIGTERM, on_sigterm) # NOQA: E305 (no blank lines after function definition)
+signal.signal(signal.SIGTERM, on_sigterm)  # NOQA: E305 (no blank lines after function definition)
 
 
 while not stopped:

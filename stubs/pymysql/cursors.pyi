@@ -3,7 +3,7 @@ from typing import Any, Iterator, Optional, Tuple, TypeVar
 from .connections import Connection
 
 
-Gen = Tuple[Any, ...] # rather than typeshed’s Union of that with Dict[str, Any]
+Gen = Tuple[Any, ...]  # rather than typeshed’s Union of that with Dict[str, Any]
 _SelfT = TypeVar("_SelfT")
 
 class Cursor:

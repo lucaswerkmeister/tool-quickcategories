@@ -1,12 +1,12 @@
 import datetime
 from typing import cast
 
-from action import AddCategoryAction, RemoveCategoryAction # NOQA “unused” import RemoveCategoryAction needed for eval(repr) test
+from action import AddCategoryAction, RemoveCategoryAction  # NOQA “unused” import RemoveCategoryAction needed for eval(repr) test
 from batch import NewBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
-from command import Command, CommandPlan, CommandEdit # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
-from localuser import LocalUser # NOQA “unused” import LocalUser needed for eval(repr) test
+from command import Command, CommandPlan, CommandEdit  # NOQA “unused” imports CommandPlan, CommandEdit needed for eval(repr) test
+from localuser import LocalUser  # NOQA “unused” import LocalUser needed for eval(repr) test
 from page import Page
 
 from test_command import command1, command2, commandPlan1, commandEdit1

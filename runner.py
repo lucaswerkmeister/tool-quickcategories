@@ -1,5 +1,5 @@
 import datetime
-import mwapi # type: ignore
+import mwapi  # type: ignore
 from typing import Dict, List, Optional, cast
 
 from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -32,7 +32,7 @@ class Runner():
             self.resolve_pages_of_one_kind(pages_without_resolve_redirects)
 
     def do_resolve_redirects(self, resolve_redirects: Optional[bool]) -> bool:
-        return resolve_redirects is True # None is equivalent to False
+        return resolve_redirects is True  # None is equivalent to False
 
     def resolve_pages_of_one_kind(self, pages: List[Page]):
         assert pages
@@ -156,21 +156,21 @@ class Runner():
             response = self.session.post(**params)
         except mwapi.errors.APIError as e:
             if e.code == 'editconflict':
-                page.resolution = None # this must be outdated now
+                page.resolution = None  # this must be outdated now
                 return CommandEditConflict(command_pending.id, command_pending.command)
             elif e.code == 'protectedpage':
                 return CommandPageProtected(command_pending.id, command_pending.command, curtimestamp=resolution['start_timestamp'])
             elif e.code == 'maxlag':
-                retry_after_seconds = 5 # the API returns this in a Retry-After header, but mwapi hides that from us :(
+                retry_after_seconds = 5  # the API returns this in a Retry-After header, but mwapi hides that from us :(
                 retry_after = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=retry_after_seconds)
                 retry_after = retry_after.replace(microsecond=0)
                 return CommandMaxlagExceeded(command_pending.id, command_pending.command, retry_after)
             elif e.code == 'blocked' or e.code == 'autoblocked':
                 auto = e.code == 'autoblocked'
-                blockinfo = None # the API returns this in a 'blockinfo' member of the 'error' object, but mwapi hides that from us :(
+                blockinfo = None  # the API returns this in a 'blockinfo' member of the 'error' object, but mwapi hides that from us :(
                 return CommandBlocked(command_pending.id, command_pending.command, auto, blockinfo)
             elif e.code == 'readonly':
-                reason = None # the API returns this in a 'readonlyreason' member of the 'error' object, but mwapi hides that from us :(
+                reason = None  # the API returns this in a 'readonlyreason' member of the 'error' object, but mwapi hides that from us :(
                 # maintenance-related read-only times are usually done within a few minutes (though scheduled for an hour),
                 # and MediaWiki automatically enters temporary read-only mode if replication lag exceeds 30 seconds,
                 # so guess a fairly short retry time
@@ -182,9 +182,9 @@ class Runner():
                 raise e
 
         if 'nochange' in response['edit']:
-            page.resolution = None # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
+            page.resolution = None  # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
             return CommandNoop(command_pending.id, command_pending.command, resolution['base_revid'])
 
         assert response['edit']['oldrevid'] == resolution['base_revid']
-        page.resolution = None # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
+        page.resolution = None  # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
         return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])

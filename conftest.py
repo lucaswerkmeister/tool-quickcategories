@@ -1,8 +1,8 @@
-import freezegun # type: ignore
-import mwapi # type: ignore
+import freezegun  # type: ignore
+import mwapi  # type: ignore
 import os
 import pymysql
-import pytest # type: ignore
+import pytest  # type: ignore
 import random
 import re
 import string
@@ -63,8 +63,8 @@ def database_connection_params(fresh_database_connection_params):
             queries = tables.read()
         with connection.cursor() as cursor:
             for table in re.findall(r'CREATE TABLE ([^ ]+) ', queries):
-                cursor.execute('DELETE FROM `%s`' % table) # more efficient than TRUNCATE TABLE on my system :/
-                # cursor.execute('ALTER TABLE `%s` AUTO_INCREMENT = 1' % table) # currently not necessary
+                cursor.execute('DELETE FROM `%s`' % table)  # more efficient than TRUNCATE TABLE on my system :/
+                # cursor.execute('ALTER TABLE `%s` AUTO_INCREMENT = 1' % table)  # currently not necessary
         connection.commit()
     finally:
         connection.close()

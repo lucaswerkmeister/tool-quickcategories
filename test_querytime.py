@@ -1,7 +1,7 @@
 import datetime
-import freezegun # type: ignore
+import freezegun  # type: ignore
 import pymysql
-import pytest # type: ignore
+import pytest  # type: ignore
 
 from querytime import QueryTimingCursor, QueryTimingSSCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
 from timestamp import now, utc_timestamp_to_datetime

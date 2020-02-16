@@ -1,6 +1,6 @@
 import json
 import pymysql
-import pytest # type: ignore
+import pytest  # type: ignore
 from typing import List, Optional, Tuple
 
 from command import CommandRecord, CommandEdit, CommandNoop
@@ -59,7 +59,7 @@ def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
     assert command_edit == command_edit_loaded
 
     command_noop = CommandNoop(command_plan_1.id, command_plan_1.command, 1234)
-    frozen_time.tick() # make sure that this update increases last_updated
+    frozen_time.tick()  # make sure that this update increases last_updated
     loaded_batch.command_records.store_finish(command_noop)
     command_noop_loaded = loaded_batch.command_records.get_slice(0, 1)[0]
     assert command_noop == command_noop_loaded
@@ -90,7 +90,7 @@ def test_DatabaseStore_start_background_does_not_insert_extra_row(database_conne
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
         assert cursor.rowcount == 1
         background_id, background_started_utc_timestamp = cursor.fetchone()
-    store.start_background(open_batch, fake_session) # should be no-op
+    store.start_background(open_batch, fake_session)  # should be no-op
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
         assert cursor.rowcount == 1
@@ -154,7 +154,7 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
 command_unfinishes_and_rows = [
     (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
     (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
-] # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
+]  # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
 command_finishes_and_rows = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
@@ -167,7 +167,7 @@ command_finishes_and_rows = [
     (commandBlocked2, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
     (commandWikiReadOnly1, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance', 'retry_after_utc_timestamp': 1552749842})),
     (commandWikiReadOnly2, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
-] # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
+]  # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
 def test_DatabaseStore_command_finish_to_row(command_finish, expected_row):

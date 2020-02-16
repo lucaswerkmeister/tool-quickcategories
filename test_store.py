@@ -1,6 +1,6 @@
 import datetime
-import mwoauth # type: ignore
-import pytest # type: ignore
+import mwoauth  # type: ignore
+import pytest  # type: ignore
 import random
 
 from batch import NewBatch, OpenBatch, ClosedBatch
@@ -110,7 +110,7 @@ def test_BatchCommandRecords_get_summary(store):
         CommandMaxlagExceeded: 1,
         CommandBlocked: 1,
         CommandWikiReadOnly: 1,
-        CommandPlan: 4, # retries: CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+        CommandPlan: 4,  # retries: CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
     }
 
 def test_BatchCommandRecords_stream_pages(store):
@@ -176,7 +176,7 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
 
     [pending_1, pending_2] = command_records.make_plans_pending(offset=0, limit=2)
     assert [pending_1.id, pending_2.id] == [id_1, id_2]
-    [pending_3, pending_4] = command_records.make_plans_pending(offset=0, limit=4) # does not return commands that are already pending
+    [pending_3, pending_4] = command_records.make_plans_pending(offset=0, limit=4)  # does not return commands that are already pending
     assert [pending_3.id, pending_4.id] == [id_3, id_4]
 
     command_records.make_pendings_planned([id_1, id_3])
@@ -191,7 +191,7 @@ def test_BatchStore_make_pendings_planned_empty(store):
 def test_BatchStore_make_plan_pending_background(store, frozen_time):
     batch_1 = store.store_batch(newBatch1, fake_session)
     frozen_time.tick()
-    batch_2 = store.store_batch(newBatch1, fake_session) # NOQA: F841 (unused)
+    batch_2 = store.store_batch(newBatch1, fake_session)  # NOQA: F841 (unused)
     frozen_time.tick()
     batch_3 = store.store_batch(newBatch1, fake_session)
     frozen_time.tick()

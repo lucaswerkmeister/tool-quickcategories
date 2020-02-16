@@ -1,5 +1,5 @@
 import requests
-import requests_oauthlib # type: ignore
+import requests_oauthlib  # type: ignore
 
 
 class FakeSession:

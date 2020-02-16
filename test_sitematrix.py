@@ -1,5 +1,5 @@
-import mwapi # type: ignore
-import pytest # type: ignore
+import mwapi  # type: ignore
+import pytest  # type: ignore
 
 from sitematrix import dbname_to_domain, domain_to_dbname, _sitematrix_cache, _sitematrix_cache_lock
 

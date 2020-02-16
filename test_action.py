@@ -1,4 +1,4 @@
-import pytest # type: ignore
+import pytest  # type: ignore
 
 from action import AddCategoryAction, AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction, RemoveCategoryAction, RemoveCategoryWithSortKeyAction
 

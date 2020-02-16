@@ -1,7 +1,7 @@
 import datetime
-import mwapi # type: ignore
+import mwapi  # type: ignore
 import os
-import pytest # type: ignore
+import pytest  # type: ignore
 from typing import Optional
 
 from action import AddCategoryAction, RemoveCategoryAction
@@ -46,7 +46,7 @@ def test_resolve_pages_and_run_commands():
                                title_A,
                                'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
                                runner)
-    base_B = set_page_wikitext('setup', # NOQA: F841 (unused)
+    base_B = set_page_wikitext('setup',  # NOQA: F841 (unused)
                                title_B,
                                '#REDIRECT [[' + title_B2 + ']]\n\n[[Category:Unchanged cat]]',
                                runner)
@@ -58,7 +58,7 @@ def test_resolve_pages_and_run_commands():
                                title_C,
                                '#REDIRECT [[' + title_C2 + ']]\n\n[[Category:Already present cat]]\n[[Category:Removed cat]]',
                                runner)
-    base_C2 = set_page_wikitext('setup', # NOQA: F841 (unused)
+    base_C2 = set_page_wikitext('setup',  # NOQA: F841 (unused)
                                 title_C2,
                                 'Test page for the QuickCategories tool.\n[[Category:Unchanged cat]]\nBottom text',
                                 runner)
@@ -330,7 +330,7 @@ def test_with_missing_page_redirect_resolve():
                 {
                     'ns': 0,
                     'title': 'Redirect to missing page',
-                    'invalid': True, # if Runner doesn’t resolve redirect, it’ll return CommandTitleInvalid instead of CommandPageMissing
+                    'invalid': True,  # if Runner doesn’t resolve redirect, it’ll return CommandTitleInvalid instead of CommandPageMissing
                 },
                 {
                     'ns': 0,

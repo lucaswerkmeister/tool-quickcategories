@@ -1,4 +1,4 @@
-import mwparserfromhell # type: ignore
+import mwparserfromhell  # type: ignore
 from typing import Any, Union
 
 from siteinfo import CategoryInfo
@@ -227,7 +227,7 @@ class RemoveCategoryAction(CategoryAction):
                       isinstance(wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and
                       wikicode.nodes[index+1].value.startswith('\n')):
                     wikicode.nodes[index+1].value = wikicode.nodes[index+1].value[1:]
-                del wikicode.nodes[index] # this should happen *after* the above blocks, otherwise the indices get confusing
+                del wikicode.nodes[index]  # this should happen *after* the above blocks, otherwise the indices get confusing
                 break
         return str(wikicode)
 

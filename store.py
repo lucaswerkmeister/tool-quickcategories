@@ -1,6 +1,6 @@
 import datetime
-import mwapi # type: ignore
-import mwoauth # type: ignore
+import mwapi  # type: ignore
+import mwoauth  # type: ignore
 from typing import Optional, Sequence, Tuple
 
 from batch import NewBatch, StoredBatch, OpenBatch
@@ -32,7 +32,7 @@ def _local_user_from_session(session: mwapi.Session) -> LocalUser:
     response = session.get(**{'action': 'query',
                               'meta': 'userinfo',
                               'uiprop': 'centralids',
-                              'assert': 'user'}) # assert is a keyword, can’t use kwargs syntax :(
+                              'assert': 'user'})  # assert is a keyword, can’t use kwargs syntax :(
     user_name = response['query']['userinfo']['name']
     local_user_id = response['query']['userinfo']['id']
     global_user_id = response['query']['userinfo']['centralids']['CentralAuth']

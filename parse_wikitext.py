@@ -1,12 +1,12 @@
-import bs4 # type: ignore
+import bs4  # type: ignore
 import cachetools
 import flask
-import mwapi # type: ignore
+import mwapi  # type: ignore
 import threading
 from typing import Tuple
 
 
-summary_cache = cachetools.LRUCache(maxsize=1024) # type: cachetools.LRUCache[Tuple[str, str], flask.Markup]
+summary_cache = cachetools.LRUCache(maxsize=1024)  # type: cachetools.LRUCache[Tuple[str, str], flask.Markup]
 summary_cache_lock = threading.RLock()
 
 

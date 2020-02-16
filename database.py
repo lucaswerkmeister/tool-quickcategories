@@ -2,10 +2,10 @@ import contextlib
 import datetime
 import itertools
 import json
-import mwapi # type: ignore
-import mwoauth # type: ignore
+import mwapi  # type: ignore
+import mwoauth  # type: ignore
 import pymysql
-import requests_oauthlib # type: ignore
+import requests_oauthlib  # type: ignore
 from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
@@ -172,7 +172,7 @@ class DatabaseStore(BatchStore):
                                   FOR UPDATE''',
                                (batch.id,))
                 if cursor.fetchone():
-                    connection.commit() # finish the FOR UPDATE
+                    connection.commit()  # finish the FOR UPDATE
                     return
 
             assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
@@ -197,7 +197,7 @@ class DatabaseStore(BatchStore):
         with self.connect() as connection:
             if session:
                 local_user = _local_user_from_session(session)
-                localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user) # type: Optional[int]
+                localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)  # type: Optional[int]
             else:
                 localuser_id = None
             with connection.cursor() as cursor:
@@ -243,7 +243,7 @@ class DatabaseStore(BatchStore):
                                (now_utc_timestamp, DatabaseStore._COMMAND_STATUS_PLAN))
                 result = cursor.fetchone()
             if not result:
-                connection.commit() # finish the FOR UPDATE
+                connection.commit()  # finish the FOR UPDATE
                 return None
 
             with connection.cursor() as cursor:
@@ -272,7 +272,7 @@ class DatabaseStore(BatchStore):
     def _command_finish_to_row(self, command_finish: CommandFinish) -> Tuple[int, dict]:
         if isinstance(command_finish, CommandEdit):
             status = DatabaseStore._COMMAND_STATUS_EDIT
-            outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision} # type: dict
+            outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision}  # type: dict
         elif isinstance(command_finish, CommandNoop):
             status = DatabaseStore._COMMAND_STATUS_NOOP
             outcome = {'revision': command_finish.revision}
@@ -352,7 +352,7 @@ class DatabaseStore(BatchStore):
                                   blockinfo=outcome_dict['blockinfo'])
         elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
             if 'retry_after_utc_timestamp' in outcome_dict:
-                retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']) # type: Optional[datetime.datetime]
+                retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp'])  # type: Optional[datetime.datetime]
             else:
                 retry_after = None
             return CommandWikiReadOnly(id,
@@ -443,7 +443,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
         with self.store.connect() as connection:
-            command_ids = [] # List[int]
+            command_ids = []  # List[int]
 
             with connection.cursor() as cursor:
                 # the extra subquery layer below is necessary to work around a MySQL/MariaDB restriction;
@@ -464,7 +464,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                     command_ids.append(command_id)
 
             if not command_ids:
-                connection.commit() # finish the FOR UPDATE
+                connection.commit()  # finish the FOR UPDATE
                 return []
 
             with connection.cursor() as cursor:
@@ -577,14 +577,14 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
     def _row_to_background_run(self,
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
-                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]: # NOQA: E127 (indentation)
+                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:  # NOQA: E127 (indentation)
         background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
         if stopped_utc_timestamp:
             if stopped_user_name:
-                stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id) # type: Optional[LocalUser]
+                stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id)  # type: Optional[LocalUser]
             else:
                 stopped_local_user = None
-            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user) # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
+            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user)  # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
         else:
             background_stop = None
         return (background_start, background_stop)
@@ -642,7 +642,7 @@ class _LocalUserStore:
                            (local_user.user_name, domain_id, local_user.local_user_id, local_user.global_user_id,
                             local_user.user_name))
             localuser_id = cursor.lastrowid
-            if not localuser_id: # not returned in the ON DUPLICATE KEY UPDATE case, apparently
+            if not localuser_id:  # not returned in the ON DUPLICATE KEY UPDATE case, apparently
                 cursor.execute('''SELECT `localuser_id`
                                   FROM `localuser`
                                   WHERE `localuser_local_user_id` = %s

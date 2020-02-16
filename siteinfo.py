@@ -1,5 +1,5 @@
 import cachetools
-import mwapi # type: ignore
+import mwapi  # type: ignore
 import threading
 from typing import Dict, List, Tuple
 
@@ -45,7 +45,7 @@ def _get_siteinfo(session: mwapi.Session) -> _SiteInfo:
     return (category_info, messages)
 
 
-siteinfo_cache = cachetools.TTLCache(maxsize=1024, ttl=24*60*60) # type: cachetools.TTLCache[str, _SiteInfo]
+siteinfo_cache = cachetools.TTLCache(maxsize=1024, ttl=24*60*60)  # type: cachetools.TTLCache[str, _SiteInfo]
 siteinfo_cache_lock = threading.RLock()
 
 

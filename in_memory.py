@@ -1,6 +1,6 @@
 import datetime
-import mwapi # type: ignore
-import mwoauth # type: ignore
+import mwapi  # type: ignore
+import mwoauth  # type: ignore
 from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
@@ -18,15 +18,15 @@ class InMemoryStore(BatchStore):
     def __init__(self):
         self.next_batch_id = 1
         self.next_command_id = 1
-        self.batches = {} # type: Dict[int, StoredBatch]
-        self.background_sessions = {} # type: Dict[int, mwapi.Session]
-        self.background_suspensions = {} # type: Dict[int, datetime.datetime]
+        self.batches = {}  # type: Dict[int, StoredBatch]
+        self.background_sessions = {}  # type: Dict[int, mwapi.Session]
+        self.background_suspensions = {}  # type: Dict[int, datetime.datetime]
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
         local_user = _local_user_from_session(session)
 
-        command_plans = [] # type: List[CommandRecord]
+        command_plans = []  # type: List[CommandRecord]
         for command in new_batch.commands:
             command_plans.append(CommandPlan(self.next_command_id, command))
             self.next_command_id += 1
@@ -79,7 +79,7 @@ class InMemoryStore(BatchStore):
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
         stopped = now()
         if session:
-            local_user = _local_user_from_session(session) # type: Optional[LocalUser]
+            local_user = _local_user_from_session(session)  # type: Optional[LocalUser]
         else:
             local_user = None
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
@@ -123,7 +123,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
         return self.command_records[offset:offset+limit]
 
     def get_summary(self) -> Dict[Type[CommandRecord], int]:
-        ret = {} # type: Dict[Type[CommandRecord], int]
+        ret = {}  # type: Dict[Type[CommandRecord], int]
         for command_record in self.command_records:
             t = type(command_record)
             ret[t] = ret.get(t, 0) + 1

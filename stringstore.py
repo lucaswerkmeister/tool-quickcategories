@@ -26,7 +26,7 @@ class StringTableStore:
         self.id_column_name = id_column_name
         self.hash_column_name = hash_column_name
         self.string_column_name = string_column_name
-        self._cache = cachetools.LRUCache(maxsize=1024) # type: cachetools.LRUCache[str, int]
+        self._cache = cachetools.LRUCache(maxsize=1024)  # type: cachetools.LRUCache[str, int]
         self._cache_lock = threading.RLock()
 
     def _hash(self, string: str) -> int:
@@ -45,7 +45,7 @@ class StringTableStore:
                            (hash,))
             result = cursor.fetchone()
         if result:
-            connection.commit() # finish the FOR UPDATE
+            connection.commit()  # finish the FOR UPDATE
             return result[0]
 
         with connection.cursor() as cursor:

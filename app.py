@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import bs4 # type: ignore
+import bs4  # type: ignore
 import cachetools
 import datetime
 import flask
 import humanize
-import mwapi # type: ignore
-import mwoauth # type: ignore
+import mwapi  # type: ignore
+import mwoauth  # type: ignore
 import os
 import random
 import re
-import requests_oauthlib # type: ignore
+import requests_oauthlib  # type: ignore
 import string
 import threading
 import toolforge
@@ -49,7 +49,7 @@ if 'oauth' in app.config:
 
 if 'database' in app.config:
     from database import DatabaseStore
-    batch_store = DatabaseStore(app.config['database']) # type: BatchStore
+    batch_store = DatabaseStore(app.config['database'])  # type: BatchStore
 
     def sometimes_flush_querytime():
         if random.randrange(128) == 0:
@@ -63,13 +63,13 @@ if 'database' in app.config:
         def __call__(self, environ, start_response):
             return werkzeug.wsgi.ClosingIterator(self.app(environ, start_response), sometimes_flush_querytime)
 
-    app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app) # type: ignore # “cannot assign to a method”
+    app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app)  # type: ignore # “cannot assign to a method”
 else:
     from in_memory import InMemoryStore
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
     batch_store = InMemoryStore()
 
-stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60) # type: cachetools.TTLCache[Any, List[int]]
+stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, List[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
 
 
@@ -137,7 +137,7 @@ def authentication_area() -> flask.Markup:
 
     response = session.get(action='query',
                            meta=['userinfo', 'notifications'],
-                           notcrosswikisummary='', # TODO use =True after next mwapi release
+                           notcrosswikisummary='',  # TODO use =True after next mwapi release
                            notprop=['count'])
     user_name = response['query']['userinfo']['name']
     notifications = response['query']['notifications']['rawcount']
@@ -170,13 +170,13 @@ def can_start_background() -> bool:
 def can_stop_background() -> bool:
     return flask.g.can_stop_background
 
-@app.template_global() # TODO make domain part of Command and turn this into a template filter?
+@app.template_global()  # TODO make domain part of Command and turn this into a template filter?
 def render_command(command: Command, domain: str) -> flask.Markup:
     return flask.Markup(flask.render_template('command.html',
                                               domain=domain,
                                               command=command))
 
-@app.template_global() # TODO also turn into a template filter?
+@app.template_global()  # TODO also turn into a template filter?
 def render_command_record(command_record: CommandRecord, domain: str) -> flask.Markup:
     if isinstance(command_record, CommandPlan):
         command_record_markup = flask.render_template('command_plan.html',
@@ -247,7 +247,7 @@ def render_command_record_type(command_record_type: Type[CommandRecord]) -> flas
 
 @app.template_filter()
 def render_datetime(dt: datetime.datetime) -> flask.Markup:
-    naive_dt = dt.astimezone().replace(tzinfo=None) # humanize doesn’t support timezones :(
+    naive_dt = dt.astimezone().replace(tzinfo=None)  # humanize doesn’t support timezones :(
     return (flask.Markup(r'<time datetime="') +
             flask.Markup.escape(dt.isoformat()) +
             flask.Markup(r'" title="') +
@@ -333,7 +333,7 @@ def new_batch_from_commands():
                                          domain=domain,
                                          servername=servername), 400
     except Exception:
-        traceback.print_exc() # for possible later manual inspection
+        traceback.print_exc()  # for possible later manual inspection
         return flask.render_template('new_batch_error_domain_unreachable.html',
                                      domain=domain), 400
 
@@ -365,7 +365,7 @@ def new_batch_from_pagepile():
                                      message='No PagePile found for that ID.'), 404
     domain, pages = pile
 
-    if not is_wikimedia_domain(domain): # might be an obscure wiki we don’t support
+    if not is_wikimedia_domain(domain):  # might be an obscure wiki we don’t support
         return flask.render_template('new_batch_error_domain_unrecognized.html',
                                      domain=domain), 400
 
@@ -426,9 +426,9 @@ def batch(id: int):
             if e.code == 'mwoauth-invalid-authorization-invalid-user':
                 # user is viewing a batch for a wiki where they do not have a local user account
                 # treat as anonymous on the local wiki, but query Meta to find out if they’re a steward
-                local_user_id = None # type: Optional[int]
-                groups = [] # type: List[str]
-                meta_session = authenticated_session('meta.wikimedia.org') # type: mwapi.Session
+                local_user_id = None  # type: Optional[int]
+                groups = []  # type: List[str]
+                meta_session = authenticated_session('meta.wikimedia.org')  # type: mwapi.Session
                 meta_userinfo = meta_session.get(action='query',
                                                  meta='userinfo',
                                                  uiprop=['centralids'])['query']['userinfo']
@@ -659,7 +659,7 @@ def preferences():
         flask.session.pop('suggested-domains', None)
 
     if 'notifications' in flask.request.form:
-        flask.session.pop('notifications', None) # True is the default
+        flask.session.pop('notifications', None)  # True is the default
     else:
         flask.session['notifications'] = False
 
@@ -699,7 +699,7 @@ def query_times():
         return 'not allowed', 403
 
     if not isinstance(batch_store, DatabaseStore):
-        return '', 204 # no content
+        return '', 204  # no content
 
     until = now()
     since = until - datetime.timedelta(days=7)
