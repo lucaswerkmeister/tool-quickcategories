@@ -387,7 +387,7 @@ def new_batch_from_pagepile():
     actions = flask.request.form.get('actions')
     if not actions:
         return flask.render_template('new_batch_errort.html',
-                                     'The actions for this batch are missing.'), 400
+                                     message='The actions for this batch are missing.'), 400
     try:
         batch = parse_tpsv.parse_batch('\n'.join([page + '|' + actions
                                                   for page in pages]),
