@@ -195,9 +195,10 @@ class DatabaseStore(BatchStore):
         stopped = now()
         stopped_utc_timestamp = datetime_to_utc_timestamp(stopped)
         with self.connect() as connection:
+            localuser_id: Optional[int]
             if session:
                 local_user = _local_user_from_session(session)
-                localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)  # type: Optional[int]
+                localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
             else:
                 localuser_id = None
             with connection.cursor() as cursor:
@@ -270,9 +271,11 @@ class DatabaseStore(BatchStore):
         return batch, command_pending, session
 
     def _command_finish_to_row(self, command_finish: CommandFinish) -> Tuple[int, dict]:
+        status: int
+        outcome: dict
         if isinstance(command_finish, CommandEdit):
             status = DatabaseStore._COMMAND_STATUS_EDIT
-            outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision}  # type: dict
+            outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision}
         elif isinstance(command_finish, CommandNoop):
             status = DatabaseStore._COMMAND_STATUS_NOOP
             outcome = {'revision': command_finish.revision}
@@ -351,8 +354,9 @@ class DatabaseStore(BatchStore):
                                   auto=outcome_dict['auto'],
                                   blockinfo=outcome_dict['blockinfo'])
         elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+            retry_after: Optional[datetime.datetime]
             if 'retry_after_utc_timestamp' in outcome_dict:
-                retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp'])  # type: Optional[datetime.datetime]
+                retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp'])
             else:
                 retry_after = None
             return CommandWikiReadOnly(id,
@@ -443,7 +447,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
         with self.store.connect() as connection:
-            command_ids = []  # List[int]
+            command_ids: List[int] = []
 
             with connection.cursor() as cursor:
                 # the extra subquery layer below is necessary to work around a MySQL/MariaDB restriction;
@@ -579,12 +583,14 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
                                -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:  # NOQA: E127 (indentation)
         background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
+        background_stop: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
         if stopped_utc_timestamp:
+            stopped_local_user: Optional[LocalUser]
             if stopped_user_name:
-                stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id)  # type: Optional[LocalUser]
+                stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id)
             else:
                 stopped_local_user = None
-            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user)  # type: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
+            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user)
         else:
             background_stop = None
         return (background_start, background_stop)

@@ -14,7 +14,7 @@ _querytext_store = StringTableStore('querytext',
                                     'querytext_sql')
 
 
-_query_times = []  # type: List[Tuple[datetime.datetime, str, float]]
+_query_times: List[Tuple[datetime.datetime, str, float]] = []
 
 
 class QueryTimingCursor(Cursor):
@@ -60,7 +60,7 @@ class QueryTimingSSCursor(QueryTimingCursor, SSCursor):
 def flush_querytime(connection: Connection) -> None:
     query_times = _query_times.copy()
     _query_times.clear()
-    querytime_values = []  # type: List[Tuple[int, int, float]]
+    querytime_values: List[Tuple[int, int, float]] = []
     for dt, query, duration in query_times:
         utc_timestamp = datetime_to_utc_timestamp(dt)
         query_id = _querytext_store.acquire_id(connection, query)
@@ -83,7 +83,7 @@ def slow_queries(connection: Connection, since: datetime.datetime, until: dateti
                           ORDER BY `querytime_duration` DESC
                           LIMIT 50''',
                        (datetime_to_utc_timestamp(since), datetime_to_utc_timestamp(until)))
-        ret = []  # type: List[Tuple[datetime.datetime, float, str]]
+        ret: List[Tuple[datetime.datetime, float, str]] = []
         for utc_timestamp, duration, sql in cursor.fetchall():
             ret.append((utc_timestamp_to_datetime(utc_timestamp), duration, sql))
         return ret

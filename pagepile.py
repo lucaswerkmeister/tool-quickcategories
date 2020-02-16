@@ -7,9 +7,9 @@ import sitematrix
 
 def load_pagepile(session: mwapi.Session, id: int) -> Optional[Tuple[str, Sequence[str]]]:
     try:
-        params = {'id': id,
-                  'action': 'get_data',
-                  'format': 'json'}  # type: Dict[str, Union[int, str]]
+        params: Dict[str, Union[int, str]] = {'id': id,
+                                              'action': 'get_data',
+                                              'format': 'json'}
         r = requests.get('https://tools.wmflabs.org/pagepile/api.php', params=params)
         pile = r.json()
     except ValueError:

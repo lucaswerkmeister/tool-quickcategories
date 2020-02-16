@@ -13,10 +13,10 @@ _sitematrix_cache_lock = threading.RLock()
                    key=lambda session: '#sitematrix',
                    lock=_sitematrix_cache_lock)
 def _get_sitematrix(session: mwapi.Session) -> dict:
-    sitematrix = {
+    sitematrix: Dict[str, Dict[str, dict]] = {
         'by_dbname': {},
         'by_url': {},
-    }  # type: Dict[str, Dict[str, dict]]
+    }
     result = session.get(action='sitematrix',
                          formatversion=2)
     for k, v in result['sitematrix'].items():

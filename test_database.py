@@ -151,11 +151,11 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
         assert stopped_localuser is None
 
 
-command_unfinishes_and_rows = [
+command_unfinishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]] = [
     (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
     (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
-]  # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
-command_finishes_and_rows = [
+]
+command_finishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]] = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
@@ -167,7 +167,7 @@ command_finishes_and_rows = [
     (commandBlocked2, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
     (commandWikiReadOnly1, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance', 'retry_after_utc_timestamp': 1552749842})),
     (commandWikiReadOnly2, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
-]  # type: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]]
+]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
 def test_DatabaseStore_command_finish_to_row(command_finish, expected_row):

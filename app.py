@@ -47,9 +47,10 @@ except FileNotFoundError:
 if 'oauth' in app.config:
     consumer_token = mwoauth.ConsumerToken(app.config['oauth']['consumer_key'], app.config['oauth']['consumer_secret'])
 
+batch_store: BatchStore
 if 'database' in app.config:
     from database import DatabaseStore
-    batch_store = DatabaseStore(app.config['database'])  # type: BatchStore
+    batch_store = DatabaseStore(app.config['database'])
 
     def sometimes_flush_querytime():
         if random.randrange(128) == 0:
@@ -426,9 +427,9 @@ def batch(id: int):
             if e.code == 'mwoauth-invalid-authorization-invalid-user':
                 # user is viewing a batch for a wiki where they do not have a local user account
                 # treat as anonymous on the local wiki, but query Meta to find out if they’re a steward
-                local_user_id = None  # type: Optional[int]
-                groups = []  # type: List[str]
-                meta_session = authenticated_session('meta.wikimedia.org')  # type: mwapi.Session
+                local_user_id: Optional[int] = None
+                groups: List[str] = []
+                meta_session: mwapi.Session = authenticated_session('meta.wikimedia.org')
                 meta_userinfo = meta_session.get(action='query',
                                                  meta='userinfo',
                                                  uiprop=['centralids'])['query']['userinfo']

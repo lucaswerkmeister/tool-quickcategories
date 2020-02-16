@@ -26,7 +26,7 @@ class StringTableStore:
         self.id_column_name = id_column_name
         self.hash_column_name = hash_column_name
         self.string_column_name = string_column_name
-        self._cache = cachetools.LRUCache(maxsize=1024)  # type: cachetools.LRUCache[str, int]
+        self._cache: cachetools.LRUCache[str, int] = cachetools.LRUCache(maxsize=1024)
         self._cache_lock = threading.RLock()
 
     def _hash(self, string: str) -> int:
