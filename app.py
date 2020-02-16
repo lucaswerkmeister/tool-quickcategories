@@ -342,7 +342,7 @@ def new_batch_from_commands():
         batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=title)
     except parse_tpsv.ParseBatchError as e:
         return flask.render_template('new_batch_error.html',
-                                     message=str(e))
+                                     message=str(e)), 400
 
     batch.cleanup()
 
@@ -394,7 +394,7 @@ def new_batch_from_pagepile():
                                        title=title)
     except parse_tpsv.ParseBatchError as e:
         return flask.render_template('new_batch_error.html',
-                                     message=str(e))
+                                     message=str(e)), 400
 
     batch.cleanup()
 
