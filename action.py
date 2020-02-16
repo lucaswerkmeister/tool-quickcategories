@@ -95,10 +95,10 @@ class AddCategoryAction(CategoryAction):
             wikicode.append(wikilink)
         return str(wikicode)
 
-    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+    def _accept_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         return self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info)
 
-    def _make_category_link(self, category_info: CategoryInfo):
+    def _make_category_link(self, category_info: CategoryInfo) -> Wikilink:
         return Wikilink(category_info[0] + ':' + self.category)
 
     def is_minor(self) -> bool:
@@ -139,7 +139,7 @@ class AddCategoryWithSortKeyAction(AddCategoryAndSortKeyAction):
 
     sort_key_symbol = '#'
 
-    def _make_category_link(self, category_info: CategoryInfo):
+    def _make_category_link(self, category_info: CategoryInfo) -> Wikilink:
         if not self.sort_key:
             return super()._make_category_link(category_info)
         return Wikilink(category_info[0] + ':' + self.category,
@@ -160,7 +160,7 @@ class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
 
     sort_key_symbol = '##'
 
-    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+    def _accept_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         if super()._accept_category_link(wikilink, category_info):
             if wikilink.text is None:
                 wikilink.text = self.sort_key
@@ -168,7 +168,7 @@ class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
         else:
             return False
 
-    def _make_category_link(self, category_info: CategoryInfo):
+    def _make_category_link(self, category_info: CategoryInfo) -> Wikilink:
         if not self.sort_key:
             return super()._make_category_link(category_info)
         return Wikilink(category_info[0] + ':' + self.category,
@@ -188,14 +188,14 @@ class AddCategoryReplaceSortKeyAction(AddCategoryAndSortKeyAction):
 
     sort_key_symbol = '###'
 
-    def _accept_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+    def _accept_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         if super()._accept_category_link(wikilink, category_info):
             wikilink.text = self.sort_key
             return True
         else:
             return False
 
-    def _make_category_link(self, category_info: CategoryInfo):
+    def _make_category_link(self, category_info: CategoryInfo) -> Wikilink:
         return Wikilink(category_info[0] + ':' + self.category,
                         self.sort_key)
 
@@ -232,7 +232,7 @@ class RemoveCategoryAction(CategoryAction):
                 break
         return str(wikicode)
 
-    def _reject_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+    def _reject_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         return self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info)
 
     def is_minor(self) -> bool:
@@ -250,7 +250,7 @@ class RemoveCategoryWithSortKeyAction(RemoveCategoryAction):
         self.sort_key = sort_key
         super().__init__(category)
 
-    def _reject_category_link(self, wikilink, category_info: CategoryInfo) -> bool:
+    def _reject_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         return super()._reject_category_link(wikilink, category_info) and \
             wikilink.text == self.sort_key
 
