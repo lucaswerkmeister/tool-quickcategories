@@ -1,4 +1,5 @@
 import mwparserfromhell  # type: ignore
+from mwparserfromhell.nodes.wikilink import Wikilink  # type: ignore
 from typing import Any, Union
 
 from siteinfo import CategoryInfo
@@ -39,7 +40,7 @@ class CategoryAction(Action):
         self.category = category
         super().__init__()
 
-    def _is_category(self, wikilink: mwparserfromhell.nodes.wikilink.Wikilink, category_info: CategoryInfo) -> bool:
+    def _is_category(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         for category_namespace_name in category_info[1]:
             if wikilink.startswith('[[' + category_namespace_name + ':'):
                 return True
@@ -98,7 +99,7 @@ class AddCategoryAction(CategoryAction):
         return self._same_category(wikilink.title.split(':', 1)[1], self.category, category_info)
 
     def _make_category_link(self, category_info: CategoryInfo):
-        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category)
+        return Wikilink(category_info[0] + ':' + self.category)
 
     def is_minor(self) -> bool:
         return True
@@ -141,8 +142,8 @@ class AddCategoryWithSortKeyAction(AddCategoryAndSortKeyAction):
     def _make_category_link(self, category_info: CategoryInfo):
         if not self.sort_key:
             return super()._make_category_link(category_info)
-        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
-                                                        self.sort_key)
+        return Wikilink(category_info[0] + ':' + self.category,
+                        self.sort_key)
 
     def __repr__(self) -> str:
         return 'AddCategoryWithSortKeyAction(' + \
@@ -170,8 +171,8 @@ class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
     def _make_category_link(self, category_info: CategoryInfo):
         if not self.sort_key:
             return super()._make_category_link(category_info)
-        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
-                                                        self.sort_key)
+        return Wikilink(category_info[0] + ':' + self.category,
+                        self.sort_key)
 
     def __repr__(self) -> str:
         return 'AddCategoryProvideSortKeyAction(' + \
@@ -195,8 +196,8 @@ class AddCategoryReplaceSortKeyAction(AddCategoryAndSortKeyAction):
             return False
 
     def _make_category_link(self, category_info: CategoryInfo):
-        return mwparserfromhell.nodes.wikilink.Wikilink(category_info[0] + ':' + self.category,
-                                                        self.sort_key)
+        return Wikilink(category_info[0] + ':' + self.category,
+                        self.sort_key)
 
     def __repr__(self) -> str:
         return 'AddCategoryReplaceSortKeyAction(' + \
@@ -212,7 +213,7 @@ class RemoveCategoryAction(CategoryAction):
     def apply(self, wikitext: str, category_info: CategoryInfo) -> str:
         wikicode = mwparserfromhell.parse(wikitext)
         for index, wikilink in enumerate(wikicode.nodes):
-            if not isinstance(wikilink, mwparserfromhell.nodes.wikilink.Wikilink):
+            if not isinstance(wikilink, Wikilink):
                 continue
             if not self._is_category(wikilink, category_info):
                 continue
