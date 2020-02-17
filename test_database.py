@@ -34,7 +34,7 @@ fake_session = FakeSession({
 fake_session.host = 'https://commons.wikimedia.org'
 
 
-def test_DatabaseStore_store_batch(database_connection_params):
+def test_DatabaseStore_store_batch(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     command2 = open_batch.command_records.get_slice(1, 1)[0]
@@ -42,12 +42,12 @@ def test_DatabaseStore_store_batch(database_connection_params):
     with store.connect() as connection:
         with connection.cursor() as cursor:
             cursor.execute('SELECT `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
-            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cursor.fetchone()
+            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cast(Tuple[Any, ...], cursor.fetchone())
             assert command2_page_title == command2.command.page.title
             assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_update_batch(database_connection_params, frozen_time: Any):
+def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_time: Any):
     store = DatabaseStore(database_connection_params)
     stored_batch = store.store_batch(newBatch1, fake_session)
     loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
@@ -71,33 +71,33 @@ def test_DatabaseStore_update_batch(database_connection_params, frozen_time: Any
     reloaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
     assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseStore_start_background_inserts_row(database_connection_params):
+def test_DatabaseStore_start_background_inserts_row(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        user_name, auth = cursor.fetchone()
+        user_name, auth = cast(Tuple[Any, ...], cursor.fetchone())
         assert user_name == 'Lucas Werkmeister'
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
 
-def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params):
+def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
         assert cursor.rowcount == 1
-        background_id, background_started_utc_timestamp = cursor.fetchone()
+        background_id, background_started_utc_timestamp = cast(Tuple[Any, ...], cursor.fetchone())
     store.start_background(open_batch, fake_session)  # should be no-op
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
         assert cursor.rowcount == 1
         assert (background_id, background_started_utc_timestamp) == cursor.fetchone()
 
-def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params):
+def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -105,12 +105,12 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        auth, stopped_utc_timestamp, stopped_user_name = cursor.fetchone()
+        auth, stopped_utc_timestamp, stopped_user_name = cast(Tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_user_name == 'Lucas Werkmeister'
         assert auth is None
 
-def test_DatabaseStore_stop_background_without_session(database_connection_params):
+def test_DatabaseStore_stop_background_without_session(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -118,11 +118,11 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser = cast(Tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
-def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params):
+def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -137,7 +137,7 @@ def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(data
         cursor.execute('SELECT 1 FROM `background` WHERE `background_stopped_utc_timestamp` IS NULL')
         assert cursor.rowcount == 0
 
-def test_DatabaseStore_closing_batch_stops_background(database_connection_params):
+def test_DatabaseStore_closing_batch_stops_background(database_connection_params: dict):
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -147,7 +147,7 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser = cursor.fetchone()
+        stopped_utc_timestamp, stopped_localuser = cast(Tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
@@ -184,7 +184,7 @@ def test_DatabaseStore_row_to_command_record(expected_command_record, row):
     assert expected_command_record == actual_command_record
 
 
-def test_LocalUserStore_store_two_users(database_connection_params):
+def test_LocalUserStore_store_two_users(database_connection_params: dict):
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -211,7 +211,7 @@ def test_LocalUserStore_store_two_users(database_connection_params):
     finally:
         connection.close()
 
-def test_LocalUserStore_store_same_user_twice(database_connection_params):
+def test_LocalUserStore_store_same_user_twice(database_connection_params: dict):
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -231,7 +231,7 @@ def test_LocalUserStore_store_same_user_twice(database_connection_params):
     finally:
         connection.close()
 
-def test_LocalUserStore_store_renamed_user(database_connection_params):
+def test_LocalUserStore_store_renamed_user(database_connection_params: dict):
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')

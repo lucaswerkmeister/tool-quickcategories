@@ -19,7 +19,7 @@ def test_StringTableStore_hash(string, expected_hash):
 
     assert expected_hash == actual_hash
 
-def test_StringTableStore_acquire_id_database(database_connection_params):
+def test_StringTableStore_acquire_id_database(database_connection_params: dict):
     connection = pymysql.connect(**database_connection_params)
     try:
         store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
