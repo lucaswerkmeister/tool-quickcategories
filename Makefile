@@ -2,5 +2,5 @@
 
 check:
 	flake8
-	MYPYPATH=stubs/ mypy .
+	mypy .
 	pytest
