@@ -31,20 +31,20 @@ import app as quickcategories
     # fallback used in new_batch_from_commands() if form parameter is missing
     ('(not provided)', False),
 ])
-def test_is_wikimedia_domain(domain, expected):
+def test_is_wikimedia_domain(domain: str, expected: bool) -> None:
     assert expected == quickcategories.is_wikimedia_domain(domain)
 
 
-def test_slice_from_args_default():
+def test_slice_from_args_default() -> None:
     assert quickcategories.slice_from_args({}) == (0, 50)
 
-def test_slice_from_args_with_offset():
+def test_slice_from_args_with_offset() -> None:
     assert quickcategories.slice_from_args({'offset': '50'}) == (50, 50)
 
-def test_slice_from_args_with_limit():
+def test_slice_from_args_with_limit() -> None:
     assert quickcategories.slice_from_args({'limit': '10'}) == (0, 10)
 
-def test_slice_from_args_with_offset_and_limit():
+def test_slice_from_args_with_offset_and_limit() -> None:
     assert quickcategories.slice_from_args({'offset': '25', 'limit': '10'}) == (25, 10)
 
 @pytest.mark.parametrize('offset', [
@@ -52,7 +52,7 @@ def test_slice_from_args_with_offset_and_limit():
     'one hundred',
     '; DROP DATABASE; --',
 ])
-def test_slice_from_args_with_invalid_offset(offset):
+def test_slice_from_args_with_invalid_offset(offset: str) -> None:
     assert quickcategories.slice_from_args({'offset': offset}) == (0, 50)
 
 @pytest.mark.parametrize('limit, effective_limit', [
@@ -61,12 +61,12 @@ def test_slice_from_args_with_invalid_offset(offset):
     ('two million', 50),
     ('; DROP DATABASE; --', 50),
 ])
-def test_slice_from_args_with_invalid_limit(limit, effective_limit):
+def test_slice_from_args_with_invalid_limit(limit: str, effective_limit: int) -> None:
     assert quickcategories.slice_from_args({'limit': limit}) == (0, effective_limit)
 
 
-def test_steward_global_user_ids_Sjoerddebruin(internet_connection: None):
+def test_steward_global_user_ids_Sjoerddebruin(internet_connection: None) -> None:
     assert 8133267 in quickcategories.steward_global_user_ids()
 
-def test_steward_global_user_ids_Lucas_Werkmeister(internet_connection: None):
+def test_steward_global_user_ids_Lucas_Werkmeister(internet_connection: None) -> None:
     assert 46054761 not in quickcategories.steward_global_user_ids()
