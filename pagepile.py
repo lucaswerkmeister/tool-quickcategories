@@ -1,6 +1,6 @@
 import mwapi  # type: ignore
 import requests
-from typing import Dict, Iterator, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
 
 import sitematrix
 
@@ -21,7 +21,7 @@ def load_pagepile(session: mwapi.Session, id: int) -> Optional[Tuple[str, Sequen
     return domain, pages
 
 
-def create_pagepile(session: mwapi.Session, domain: str, pages: Iterator[str]) -> int:
+def create_pagepile(session: mwapi.Session, domain: str, pages: Iterable[str]) -> int:
     r = requests.post('https://tools.wmflabs.org/pagepile/api.php', data={
         'action': 'create_pile_with_data',
         'wiki': sitematrix.domain_to_dbname(session, domain),
