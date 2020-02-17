@@ -9,6 +9,7 @@ import signal
 import sys
 import time
 import toolforge
+from typing import Any
 import yaml
 
 from command import CommandFailure
@@ -41,7 +42,7 @@ else:
 
 
 stopped = False
-def on_sigterm(signalnum, frame):
+def on_sigterm(signalnum: int, frame: Any) -> None:
     global stopped
     stopped = True
     print('Received SIGTERM, will stop once the current command is done', flush=True)
