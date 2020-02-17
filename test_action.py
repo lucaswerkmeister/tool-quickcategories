@@ -75,7 +75,7 @@ def test_AddCategoryAction_apply_case_sensitive():
     assert expected == action.apply(wikitext, ('Category', ['Category'], 'case-sensitive'))
 
 def test_AddCategoryAction_summary():
-    assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test]]'
+    assert AddCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '+[[Kategorie:Test]]'
 
 def test_AddCategoryAction_is_minor():
     assert AddCategoryAction('Test').is_minor()
@@ -114,7 +114,7 @@ def test_AddCategoryAndSortKeyAction_init_empty_sort_key(clazz):
 
 @pytest.mark.parametrize('clazz', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
 def test_AddCategoryAndSortKeyAction_summary(clazz):
-    assert clazz('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'])) == '+[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
+    assert clazz('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '+[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
 
 
 @pytest.mark.parametrize('wikitext, expected', [
@@ -248,7 +248,7 @@ def test_RemoveCategoryAction_apply_case_sensitive():
     assert wikitext == action.apply(wikitext, ('Category', ['Category'], 'case-sensitive'))
 
 def test_RemoveCategoryAction_summary():
-    assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test]]'
+    assert RemoveCategoryAction('Test').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '-[[Kategorie:Test]]'
 
 def test_RemoveCategoryAction_is_minor():
     assert not RemoveCategoryAction('Test').is_minor()
@@ -285,7 +285,7 @@ def test_RemoveCategoryWithSortKeyAction_init_empty_sort_key():
         RemoveCategoryWithSortKeyAction('Category', '')
 
 def test_RemoveCategoryWithSortKeyAction_summary():
-    assert RemoveCategoryWithSortKeyAction('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'])) == '-[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
+    assert RemoveCategoryWithSortKeyAction('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '-[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
 
 @pytest.mark.parametrize('wikitext, expected', [
     ('', ''),
