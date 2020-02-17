@@ -16,7 +16,7 @@ class Runner():
         self.summary_batch_title = summary_batch_title
         self.summary_batch_link = summary_batch_link
 
-    def resolve_pages(self, pages: List[Page]):
+    def resolve_pages(self, pages: List[Page]) -> None:
         pages_with_resolve_redirects: List[Page] = []
         pages_without_resolve_redirects: List[Page] = []
 
@@ -34,7 +34,7 @@ class Runner():
     def do_resolve_redirects(self, resolve_redirects: Optional[bool]) -> bool:
         return resolve_redirects is True  # None is equivalent to False
 
-    def resolve_pages_of_one_kind(self, pages: List[Page]):
+    def resolve_pages_of_one_kind(self, pages: List[Page]) -> None:
         assert pages
         assert len(pages) <= 50
 
