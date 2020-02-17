@@ -2,7 +2,7 @@ import datetime
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor, SSCursor
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
 
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -41,7 +41,7 @@ class QueryTimingCursor(Cursor):
         _query_times.append((now(), query, end-begin))
         return ret
 
-    def executemany(self, query: str, args) -> int:
+    def executemany(self, query: str, args: Iterable[Any]) -> int:
         self._in_executemany = True
         try:
             begin = time.time()
