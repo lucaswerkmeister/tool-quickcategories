@@ -8,15 +8,15 @@ from pagepile import load_pagepile, create_pagepile
 session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
 
-def test_load_pagepile_not_empty(internet_connection):
+def test_load_pagepile_not_empty(internet_connection: None):
     pile = load_pagepile(session, 24289)
     assert pile == ('ga.wikipedia.org', ['Rose Hill, Derby'])
 
-def test_load_pagepile_empty(internet_connection):
+def test_load_pagepile_empty(internet_connection: None):
     pile = load_pagepile(session, 12345)
     assert pile == ('www.wikidata.org', [])
 
-def test_load_pagepile_unicode(internet_connection):
+def test_load_pagepile_unicode(internet_connection: None):
     pile = load_pagepile(session, 24172)
     # note: the order of the following list is not the same as on the HTML view –
     # HTML orders by internal ID, JSON by namespace and title
@@ -33,11 +33,11 @@ def test_load_pagepile_unicode(internet_connection):
                                          'המטרופולין של קנזס סיטי',
                                          'המטרופולין של שיקגו'])
 
-def test_load_pagepile_error(internet_connection):
+def test_load_pagepile_error(internet_connection: None):
     assert load_pagepile(session, 1234) is None
 
 
-def test_create_pagepile_and_load_pagepile(internet_connection):
+def test_create_pagepile_and_load_pagepile(internet_connection: None):
     if 'TEST_CREATE_PAGEPILE' not in os.environ:
         pytest.skip('Not creating a new PagePile for this test')
 

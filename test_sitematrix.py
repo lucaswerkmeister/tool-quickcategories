@@ -97,7 +97,7 @@ def test_dbname_to_domain_warns_for_fake_session_with_too_many_sites():
         dbname_to_domain(fake_session_with_too_many_sites, 'enwiki') == 'en.wikipedia.org'
 
 
-def test_dbname_to_domain_real_session(internet_connection):
+def test_dbname_to_domain_real_session(internet_connection: None):
     session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
     assert dbname_to_domain(session, 'enwiki') == 'en.wikipedia.org'
@@ -118,7 +118,7 @@ def test_domain_to_dbname_warns_for_fake_session_with_too_many_sites():
         domain_to_dbname(fake_session_with_too_many_sites, 'en.wikipedia.org') == 'enwiki'
 
 
-def test_domain_to_dbname_real_session(internet_connection):
+def test_domain_to_dbname_real_session(internet_connection: None):
     session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
     assert domain_to_dbname(session, 'en.wikipedia.org') == 'enwiki'

@@ -65,8 +65,8 @@ def test_slice_from_args_with_invalid_limit(limit, effective_limit):
     assert quickcategories.slice_from_args({'limit': limit}) == (0, effective_limit)
 
 
-def test_steward_global_user_ids_Sjoerddebruin(internet_connection):
+def test_steward_global_user_ids_Sjoerddebruin(internet_connection: None):
     assert 8133267 in quickcategories.steward_global_user_ids()
 
-def test_steward_global_user_ids_Lucas_Werkmeister(internet_connection):
+def test_steward_global_user_ids_Lucas_Werkmeister(internet_connection: None):
     assert 46054761 not in quickcategories.steward_global_user_ids()
