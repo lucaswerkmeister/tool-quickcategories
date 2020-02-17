@@ -2,13 +2,14 @@ import datetime
 import freezegun  # type: ignore
 import pymysql
 import pytest  # type: ignore
+from typing import Iterator
 
 from querytime import QueryTimingCursor, QueryTimingSSCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
 from timestamp import now, utc_timestamp_to_datetime
 
 
 @pytest.fixture(autouse=True)
-def clean_querytime():
+def clean_querytime() -> Iterator[None]:
     with _querytext_store._cache_lock:
         _querytext_store._cache.clear()
     _query_times.clear()
@@ -19,7 +20,7 @@ def clean_querytime():
 
 
 @pytest.fixture(params=[QueryTimingCursor, QueryTimingSSCursor])
-def database_connection_params_with_cursorclass(database_connection_params, request):
+def database_connection_params_with_cursorclass(database_connection_params, request) -> Iterator[dict]:
     params = database_connection_params.copy()
     params['cursorclass'] = request.param
     yield params

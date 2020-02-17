@@ -1,5 +1,6 @@
 import mwapi  # type: ignore
 import pytest  # type: ignore
+from typing import Iterator
 
 from sitematrix import dbname_to_domain, domain_to_dbname, _sitematrix_cache, _sitematrix_cache_lock
 
@@ -7,7 +8,7 @@ from test_utils import FakeSession
 
 
 @pytest.fixture(autouse=True)
-def clean_sitematrix():
+def clean_sitematrix() -> Iterator[None]:
     with _sitematrix_cache_lock:
         _sitematrix_cache.clear()
     yield

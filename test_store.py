@@ -2,6 +2,7 @@ import datetime
 import mwoauth  # type: ignore
 import pytest  # type: ignore
 import random
+from typing import Iterator
 
 from batch import NewBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -9,6 +10,7 @@ from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
 from page import Page
+from store import BatchStore
 from timestamp import now
 
 from test_action import addCategory1
@@ -37,7 +39,7 @@ fake_session.host = 'https://commons.wikimedia.org'
 
 
 @pytest.fixture(params=[InMemoryStore, DatabaseStore])
-def store(request):
+def store(request) -> Iterator[BatchStore]:
     if request.param is InMemoryStore:
         yield InMemoryStore()
     elif request.param is DatabaseStore:

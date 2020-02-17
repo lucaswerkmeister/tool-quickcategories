@@ -6,16 +6,17 @@ import pytest  # type: ignore
 import random
 import re
 import string
+from typing import Any, Iterator
 
 
 @pytest.fixture
-def frozen_time():
+def frozen_time() -> Iterator[Any]:
     with freezegun.freeze_time() as frozen_time:
         yield frozen_time
 
 
 @pytest.fixture
-def internet_connection():
+def internet_connection() -> Iterator[None]:
     """No-value fixture to skip tests if no internet connection is available."""
     try:
         yield
@@ -24,7 +25,7 @@ def internet_connection():
 
 
 @pytest.fixture(scope="module")
-def fresh_database_connection_params():
+def fresh_database_connection_params() -> Iterator[dict]:
     if 'MARIADB_ROOT_PASSWORD' not in os.environ:
         pytest.skip('MariaDB credentials not provided')
     connection = pymysql.connect(host='localhost',
@@ -56,7 +57,7 @@ def fresh_database_connection_params():
 
 
 @pytest.fixture
-def database_connection_params(fresh_database_connection_params):
+def database_connection_params(fresh_database_connection_params) -> Iterator[dict]:
     connection = pymysql.connect(**fresh_database_connection_params)
     try:
         with open('tables.sql') as tables:
