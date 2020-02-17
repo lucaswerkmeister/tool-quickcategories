@@ -12,22 +12,22 @@ removeCategory1 = RemoveCategoryAction('Cat 1')
 removeCategoryWithSortKey1 = RemoveCategoryWithSortKeyAction('Cat 1', 'sort key')
 
 
-@pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_empty(clazz):
+@pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
+def test_CategoryAction_init_empty(class_):
     with pytest.raises(AssertionError):
-        clazz('')
+        class_('')
 
-@pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_wikilink(clazz):
+@pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
+def test_CategoryAction_init_wikilink(class_):
     with pytest.raises(AssertionError):
-        clazz('[[Category:Cat 1]]')
+        class_('[[Category:Cat 1]]')
     with pytest.raises(AssertionError):
-        clazz('[[other link]]')
+        class_('[[other link]]')
 
-@pytest.mark.parametrize('clazz', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_category_namespace(clazz):
+@pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
+def test_CategoryAction_init_category_namespace(class_):
     with pytest.raises(AssertionError):
-        clazz('Category:Cat 1')
+        class_('Category:Cat 1')
 
 
 @pytest.mark.parametrize('wikitext, expected', [
@@ -107,14 +107,14 @@ def test_AddCategoryAction_repr():
     assert eval(repr(addCategory1)) == addCategory1
 
 
-@pytest.mark.parametrize('clazz', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
-def test_AddCategoryAndSortKeyAction_init_empty_sort_key(clazz):
+@pytest.mark.parametrize('class_', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
+def test_AddCategoryAndSortKeyAction_init_empty_sort_key(class_):
     with pytest.raises(AssertionError):
-        clazz('Category', '')
+        class_('Category', '')
 
-@pytest.mark.parametrize('clazz', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
-def test_AddCategoryAndSortKeyAction_summary(clazz):
-    assert clazz('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '+[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
+@pytest.mark.parametrize('class_', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
+def test_AddCategoryAndSortKeyAction_summary(class_):
+    assert class_('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '+[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
 
 
 @pytest.mark.parametrize('wikitext, expected', [
