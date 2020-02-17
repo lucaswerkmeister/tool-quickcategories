@@ -15,7 +15,7 @@ from timestamp import now
 
 class InMemoryStore(BatchStore):
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.next_batch_id = 1
         self.next_command_id = 1
         self.batches: Dict[int, StoredBatch] = {}
@@ -115,7 +115,7 @@ class InMemoryStore(BatchStore):
 
 class _BatchCommandRecordsList(BatchCommandRecords):
 
-    def __init__(self, command_records: List[CommandRecord], batch_id: int, store: InMemoryStore):
+    def __init__(self, command_records: List[CommandRecord], batch_id: int, store: InMemoryStore) -> None:
         self.command_records = command_records
         self.batch_id = batch_id
         self.store = store
@@ -180,7 +180,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
-    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]], store: InMemoryStore):
+    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]], store: InMemoryStore) -> None:
         self.background_runs = background_runs
         self.store = store
 

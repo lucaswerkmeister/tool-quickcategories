@@ -4,7 +4,7 @@ from typing import Any
 class LocalUser:
     """A user account local to one wiki."""
 
-    def __init__(self, user_name: str, domain: str, local_user_id: int, global_user_id: int):
+    def __init__(self, user_name: str, domain: str, local_user_id: int, global_user_id: int) -> None:
         self.user_name = user_name
         self.domain = domain
         self.local_user_id = local_user_id

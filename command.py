@@ -9,7 +9,7 @@ from siteinfo import CategoryInfo
 class Command:
     """A list of actions to perform on a page."""
 
-    def __init__(self, page: Page, actions: List['Action']):
+    def __init__(self, page: Page, actions: List['Action']) -> None:
         self.page = page
         self.actions = actions
 
@@ -55,7 +55,7 @@ class Command:
 class CommandRecord:
     """A command that was recorded in some store."""
 
-    def __init__(self, id: int, command: Command):
+    def __init__(self, id: int, command: Command) -> None:
         self.id = id
         self.command = command
 
@@ -105,7 +105,7 @@ class CommandSuccess(CommandFinish):
 class CommandEdit(CommandSuccess):
     """A command that resulted in an edit on a page."""
 
-    def __init__(self, id: int, command: Command, base_revision: int, revision: int):
+    def __init__(self, id: int, command: Command, base_revision: int, revision: int) -> None:
         assert base_revision < revision
         super().__init__(id, command)
         self.base_revision = base_revision
@@ -129,7 +129,7 @@ class CommandEdit(CommandSuccess):
 class CommandNoop(CommandSuccess):
     """A command that resulted in no change to a page."""
 
-    def __init__(self, id: int, command: Command, revision: int):
+    def __init__(self, id: int, command: Command, revision: int) -> None:
         super().__init__(id, command)
         self.revision = revision
 
@@ -182,7 +182,7 @@ class CommandFailure(CommandFinish):
 class CommandPageMissing(CommandFailure):
     """A command that failed because the specified page was found to be missing at the time."""
 
-    def __init__(self, id: int, command: Command, curtimestamp: str):
+    def __init__(self, id: int, command: Command, curtimestamp: str) -> None:
         super().__init__(id, command)
         self.curtimestamp = curtimestamp
 
@@ -211,7 +211,7 @@ class CommandPageMissing(CommandFailure):
 class CommandTitleInvalid(CommandFailure):
     """A command that failed because the specified title was invalid."""
 
-    def __init__(self, id: int, command: Command, curtimestamp: str):
+    def __init__(self, id: int, command: Command, curtimestamp: str) -> None:
         super().__init__(id, command)
         self.curtimestamp = curtimestamp
 
@@ -240,7 +240,7 @@ class CommandTitleInvalid(CommandFailure):
 class CommandPageProtected(CommandFailure):
     """A command that failed because the specified page was protected at the time."""
 
-    def __init__(self, id: int, command: Command, curtimestamp: str):
+    def __init__(self, id: int, command: Command, curtimestamp: str) -> None:
         super().__init__(id, command)
         self.curtimestamp = curtimestamp
 
@@ -292,7 +292,7 @@ class CommandEditConflict(CommandFailure):
 class CommandMaxlagExceeded(CommandFailure):
     """A command that failed because replication lag in the database cluster was too high."""
 
-    def __init__(self, id: int, command: Command, retry_after: datetime.datetime):
+    def __init__(self, id: int, command: Command, retry_after: datetime.datetime) -> None:
         super().__init__(id, command)
         self.retry_after = retry_after
 
@@ -321,7 +321,7 @@ class CommandMaxlagExceeded(CommandFailure):
 class CommandBlocked(CommandFailure):
     """A command that failed because the user or IP address was blocked."""
 
-    def __init__(self, id: int, command: Command, auto: bool, blockinfo: Optional[dict]):
+    def __init__(self, id: int, command: Command, auto: bool, blockinfo: Optional[dict]) -> None:
         super().__init__(id, command)
         self.auto = auto
         self.blockinfo = blockinfo
@@ -356,7 +356,7 @@ class CommandBlocked(CommandFailure):
 class CommandWikiReadOnly(CommandFailure):
     """A command that failed because the wiki was in read-only mode."""
 
-    def __init__(self, id: int, command: Command, reason: Optional[str], retry_after: Optional[datetime.datetime]):
+    def __init__(self, id: int, command: Command, reason: Optional[str], retry_after: Optional[datetime.datetime]) -> None:
         super().__init__(id, command)
         self.reason = reason
         self.retry_after = retry_after

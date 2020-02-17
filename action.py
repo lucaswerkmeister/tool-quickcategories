@@ -32,7 +32,7 @@ class CategoryAction(Action):
 
     symbol = ''
 
-    def __init__(self, category: str):
+    def __init__(self, category: str) -> None:
         assert category, 'category should not be empty'
         assert not category.startswith('Category:'), 'category should not include namespace'
         assert '[' not in category, 'category should not be a wikilink'
@@ -113,7 +113,7 @@ class AddCategoryAndSortKeyAction(AddCategoryAction):
 
     sort_key_symbol = ''
 
-    def __init__(self, category: str, sort_key: Union[str, None]):
+    def __init__(self, category: str, sort_key: Union[str, None]) -> None:
         assert sort_key != '', 'sort key cannot be the empty string'
         self.sort_key = sort_key
         super().__init__(category)
@@ -245,7 +245,7 @@ class RemoveCategoryAction(CategoryAction):
 class RemoveCategoryWithSortKeyAction(RemoveCategoryAction):
     """An action to remove a category from the wikitext of a page if it matches a certain sort key."""
 
-    def __init__(self, category: str, sort_key: Union[str, None]):
+    def __init__(self, category: str, sort_key: Union[str, None]) -> None:
         assert sort_key != '', 'sort key cannot be the empty string'
         self.sort_key = sort_key
         super().__init__(category)

@@ -9,7 +9,7 @@ import siteinfo
 
 class Runner():
 
-    def __init__(self, session: mwapi.Session, summary_batch_title: Optional[str] = None, summary_batch_link: Optional[str] = None):
+    def __init__(self, session: mwapi.Session, summary_batch_title: Optional[str] = None, summary_batch_link: Optional[str] = None) -> None:
         self.session = session
         self.csrf_token = session.get(action='query',
                                       meta='tokens')['query']['tokens']['csrftoken']

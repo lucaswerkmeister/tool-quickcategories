@@ -36,7 +36,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_PAGE_PROTECTED = 134
     _COMMAND_STATUS_TITLE_INVALID = 135
 
-    def __init__(self, connection_params: dict):
+    def __init__(self, connection_params: dict) -> None:
         connection_params.setdefault('charset', 'utf8mb4')
         self.connection_params = connection_params
         self.domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -401,7 +401,7 @@ class DatabaseStore(BatchStore):
 
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
-    def __init__(self, batch_id: int, store: DatabaseStore):
+    def __init__(self, batch_id: int, store: DatabaseStore) -> None:
         self.batch_id = batch_id
         self.store = store
 
@@ -563,7 +563,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
 class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
-    def __init__(self, batch_id: int, domain: str, store: DatabaseStore):
+    def __init__(self, batch_id: int, domain: str, store: DatabaseStore) -> None:
         self.batch_id = batch_id
         self.domain = domain
         self.store = store
@@ -634,7 +634,7 @@ class _LocalUserStore:
        When a user has been renamed, the same ID will still be used
        and the name will be updated once the user is stored the next time."""
 
-    def __init__(self, domain_store: StringTableStore):
+    def __init__(self, domain_store: StringTableStore) -> None:
         self.domain_store = domain_store
 
     def acquire_localuser_id(self, connection: pymysql.connections.Connection, local_user: LocalUser) -> int:

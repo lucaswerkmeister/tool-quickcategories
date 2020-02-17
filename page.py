@@ -8,7 +8,7 @@ class Page:
     resolve_redirects: Optional[bool]
     resolution: Optional[dict] = None
 
-    def __init__(self, title: str, resolve_redirects: Optional[bool]):
+    def __init__(self, title: str, resolve_redirects: Optional[bool]) -> None:
         if title.startswith('!'):
             raise ValueError("page title '%s' cannot start with ! (ambiguous str)" % title)
         self.title = title

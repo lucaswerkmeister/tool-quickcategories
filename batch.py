@@ -10,7 +10,7 @@ from localuser import LocalUser
 class NewBatch:
     """A list of commands to be performed."""
 
-    def __init__(self, commands: List[Command], title: Optional[str]):
+    def __init__(self, commands: List[Command], title: Optional[str]) -> None:
         self.commands = commands
         self.title = title
 

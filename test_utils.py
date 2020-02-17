@@ -7,7 +7,7 @@ class FakeSession:
 
     host: Optional[str]
 
-    def __init__(self, get_response: dict, post_response: Optional[Union[dict, BaseException]] = None):
+    def __init__(self, get_response: dict, post_response: Optional[Union[dict, BaseException]] = None) -> None:
         self.get_response = get_response
         self.post_response = post_response
         self.host = None
