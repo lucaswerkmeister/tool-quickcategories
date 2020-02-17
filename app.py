@@ -15,9 +15,9 @@ import string
 import threading
 import toolforge
 import traceback
-from typing import Any, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, Union, cast
 import warnings
-import werkzeug.wsgi
+import werkzeug
 import yaml
 
 from batch import StoredBatch, OpenBatch
@@ -52,16 +52,16 @@ if 'database' in app.config:
     from database import DatabaseStore
     batch_store = DatabaseStore(app.config['database'])
 
-    def sometimes_flush_querytime():
+    def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
-            with batch_store.connect() as connection:
+            with cast(DatabaseStore, batch_store).connect() as connection:
                 flush_querytime(connection)
 
     class SometimesFlushQuerytimeMiddleware:
-        def __init__(self, app):
+        def __init__(self, app: flask.app.Flask):
             self.app = app
 
-        def __call__(self, environ, start_response):
+        def __call__(self, environ: dict, start_response: Callable) -> Iterator:
             return werkzeug.wsgi.ClosingIterator(self.app(environ, start_response), sometimes_flush_querytime)
 
     app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app)  # type: ignore # “cannot assign to a method”
@@ -79,7 +79,7 @@ warnings.filterwarnings('ignore',
                         module='bs4')
 
 
-def log(type, message):
+def log(type: str, message: str) -> None:
     if app.config.get('DEBUG_' + type, False):
         print('[%s] %s' % (type, message))
 
@@ -302,14 +302,14 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
     return authenticated_session(domain) or anonymous_session(domain)
 
 @app.route('/')
-def index():
+def index() -> str:
     return flask.render_template('index.html',
                                  default_domain=flask.session.get('default-domain', None),
                                  suggested_domains=flask.session.get('suggested-domains', []),
                                  batches=batch_store.get_batches_slice(offset=0, limit=10))
 
 @app.route('/batch/new/commands', methods=['POST'])
-def new_batch_from_commands():
+def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
         return flask.render_template('new_batch_error_domain_unrecognized.html',
@@ -350,7 +350,7 @@ def new_batch_from_commands():
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/new/pagepile', methods=['GET', 'POST'])
-def new_batch_from_pagepile():
+def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
                                      page_pile_id=flask.request.args.get('page_pile_id'))
@@ -402,7 +402,7 @@ def new_batch_from_pagepile():
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/')
-def batches():
+def batches() -> str:
     offset, limit = slice_from_args(flask.request.args)
     return flask.render_template('batches.html',
                                  batches=batch_store.get_batches_slice(offset=offset, limit=limit),
@@ -411,7 +411,7 @@ def batches():
                                  count=batch_store.get_batches_count())
 
 @app.route('/batch/<int:id>/')
-def batch(id: int):
+def batch(id: int) -> Union[str, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -460,7 +460,7 @@ def batch(id: int):
                                  limit=limit)
 
 @app.route('/batch/<int:id>/background_history')
-def batch_background_history(id: int):
+def batch_background_history(id: int) -> Union[str, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -470,7 +470,7 @@ def batch_background_history(id: int):
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/')
-def batch_export(id: int):
+def batch_export(id: int) -> Union[str, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -480,7 +480,7 @@ def batch_export(id: int):
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/metadata.json')
-def batch_export_metadata(id: int):
+def batch_export_metadata(id: int) -> Union[Tuple[Any, dict], Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -505,21 +505,21 @@ def batch_export_metadata(id: int):
     }
 
 @app.route('/batch/<int:id>/export/titles/all.txt')
-def batch_export_all_titles(id: int):
+def batch_export_all_titles(id: int) -> Union[Tuple[werkzeug.Response, dict], Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
                                      id=id), 404
 
-    def stream():
-        for page in batch.command_records.stream_pages():
+    def stream() -> Iterator[str]:
+        for page in cast(StoredBatch, batch).command_records.stream_pages():
             yield page.title + '\n'
     return app.response_class(stream(), mimetype='text/plain'), {
         'Content-Disposition': 'inline; filename="batch_%d.txt"' % id,
     }
 
 @app.route('/batch/<int:id>/export/titles/all-pagepile', methods=['POST'])
-def batch_export_all_pagepile(id: int):
+def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -530,7 +530,7 @@ def batch_export_all_pagepile(id: int):
     return flask.redirect('https://tools.wmflabs.org/pagepile/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
-def run_batch_slice(id: int):
+def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -581,7 +581,7 @@ def run_batch_slice(id: int):
                                         limit=limit))
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
-def start_batch_background(id: int):
+def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -609,7 +609,7 @@ def start_batch_background(id: int):
                                         limit=limit))
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
-def stop_batch_background(id: int):
+def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -637,7 +637,7 @@ def stop_batch_background(id: int):
                                         limit=limit))
 
 @app.route('/preferences', methods=['GET', 'POST'])
-def preferences():
+def preferences() -> Union[werkzeug.Response, str]:
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
                                      default_domain=flask.session.get('default-domain', None),
@@ -667,25 +667,25 @@ def preferences():
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/login')
-def login():
+def login() -> werkzeug.Response:
     redirect, request_token = mwoauth.initiate('https://meta.wikimedia.org/w/index.php', consumer_token, user_agent=user_agent)
     flask.session['oauth_request_token'] = dict(zip(request_token._fields, request_token))
     return flask.redirect(redirect)
 
 @app.route('/oauth/callback')
-def oauth_callback():
+def oauth_callback() -> werkzeug.Response:
     request_token = mwoauth.RequestToken(**flask.session.pop('oauth_request_token'))
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/logout')
-def logout():
+def logout() -> werkzeug.Response:
     flask.session.clear()
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/debug/query_times')
-def query_times():
+def query_times() -> Union[str, Tuple[str, int]]:
     session = authenticated_session()
     if not session:
         return 'not logged in', 403
@@ -756,7 +756,7 @@ def steward_global_user_ids() -> List[int]:
     return ids
 
 
-def full_url(endpoint: str, **kwargs) -> str:
+def full_url(endpoint: str, **kwargs: Any) -> str:
     scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     return flask.url_for(endpoint, _external=True, _scheme=scheme, **kwargs)
 
@@ -808,9 +808,10 @@ def submitted_request_valid() -> bool:
     return True
 
 @app.before_request
-def require_valid_submitted_request():
+def require_valid_submitted_request() -> Optional[Tuple[str, int]]:
     if flask.request.method == 'POST' and not submitted_request_valid():
         return flask.render_template('csrf_error.html'), 400
+    return None
 
 @app.after_request
 def deny_frame(response: flask.Response) -> flask.Response:
