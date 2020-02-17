@@ -2,7 +2,7 @@ import datetime
 import mwoauth  # type: ignore
 import pytest  # type: ignore
 import random
-from typing import Iterator
+from typing import Any, Iterator
 
 from batch import NewBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -190,7 +190,7 @@ def test_BatchStore_make_pendings_planned_empty(store):
     batch = store.store_batch(newBatch1, fake_session)
     batch.command_records.make_pendings_planned([])
 
-def test_BatchStore_make_plan_pending_background(store, frozen_time):
+def test_BatchStore_make_plan_pending_background(store, frozen_time: Any):
     batch_1 = store.store_batch(newBatch1, fake_session)
     frozen_time.tick()
     batch_2 = store.store_batch(newBatch1, fake_session)  # NOQA: F841 (unused)

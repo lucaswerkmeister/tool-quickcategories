@@ -1,8 +1,9 @@
 import json
 import pymysql
 import pytest  # type: ignore
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, cast
 
+from batch import StoredBatch
 from command import CommandRecord, CommandEdit, CommandNoop
 from database import DatabaseStore, _LocalUserStore
 from localuser import LocalUser
@@ -46,10 +47,10 @@ def test_DatabaseStore_store_batch(database_connection_params):
             assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
+def test_DatabaseStore_update_batch(database_connection_params, frozen_time: Any):
     store = DatabaseStore(database_connection_params)
     stored_batch = store.store_batch(newBatch1, fake_session)
-    loaded_batch = store.get_batch(stored_batch.id)
+    loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
     [command_plan_1, command_plan_2] = loaded_batch.command_records.get_slice(0, 2)
 
@@ -67,7 +68,7 @@ def test_DatabaseStore_update_batch(database_connection_params, frozen_time):
     assert stored_batch.command_records.get_slice(0, 2) == loaded_batch.command_records.get_slice(0, 2)
 
     # TODO ideally, the timestamps on stored_batch and loaded_batch would update as well
-    reloaded_batch = store.get_batch(stored_batch.id)
+    reloaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
     assert reloaded_batch.last_updated > reloaded_batch.created
 
 def test_DatabaseStore_start_background_inserts_row(database_connection_params):
