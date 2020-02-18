@@ -4,7 +4,7 @@ import pytest  # type: ignore
 from typing import Any, List, Optional, Tuple, cast
 
 from batch import StoredBatch
-from command import CommandRecord, CommandEdit, CommandNoop
+from command import CommandEdit, CommandFinish, CommandNoop, CommandRecord
 from database import DatabaseStore, _LocalUserStore
 from localuser import LocalUser
 from stringstore import StringTableStore
@@ -34,7 +34,7 @@ fake_session = FakeSession({
 fake_session.host = 'https://commons.wikimedia.org'
 
 
-def test_DatabaseStore_store_batch(database_connection_params: dict):
+def test_DatabaseStore_store_batch(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     command2 = open_batch.command_records.get_slice(1, 1)[0]
@@ -47,7 +47,7 @@ def test_DatabaseStore_store_batch(database_connection_params: dict):
             assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_time: Any):
+def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_time: Any) -> None:
     store = DatabaseStore(database_connection_params)
     stored_batch = store.store_batch(newBatch1, fake_session)
     loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
@@ -71,7 +71,7 @@ def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_tim
     reloaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
     assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseStore_start_background_inserts_row(database_connection_params: dict):
+def test_DatabaseStore_start_background_inserts_row(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -83,7 +83,7 @@ def test_DatabaseStore_start_background_inserts_row(database_connection_params: 
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
 
-def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params: dict):
+def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -97,7 +97,7 @@ def test_DatabaseStore_start_background_does_not_insert_extra_row(database_conne
         assert cursor.rowcount == 1
         assert (background_id, background_started_utc_timestamp) == cursor.fetchone()
 
-def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params: dict):
+def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -110,7 +110,7 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
         assert stopped_user_name == 'Lucas Werkmeister'
         assert auth is None
 
-def test_DatabaseStore_stop_background_without_session(database_connection_params: dict):
+def test_DatabaseStore_stop_background_without_session(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -122,7 +122,7 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
-def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params: dict):
+def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -137,7 +137,7 @@ def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(data
         cursor.execute('SELECT 1 FROM `background` WHERE `background_stopped_utc_timestamp` IS NULL')
         assert cursor.rowcount == 0
 
-def test_DatabaseStore_closing_batch_stops_background(database_connection_params: dict):
+def test_DatabaseStore_closing_batch_stops_background(database_connection_params: dict) -> None:
     store = DatabaseStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
@@ -171,12 +171,12 @@ command_finishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]
 ]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
-def test_DatabaseStore_command_finish_to_row(command_finish, expected_row):
+def test_DatabaseStore_command_finish_to_row(command_finish: CommandFinish, expected_row: Tuple[int, Optional[dict]]) -> None:
     actual_row = DatabaseStore({})._command_finish_to_row(command_finish)
     assert expected_row == actual_row
 
 @pytest.mark.parametrize('expected_command_record, row', command_unfinishes_and_rows + command_finishes_and_rows)
-def test_DatabaseStore_row_to_command_record(expected_command_record, row):
+def test_DatabaseStore_row_to_command_record(expected_command_record: CommandRecord, row: Tuple[int, Optional[dict]]) -> None:
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
     full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json
@@ -184,7 +184,7 @@ def test_DatabaseStore_row_to_command_record(expected_command_record, row):
     assert expected_command_record == actual_command_record
 
 
-def test_LocalUserStore_store_two_users(database_connection_params: dict):
+def test_LocalUserStore_store_two_users(database_connection_params: dict) -> None:
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -211,7 +211,7 @@ def test_LocalUserStore_store_two_users(database_connection_params: dict):
     finally:
         connection.close()
 
-def test_LocalUserStore_store_same_user_twice(database_connection_params: dict):
+def test_LocalUserStore_store_same_user_twice(database_connection_params: dict) -> None:
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -231,7 +231,7 @@ def test_LocalUserStore_store_same_user_twice(database_connection_params: dict):
     finally:
         connection.close()
 
-def test_LocalUserStore_store_renamed_user(database_connection_params: dict):
+def test_LocalUserStore_store_renamed_user(database_connection_params: dict) -> None:
     connection = pymysql.connect(**database_connection_params)
     try:
         domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
