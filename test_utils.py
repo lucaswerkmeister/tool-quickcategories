@@ -1,10 +1,13 @@
 import requests
 import requests_oauthlib  # type: ignore
+from typing import Any, Optional, Union
 
 
 class FakeSession:
 
-    def __init__(self, get_response, post_response=None):
+    host: Optional[str]
+
+    def __init__(self, get_response: dict, post_response: Optional[Union[dict, BaseException]] = None):
         self.get_response = get_response
         self.post_response = post_response
         self.host = None
@@ -12,10 +15,10 @@ class FakeSession:
         self.session.auth = requests_oauthlib.OAuth1(client_key='fake client key', client_secret='fake client secret',
                                                      resource_owner_key='fake resource owner key', resource_owner_secret='fake resource owner secret')
 
-    def get(self, *args, **kwargs):
+    def get(self, *args: Any, **kwargs: Any) -> dict:
         return self.get_response
 
-    def post(self, *args, **kwargs):
+    def post(self, *args: Any, **kwargs: Any) -> dict:
         if self.post_response:
             if isinstance(self.post_response, BaseException):
                 raise self.post_response
