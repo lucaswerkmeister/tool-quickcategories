@@ -2,16 +2,16 @@ import datetime
 import mwapi  # type: ignore
 import os
 import pytest  # type: ignore
-from typing import Optional
+from typing import List, Optional
 
-from action import AddCategoryAction, RemoveCategoryAction
+from action import Action, AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from runner import Runner
 
 from test_utils import FakeSession
 
-def test_resolve_pages_and_run_commands():
+def test_resolve_pages_and_run_commands() -> None:
     if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
         pytest.skip('MediaWiki credentials not provided')
     session = mwapi.Session('https://test.wikipedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
@@ -34,10 +34,10 @@ def test_resolve_pages_and_run_commands():
     title_C = 'QuickCategories CI Test Other Redirect' + suffix
     title_C2 = 'QuickCategories CI Test Other Redirect Target' + suffix
 
-    actions = [AddCategoryAction('Added cat'),
-               AddCategoryAction('Already present cat'),
-               RemoveCategoryAction('Removed cat'),
-               RemoveCategoryAction('Not present cat')]
+    actions: List[Action] = [AddCategoryAction('Added cat'),
+                             AddCategoryAction('Already present cat'),
+                             RemoveCategoryAction('Removed cat'),
+                             RemoveCategoryAction('Not present cat')]
     command_A = Command(Page(title_A, True), actions)
     command_B = Command(Page(title_B, True), actions)
     command_C = Command(Page(title_C, False), actions)
@@ -108,7 +108,7 @@ def test_resolve_pages_and_run_commands():
     set_page_wikitext('teardown', title_C, '#REDIRECT [[' + title_C2 + ']]', runner)
     set_page_wikitext('teardown', title_C2, 'Test page for the QuickCategories tool.', runner)
 
-def set_page_wikitext(summary, title: str, wikitext: str, runner: Runner) -> int:
+def set_page_wikitext(summary: str, title: str, wikitext: str, runner: Runner) -> int:
     response = runner.session.post(**{'action': 'edit',
                                       'title': title,
                                       'text': wikitext,
@@ -129,7 +129,7 @@ def get_page_revision(title: str, runner: Runner) -> dict:
                                   formatversion=2)
     return response['query']['pages'][0]['revisions'][0]
 
-def test_with_nochange():
+def test_with_nochange() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -203,7 +203,7 @@ def test_with_nochange():
     assert command_record.revision == 195259
     assert command.page.resolution is None
 
-def test_with_missing_page():
+def test_with_missing_page() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -259,7 +259,7 @@ def test_with_missing_page():
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_missing_page_unnormalized():
+def test_with_missing_page_unnormalized() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -320,7 +320,7 @@ def test_with_missing_page_unnormalized():
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_missing_page_redirect_resolve():
+def test_with_missing_page_redirect_resolve() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -387,7 +387,7 @@ def test_with_missing_page_redirect_resolve():
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
 @pytest.mark.parametrize('resolve_redirects', [False, None])
-def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[bool]):
+def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[bool]) -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -449,7 +449,7 @@ def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_missing_page_unnormalized_redirect():
+def test_with_missing_page_unnormalized_redirect() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -516,7 +516,7 @@ def test_with_missing_page_unnormalized_redirect():
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_invalid_title():
+def test_with_invalid_title() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession({
         'curtimestamp': curtimestamp,
@@ -571,7 +571,7 @@ def test_with_invalid_title():
 
     assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_protected_page():
+def test_with_protected_page() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -634,7 +634,7 @@ def test_with_protected_page():
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
 
-def test_with_edit_conflict():
+def test_with_edit_conflict() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -704,7 +704,7 @@ def test_with_edit_conflict():
     assert command_record == CommandEditConflict(command_pending.id, command_pending.command)
     assert page.resolution is None
 
-def test_with_maxlag_exceeded():
+def test_with_maxlag_exceeded() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -775,7 +775,7 @@ def test_with_maxlag_exceeded():
     assert command_record.retry_after.tzinfo == datetime.timezone.utc
     assert page.resolution is not None
 
-def test_with_blocked():
+def test_with_blocked() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -846,7 +846,7 @@ def test_with_blocked():
     assert not command_record.auto
     # would be nice to assert command_record.blockinfo once Runner can record it
 
-def test_with_autoblocked():
+def test_with_autoblocked() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
@@ -917,7 +917,7 @@ def test_with_autoblocked():
     assert command_record.auto
     # would be nice to assert command_record.blockinfo once Runner can record it
 
-def test_with_readonly():
+def test_with_readonly() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
     session = FakeSession(
         {
