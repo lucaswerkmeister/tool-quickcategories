@@ -183,47 +183,47 @@ response_zhwiki = {
 }
 
 
-def test_category_info_enwiki():
+def test_category_info_enwiki() -> None:
     session = FakeSession(response_enwiki)
     session.host = 'https://en.wikipedia.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Category', ['Category'], 'first-letter')
 
-def test_category_info_dewiktionary():
+def test_category_info_dewiktionary() -> None:
     session = FakeSession(response_dewiktionary)
     session.host = 'https://de.wiktionary.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Kategorie', ['Kategorie', 'Category'], 'case-sensitive')
 
-def test_category_info_ruwiki():
+def test_category_info_ruwiki() -> None:
     session = FakeSession(response_ruwiki)
     session.host = 'https://ru.wikipedia.org'
     category_info = siteinfo.category_info(session)
     assert category_info == ('Категория', ['Категория', 'Category', 'К'], 'first-letter')
 
 
-def test_comma_separator():
+def test_comma_separator() -> None:
     session = FakeSession(response_zhwiki)
     session.host = 'https://zh.wikipedia.org'
     comma_separator = siteinfo.comma_separator(session)
     assert comma_separator == '、'
 
 
-def test_semicolon_separator():
+def test_semicolon_separator() -> None:
     session = FakeSession(response_zhwiki)
     session.host = 'https://zh.wikipedia.org'
     semicolon_separator = siteinfo.semicolon_separator(session)
     assert semicolon_separator == '；'
 
 
-def test_word_separator():
+def test_word_separator() -> None:
     session = FakeSession(response_zhwiki)
     session.host = 'https://zh.wikipedia.org'
     word_separator = siteinfo.word_separator(session)
     assert word_separator == ''
 
 
-def test_parentheses():
+def test_parentheses() -> None:
     session = FakeSession(response_zhwiki)
     session.host = 'https://zh.wikipedia.org'
     parentheses = siteinfo.parentheses(session, 'foo')
