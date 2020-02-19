@@ -69,4 +69,4 @@ def database_connection_params(fresh_database_connection_params) -> Iterator[dic
         connection.commit()
     finally:
         connection.close()
-    return fresh_database_connection_params
+    yield fresh_database_connection_params
