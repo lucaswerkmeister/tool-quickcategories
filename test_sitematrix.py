@@ -85,19 +85,19 @@ fake_session_with_too_many_sites = FakeSession({
 })
 
 
-def test_dbname_to_domain_fake_session():
+def test_dbname_to_domain_fake_session() -> None:
     assert dbname_to_domain(fake_session, 'enwiki') == 'en.wikipedia.org'
     assert dbname_to_domain(fake_session, 'enwiktionary') == 'en.wiktionary.org'
     assert dbname_to_domain(fake_session, 'ptwiki') == 'pt.wikipedia.org'
     assert dbname_to_domain(fake_session, 'wikidatawiki') == 'www.wikidata.org'
 
 
-def test_dbname_to_domain_warns_for_fake_session_with_too_many_sites():
+def test_dbname_to_domain_warns_for_fake_session_with_too_many_sites() -> None:
     with pytest.warns(UserWarning):
         dbname_to_domain(fake_session_with_too_many_sites, 'enwiki') == 'en.wikipedia.org'
 
 
-def test_dbname_to_domain_real_session(internet_connection: None):
+def test_dbname_to_domain_real_session(internet_connection: None) -> None:
     session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
     assert dbname_to_domain(session, 'enwiki') == 'en.wikipedia.org'
@@ -106,19 +106,19 @@ def test_dbname_to_domain_real_session(internet_connection: None):
     assert dbname_to_domain(session, 'wikidatawiki') == 'www.wikidata.org'
 
 
-def test_domain_to_dbname_fake_session():
+def test_domain_to_dbname_fake_session() -> None:
     assert domain_to_dbname(fake_session, 'en.wikipedia.org') == 'enwiki'
     assert domain_to_dbname(fake_session, 'en.wiktionary.org') == 'enwiktionary'
     assert domain_to_dbname(fake_session, 'pt.wikipedia.org') == 'ptwiki'
     assert domain_to_dbname(fake_session, 'www.wikidata.org') == 'wikidatawiki'
 
 
-def test_domain_to_dbname_warns_for_fake_session_with_too_many_sites():
+def test_domain_to_dbname_warns_for_fake_session_with_too_many_sites() -> None:
     with pytest.warns(UserWarning):
         domain_to_dbname(fake_session_with_too_many_sites, 'en.wikipedia.org') == 'enwiki'
 
 
-def test_domain_to_dbname_real_session(internet_connection: None):
+def test_domain_to_dbname_real_session(internet_connection: None) -> None:
     session = mwapi.Session('https://meta.wikimedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
 
     assert domain_to_dbname(session, 'en.wikipedia.org') == 'enwiki'
