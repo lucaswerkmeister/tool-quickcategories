@@ -2,5 +2,5 @@
 
 check:
 	flake8
-	mypy .
+	mypy
 	pytest
