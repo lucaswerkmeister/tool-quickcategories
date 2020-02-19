@@ -57,7 +57,7 @@ def fresh_database_connection_params() -> Iterator[dict]:
 
 
 @pytest.fixture
-def database_connection_params(fresh_database_connection_params) -> Iterator[dict]:
+def database_connection_params(fresh_database_connection_params: dict) -> Iterator[dict]:
     connection = pymysql.connect(**fresh_database_connection_params)
     try:
         with open('tables.sql') as tables:
