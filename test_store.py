@@ -2,9 +2,9 @@ import datetime
 import mwoauth  # type: ignore
 import pytest  # type: ignore
 import random
-from typing import Any, Iterator
+from typing import Any, Iterator, cast
 
-from batch import NewBatch, OpenBatch, ClosedBatch
+from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from database import DatabaseStore
 from in_memory import InMemoryStore
@@ -39,7 +39,7 @@ fake_session.host = 'https://commons.wikimedia.org'
 
 
 @pytest.fixture(params=[InMemoryStore, DatabaseStore])
-def store(request) -> Iterator[BatchStore]:
+def store(request: Any) -> Iterator[BatchStore]:
     if request.param is InMemoryStore:
         yield InMemoryStore()
     elif request.param is DatabaseStore:
@@ -49,9 +49,9 @@ def store(request) -> Iterator[BatchStore]:
         raise ValueError('Unknown param!')
 
 
-def test_BatchStore_get_batch(store):
+def test_BatchStore_get_batch(store: BatchStore) -> None:
     stored_batch = store.store_batch(newBatch1, fake_session)
-    loaded_batch = store.get_batch(stored_batch.id)
+    loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
     assert loaded_batch.id == stored_batch.id
     assert loaded_batch.local_user == LocalUser('Lucas Werkmeister', 'commons.wikimedia.org', 6198807, 46054761)
@@ -60,38 +60,38 @@ def test_BatchStore_get_batch(store):
     assert len(loaded_batch.command_records) == 2
     assert loaded_batch.command_records.get_slice(0, 2) == stored_batch.command_records.get_slice(0, 2)
 
-def test_BatchStore_store_get_without_title(store):
+def test_BatchStore_store_get_without_title(store: BatchStore) -> None:
     stored_batch = store.store_batch(NewBatch([command1], title=None), fake_session)
-    loaded_batch = store.get_batch(stored_batch.id)
+    loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
     assert stored_batch.title is None
     assert loaded_batch.title is None
 
-def test_BatchStore_store_get_with_title(store):
+def test_BatchStore_store_get_with_title(store: BatchStore) -> None:
     stored_batch = store.store_batch(NewBatch([command1], title='Test batch'), fake_session)
-    loaded_batch = store.get_batch(stored_batch.id)
+    loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
     assert stored_batch.title == 'Test batch'
     assert loaded_batch.title == 'Test batch'
 
-def test_BatchStore_store_get_with_resolve_redirect_flags(store):
+def test_BatchStore_store_get_with_resolve_redirect_flags(store: BatchStore) -> None:
     command_True = Command(Page(command1.page.title, resolve_redirects=True), command1.actions)
     command_False = Command(Page(command1.page.title, resolve_redirects=False), command1.actions)
     command_None = Command(Page(command1.page.title, resolve_redirects=None), command1.actions)
 
     stored_batch = store.store_batch(NewBatch([command_True, command_False, command_None], title=None), fake_session)
-    loaded_batch = store.get_batch(stored_batch.id)
+    loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
     [loaded_True, loaded_False, loaded_None] = loaded_batch.command_records.get_slice(0, 3)
     assert loaded_True.command.page.resolve_redirects is True
     assert loaded_False.command.page.resolve_redirects is False
     assert loaded_None.command.page.resolve_redirects is None
 
-def test_BatchStore_get_batch_missing(store):
+def test_BatchStore_get_batch_missing(store: BatchStore) -> None:
     loaded_batch = store.get_batch(1)
     assert loaded_batch is None
 
-def test_BatchCommandRecords_get_summary(store):
+def test_BatchCommandRecords_get_summary(store: BatchStore) -> None:
     batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
     [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9] = batch.command_records.get_slice(0, 9)
     batch.command_records.store_finish(CommandEdit(cr1.id, cr1.command, 1, 4))
@@ -115,11 +115,11 @@ def test_BatchCommandRecords_get_summary(store):
         CommandPlan: 4,  # retries: CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
     }
 
-def test_BatchCommandRecords_stream_pages(store):
+def test_BatchCommandRecords_stream_pages(store: BatchStore) -> None:
     batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
     assert list(batch.command_records.stream_pages()) == [command1.page]*9
 
-def test_BatchStore_closes_batch(store):
+def test_BatchStore_closes_batch(store: BatchStore) -> None:
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
     open_batch.command_records.store_finish(CommandNoop(command_record_1.id, command_record_1.command, revision=1))
@@ -127,32 +127,32 @@ def test_BatchStore_closes_batch(store):
     open_batch.command_records.store_finish(CommandNoop(command_record_2.id, command_record_2.command, revision=2))
     assert type(store.get_batch(open_batch.id)) is ClosedBatch
 
-def test_BatchStore_get_batches_slice_latest(store):
+def test_BatchStore_get_batches_slice_latest(store: BatchStore) -> None:
     open_batches = []
     for i in range(25):
         open_batches.append(store.store_batch(newBatch1, fake_session))
     open_batches.reverse()
     assert open_batches[:10] == store.get_batches_slice(offset=0, limit=10)
 
-def test_BatchStore_get_batches_slice_other(store):
+def test_BatchStore_get_batches_slice_other(store: BatchStore) -> None:
     open_batches = []
     for i in range(25):
         open_batches.append(store.store_batch(newBatch1, fake_session))
     open_batches.reverse()
     assert open_batches[5:20] == store.get_batches_slice(offset=5, limit=15)
 
-def test_BatchStore_get_batches_count(store):
+def test_BatchStore_get_batches_count(store: BatchStore) -> None:
     count = random.randrange(5, 35)
     for i in range(count):
         store.store_batch(newBatch1, fake_session)
     assert store.get_batches_count() == count
 
-def test_BatchStore_stop_background_noop(store):
+def test_BatchStore_stop_background_noop(store: BatchStore) -> None:
     open_batch = store.store_batch(newBatch1, fake_session)
     store.stop_background(open_batch)
     # no error
 
-def test_BatchStore_retry(store):
+def test_BatchStore_retry(store: BatchStore) -> None:
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
     open_batch.command_records.store_finish(CommandWikiReadOnly(command_record_1.id, command_record_1.command, reason=None, retry_after=None))
@@ -167,7 +167,7 @@ def test_BatchStore_retry(store):
     assert command_record_3.id != command_record_1.id
     assert command_record_3.id != command_record_4.id
 
-def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
+def test_BatchStore_make_plans_pending_and_make_pendings_planned(store: BatchStore) -> None:
     command_1 = Command(Page('Page 1', True), [addCategory1])
     command_2 = Command(Page('Page 2', True), [addCategory1])
     command_3 = Command(Page('Page 3', True), [addCategory1])
@@ -186,11 +186,11 @@ def test_BatchStore_make_plans_pending_and_make_pendings_planned(store):
     command_records.make_pendings_planned([id_2, id_4])
     assert [CommandPlan, CommandPlan, CommandPlan, CommandPlan] == [type(command_record) for command_record in command_records.get_slice(0, 4)]
 
-def test_BatchStore_make_pendings_planned_empty(store):
+def test_BatchStore_make_pendings_planned_empty(store: BatchStore) -> None:
     batch = store.store_batch(newBatch1, fake_session)
     batch.command_records.make_pendings_planned([])
 
-def test_BatchStore_make_plan_pending_background(store, frozen_time: Any):
+def test_BatchStore_make_plan_pending_background(store: BatchStore, frozen_time: Any) -> None:
     batch_1 = store.store_batch(newBatch1, fake_session)
     frozen_time.tick()
     batch_2 = store.store_batch(newBatch1, fake_session)  # NOQA: F841 (unused)
