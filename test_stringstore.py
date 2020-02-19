@@ -12,14 +12,14 @@ from stringstore import StringTableStore
     ('☺', 3752208785),
     ('🤔', 1622577385),
 ])
-def test_StringTableStore_hash(string, expected_hash):
+def test_StringTableStore_hash(string: str, expected_hash: int) -> None:
     store = StringTableStore('', '', '', '')
 
     actual_hash = store._hash(string)
 
     assert expected_hash == actual_hash
 
-def test_StringTableStore_acquire_id_database(database_connection_params: dict):
+def test_StringTableStore_acquire_id_database(database_connection_params: dict) -> None:
     connection = pymysql.connect(**database_connection_params)
     try:
         store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
@@ -43,7 +43,7 @@ def test_StringTableStore_acquire_id_database(database_connection_params: dict):
     finally:
         connection.close()
 
-def test_StringTableStore_acquire_id_cached():
+def test_StringTableStore_acquire_id_cached() -> None:
     store = StringTableStore('', '', '', '')
 
     with store._cache_lock:
