@@ -17,9 +17,11 @@ and logs ending up in `~/uwsgi.log`.
 
 If the web service is not running for some reason, run the following command:
 ```
-webservice --backend=kubernetes python3.7 start
+webservice start
 ```
 If it’s acting up, try the same command with `restart` instead of `start`.
+Both should pull their config from the `service.template` file,
+which is symlinked from the source code directory into the tool home directory.
 
 ### Background runner
 
@@ -40,7 +42,7 @@ The following commands should work to update the tool after becoming the tool ac
 
 ```
 # stop current processes
-webservice --backend=kubernetes python3.7 stop
+webservice stop
 kubectl delete deployment quickcategories.background-runner
 
 # update source code
@@ -50,14 +52,14 @@ git diff @ @{u} # inspect changes
 git merge --ff-only @{u}
 
 # update webservice venv
-webservice --backend=kubernetes python3.7 shell
+webservice shell
 source ~/www/python/venv/bin/activate
 pip3 install --upgrade pip
 pip3 install -r ~/www/python/src/requirements.txt
 exit
 
 # start new processes
-webservice --backend=kubernetes python3.7 start
+webservice start
 kubectl create -f deployment.yaml
 ```
 
