@@ -763,13 +763,13 @@ def full_url(endpoint: str, **kwargs: Any) -> str:
 @app.template_global()
 def current_url(external: bool = False) -> str:
     if external:
-        return flask.url_for(flask.request.endpoint,
+        return flask.url_for(cast(str, flask.request.endpoint),
                              _external=True,
                              _scheme=flask.request.headers.get('X-Forwarded-Proto', 'http'),
                              **flask.request.args,
                              **flask.request.view_args)
     else:
-        return flask.url_for(flask.request.endpoint,
+        return flask.url_for(cast(str, flask.request.endpoint),
                              **flask.request.args,
                              **flask.request.view_args)
 
