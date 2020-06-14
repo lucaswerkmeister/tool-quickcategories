@@ -8,7 +8,7 @@
   <li>
     <form method="post" action="{{ url_for('batch_export_all_pagepile', id=batch.id) }}">
       <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
-      <button class="btn btn-link p-0 border-0">Create PagePile</button>
+      <button class="btn btn-link p-0 border-0 align-baseline">Create PagePile</button>
     </form>
   </li>
 </ul>
