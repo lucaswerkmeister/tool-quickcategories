@@ -527,7 +527,7 @@ def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, in
     pile_id = create_pagepile(anonymous_session('meta.wikimedia.org'),
                               batch.domain,
                               map(lambda page: page.title, batch.command_records.stream_pages()))
-    return flask.redirect('https://tools.wmflabs.org/pagepile/api.php?action=get_data&id=%d' % pile_id)
+    return flask.redirect('https://pagepile.toolforge.org/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
