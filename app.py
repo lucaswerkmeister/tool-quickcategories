@@ -677,6 +677,7 @@ def oauth_callback() -> werkzeug.Response:
     request_token = mwoauth.RequestToken(**flask.session.pop('oauth_request_token'))
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
+    flask.session.pop('csrf_token', None)
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/logout')
@@ -780,9 +781,8 @@ def submitted_request_valid() -> bool:
     by an attacker as part of a Cross-Site Request Forgery attack;
     callers MUST NOT process the request in that case.
     """
-    real_token = flask.session.pop('csrf_token', None)
-    log('CSRF', 'invalidated token from session')
-    submitted_token = flask.request.form.get('csrf_token', None)
+    real_token = flask.session.get('csrf_token')
+    submitted_token = flask.request.form.get('csrf_token')
     if not real_token:
         # we never expected a POST
         log('CSRF', 'no real token')
