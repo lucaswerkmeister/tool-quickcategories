@@ -306,10 +306,16 @@ def index() -> str:
     return flask.render_template('index.html',
                                  default_domain=flask.session.get('default-domain', None),
                                  suggested_domains=flask.session.get('suggested-domains', []),
-                                 batches=batch_store.get_batches_slice(offset=0, limit=10))
+                                 batches=batch_store.get_batches_slice(offset=0, limit=10),
+                                 read_only_reason=app.config.get('read_only_reason'))
 
 @app.route('/batch/new/commands', methods=['POST'])
 def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
+    read_only_reason = app.config.get('read_only_reason')
+    if read_only_reason:  # TODO use walrus operator in Python 3.8
+        return flask.render_template('new_batch_error.html',
+                                     message=flask.Markup(read_only_reason)), 503
+
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
         return flask.render_template('new_batch_error_domain_unrecognized.html',
@@ -353,7 +359,13 @@ def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
 def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
-                                     page_pile_id=flask.request.args.get('page_pile_id'))
+                                     page_pile_id=flask.request.args.get('page_pile_id'),
+                                     read_only_reason=app.config.get('read_only_reason'))
+
+    read_only_reason = app.config.get('read_only_reason')
+    if read_only_reason:  # TODO use walrus operator in Python 3.8
+        return flask.render_template('new_batch_error.html',
+                                     message=flask.Markup(read_only_reason)), 503
 
     pile_id = flask.request.form.get('page_pile_id')
     if not pile_id:
@@ -457,7 +469,8 @@ def batch(id: int) -> Union[str, Tuple[str, int]]:
     return flask.render_template('batch.html',
                                  batch=batch,
                                  offset=offset,
-                                 limit=limit)
+                                 limit=limit,
+                                 read_only_reason=app.config.get('read_only_reason'))
 
 @app.route('/batch/<int:id>/background_history')
 def batch_background_history(id: int) -> Union[str, Tuple[str, int]]:
@@ -531,6 +544,11 @@ def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, in
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+    read_only_reason = app.config.get('read_only_reason')
+    if read_only_reason:  # TODO use walrus operator in Python 3.8
+        return flask.render_template('batch_error.html',
+                                     message=flask.Markup(read_only_reason)), 503
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -542,7 +560,9 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     local_user_id = session.get(action='query',
                                 meta='userinfo')['query']['userinfo']['id']
     if local_user_id != batch.local_user.local_user_id:
-        return 'may not run this batch', 403
+        message = 'You may not run this batch because you do not seem to be the user who created it.'
+        return flask.render_template('batch_error.html',
+                                     message=message), 403
 
     if 'summary_batch_link' in app.config:
         summary_batch_link = app.config['summary_batch_link'].format(id)
@@ -582,12 +602,18 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
 def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+    read_only_reason = app.config.get('read_only_reason')
+    if read_only_reason:  # TODO use walrus operator in Python 3.8
+        return flask.render_template('batch_error.html',
+                                     message=flask.Markup(read_only_reason)), 503
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
                                      id=id), 404
     if not isinstance(batch, OpenBatch):
-        return 'not an open batch', 400
+        return flask.render_template('batch_error.html',
+                                     message='This is not an open batch.'), 400
 
     session = authenticated_session(batch.domain)
     if not session:
@@ -598,7 +624,9 @@ def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]
     local_user_id = userinfo['id']
     if local_user_id != batch.local_user.local_user_id or \
        'autoconfirmed' not in userinfo['groups']:
-        return 'may not start this batch in background', 403
+        message = 'You may not start this batch in the background.'
+        return flask.render_template('batch_error.html',
+                                     message=message), 403
 
     batch_store.start_background(batch, session)
 
@@ -610,6 +638,11 @@ def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
 def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+    read_only_reason = app.config.get('read_only_reason')
+    if read_only_reason:  # TODO use walrus operator in Python 3.8
+        return flask.render_template('batch_error.html',
+                                     message=flask.Markup(read_only_reason)), 503
+
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',

@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block main %}
 <h1>QuickCategories</h1>
+{% if read_only_reason %}
+<div class="alert alert-info" role="alert">
+  {{ read_only_reason | safe }}
+</div>
+{% endif %}
 <h2 id="new-batch">New batch</h2>
 <form method="post" action="{{ url_for('new_batch_from_commands') }}" class="mb-3" aria-labelledby="new-batch">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
@@ -58,7 +63,7 @@
       {% endif %}
       placeholder="Commons:Sandbox|+Category:Test|-Category:Other test&#x0A;Other page|+Category:Sandbox##sort key"></textarea>
   </div>
-  <button type="submit" class="btn btn-primary" {% if not user_logged_in() %} disabled {% endif %}>Submit batch</button>
+  <button type="submit" class="btn btn-primary" {% if not user_logged_in() or read_only_reason %} disabled {% endif %}>Submit batch</button>
   {% if not user_logged_in() %}
   <span class="alert alert-warning">
     You need to <a href="{{ url_for('login') }}">log in</a> before you can submit batches.

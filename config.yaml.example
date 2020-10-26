@@ -9,3 +9,5 @@ oauth:
 #     db: ...
 #     host: tools.db.svc.eqiad.wmflabs # on Toolforge
 #     read_default_file: ~/replica.my.cnf # on Toolforge, instead of user and password
+# read_only_reason: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
+# (If you set a read_only_reason, you probably also want to stop the background runner.)

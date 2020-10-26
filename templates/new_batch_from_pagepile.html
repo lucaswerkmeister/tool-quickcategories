@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% block main %}
 <h1 id="new-batch-from-pagepile">New batch from PagePile</h1>
+{% if read_only_reason %}
+<div class="alert alert-info" role="alert">
+  {{ read_only_reason | safe }}
+</div>
+{% endif %}
 <form method="post" action="{{ url_for('new_batch_from_pagepile') }}" class="mb-3" aria-labelledby="new-batch-from-pagepile">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <div class="form-group">
@@ -42,7 +47,7 @@
       (see <a href="https://meta.wikimedia.org/wiki/Special:MyLanguage/Help:Edit_summary" tabindex="-1">Help:Edit summary</a>).
     </small>
   </div>
-  <button type="submit" class="btn btn-primary" {% if not user_logged_in() %} disabled {% endif %}>Submit batch</button>
+  <button type="submit" class="btn btn-primary" {% if not user_logged_in() or read_only_reason %} disabled {% endif %}>Submit batch</button>
   {% if not user_logged_in() %}
   <span class="alert alert-warning">
     You need to <a href="{{ url_for('login') }}">log in</a> before you can submit batches.

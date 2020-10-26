@@ -40,6 +40,10 @@ else:
     print('No database configuration, cannot run in background')
     sys.exit(1)
 
+if 'read_only_reason' in config:
+    print('Tool is in read-only mode according to config')
+    sys.exit(1)
+
 
 stopped = False
 def on_sigterm(signalnum: int, frame: Any) -> None:

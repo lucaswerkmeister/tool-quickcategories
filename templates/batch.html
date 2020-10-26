@@ -76,6 +76,11 @@
 {% set can_run_command_records = can_run_commands(command_records) %}
 {% set can_start_new_background = can_start_background() and not currently_running %}
 {% if can_run_command_records or can_start_new_background %}
+{% if read_only_reason %}
+<div class="alert alert-info" role="alert">
+  {{ read_only_reason | safe }}
+</div>
+{% else %}
 <form method="post">
   <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
   <input name="offset" type="hidden" value="{{ offset }}">
@@ -106,5 +111,6 @@
   {% endif %}
   {% endif %}
 </form>
+{% endif %}
 {% endif %}
 {% endblock %}
