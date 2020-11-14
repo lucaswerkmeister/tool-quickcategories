@@ -307,12 +307,18 @@ class DatabaseStore(BatchStore):
 
         return status, outcome
 
+    def _row_to_page(self, title: str, resolve_redirects: Optional[int]) -> Page:
+        return Page(title, self._tinyint_to_bool(resolve_redirects))
+
+    def _row_to_command(self, title: str, resolve_redirects: Optional[int], actions_tpsv: str) -> Command:
+        return Command(self._row_to_page(title, self._tinyint_to_bool(resolve_redirects)),
+                       [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
+
     def _row_to_command_record(self, id: int, title: str, resolve_redirects: Optional[int], actions_tpsv: str, status: int, outcome: Optional[str]) -> CommandRecord:
         if outcome:
             outcome_dict = json.loads(outcome)
 
-        command = Command(Page(title, self._tinyint_to_bool(resolve_redirects)),
-                          [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
+        command = self._row_to_command(title, resolve_redirects, actions_tpsv)
 
         if status == DatabaseStore._COMMAND_STATUS_PLAN:
             assert outcome is None
@@ -435,7 +441,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               ORDER BY `command_id` ASC''',
                            (self.batch_id,))
             for title, resolve_redirects in cursor.fetchall_unbuffered():
-                yield Page(title, self.store._tinyint_to_bool(resolve_redirects))
+                yield self.store._row_to_page(title, resolve_redirects)
 
     def stream_commands(self) -> Iterator[Command]:
         with self.store.connect_streaming() as connection, cast(pymysql.cursors.SSCursor, connection.cursor()) as cursor:
@@ -446,8 +452,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               ORDER BY `command_id` ASC''',
                            (self.batch_id,))
             for title, resolve_redirects, actions_tpsv in cursor.fetchall_unbuffered():
-                yield Command(Page(title, self.store._tinyint_to_bool(resolve_redirects)),
-                              [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
+                yield self.store._row_to_command(title, resolve_redirects, actions_tpsv)
 
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
