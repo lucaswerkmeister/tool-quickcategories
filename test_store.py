@@ -119,6 +119,10 @@ def test_BatchCommandRecords_stream_pages(store: BatchStore) -> None:
     batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
     assert list(batch.command_records.stream_pages()) == [command1.page]*9
 
+def test_BatchCommandRecords_stream_commands(store: BatchStore) -> None:
+    batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
+    assert list(batch.command_records.stream_commands()) == [command1]*9
+
 def test_BatchStore_closes_batch(store: BatchStore) -> None:
     open_batch = store.store_batch(newBatch1, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)

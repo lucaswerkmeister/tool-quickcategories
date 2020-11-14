@@ -1,6 +1,6 @@
 from typing import Dict, Iterator, List, Type
 
-from command import CommandRecord, CommandPending, CommandFinish
+from command import Command, CommandRecord, CommandPending, CommandFinish
 from page import Page
 
 
@@ -14,6 +14,9 @@ class BatchCommandRecords:
         ...
 
     def stream_pages(self) -> Iterator[Page]:
+        ...
+
+    def stream_commands(self) -> Iterator[Command]:
         ...
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:

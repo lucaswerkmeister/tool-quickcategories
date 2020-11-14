@@ -542,6 +542,20 @@ def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, in
                               map(lambda page: page.title, batch.command_records.stream_pages()))
     return flask.redirect('https://pagepile.toolforge.org/api.php?action=get_data&id=%d' % pile_id)
 
+@app.route('/batch/<int:id>/export/tpsv/all.txt')
+def batch_export_all_tpsv(id: int) -> Union[Tuple[werkzeug.Response, dict], Tuple[str, int]]:
+    batch = batch_store.get_batch(id)
+    if batch is None:
+        return flask.render_template('batch_not_found.html',
+                                     id=id), 404
+
+    def stream() -> Iterator[str]:
+        for command in cast(StoredBatch, batch).command_records.stream_commands():
+            yield str(command) + '\n'
+    return app.response_class(stream(), mimetype='text/plain'), {
+        'Content-Disposition': 'inline; filename="batch_%d.txt"' % id,
+    }
+
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     read_only_reason = app.config.get('read_only_reason')

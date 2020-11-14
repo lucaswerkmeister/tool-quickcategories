@@ -5,6 +5,7 @@
 <ul>
   <li><a href="{{ url_for('batch_export_metadata', id=batch.id) }}">Metadata (JSON)</a></li>
   <li><a href="{{ url_for('batch_export_all_titles', id=batch.id) }}">Page titles (plain text)</a></li>
+  <li><a href="{{ url_for('batch_export_all_tpsv', id=batch.id) }}">Page titles and commands (like QuickCategories input)</a></li>
   <li>
     <form method="post" action="{{ url_for('batch_export_all_pagepile', id=batch.id) }}">
       <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">

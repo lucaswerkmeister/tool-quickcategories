@@ -437,6 +437,18 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             for title, resolve_redirects in cursor.fetchall_unbuffered():
                 yield Page(title, self.store._tinyint_to_bool(resolve_redirects))
 
+    def stream_commands(self) -> Iterator[Command]:
+        with self.store.connect_streaming() as connection, cast(pymysql.cursors.SSCursor, connection.cursor()) as cursor:
+            cursor.execute('''SELECT `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`
+                              FROM `command`
+                              JOIN `actions` ON `command_actions` = `actions_id`
+                              WHERE `command_batch` = %s
+                              ORDER BY `command_id` ASC''',
+                           (self.batch_id,))
+            for title, resolve_redirects, actions_tpsv in cursor.fetchall_unbuffered():
+                yield Command(Page(title, self.store._tinyint_to_bool(resolve_redirects)),
+                              [parse_tpsv.parse_action(field) for field in actions_tpsv.split('|')])
+
     def __len__(self) -> int:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('SELECT COUNT(*) FROM `command` WHERE `command_batch` = %s', (self.batch_id,))

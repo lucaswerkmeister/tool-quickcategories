@@ -6,7 +6,7 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, c
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
-from command import CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
 from page import Page
 from store import BatchStore, _local_user_from_session
@@ -133,6 +133,10 @@ class _BatchCommandRecordsList(BatchCommandRecords):
     def stream_pages(self) -> Iterator[Page]:
         for command_record in self.command_records:
             yield command_record.command.page
+
+    def stream_commands(self) -> Iterator[Command]:
+        for command_record in self.command_records:
+            yield command_record.command
 
     def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
         command_pendings = []
