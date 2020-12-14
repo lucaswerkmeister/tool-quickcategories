@@ -814,11 +814,11 @@ def current_url(external: bool = False) -> str:
         return flask.url_for(cast(str, flask.request.endpoint),
                              _external=True,
                              _scheme=flask.request.headers.get('X-Forwarded-Proto', 'http'),
-                             **flask.request.args,
+                             **flask.request.args.to_dict(flat=False),
                              **flask.request.view_args)
     else:
         return flask.url_for(cast(str, flask.request.endpoint),
-                             **flask.request.args,
+                             **flask.request.args.to_dict(flat=False),
                              **flask.request.view_args)
 
 def submitted_request_valid() -> bool:
