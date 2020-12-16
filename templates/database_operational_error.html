@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="alert alert-danger" role="alert">
+  <strong>An error occurred when interacting with the database.</strong>
+  {% if expected_database_error %}
+  <p>{{ expected_database_error | safe }}</p>
+  {% endif %}
+  <p>
+    Please try again later, or contact the tool’s maintainer if the problem persists.
+  </p>
+</div>
+{% endblock %}

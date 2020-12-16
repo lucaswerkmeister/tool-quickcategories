@@ -8,6 +8,7 @@ import humanize
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
 import os
+import pymysql.err
 import random
 import re
 import requests_oauthlib  # type: ignore
@@ -871,3 +872,8 @@ def deny_frame(response: flask.Response) -> flask.Response:
     """
     response.headers['X-Frame-Options'] = 'deny'
     return response
+
+@app.errorhandler(pymysql.err.OperationalError)
+def handle_database_operational_error(e: pymysql.err.OperationalError) -> Tuple[str, int]:
+    return flask.render_template('database_operational_error.html',
+                                 expected_database_error=app.config.get('expected_database_error')), 503
