@@ -9,6 +9,7 @@
     {% endblock head %}
   </head>
   <body>
+    <a href="#main" class="sr-only sr-only-focusable">Skip to main content</a>
     <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
       <a href="{{ url_for('index') }}" class="navbar-brand">QuickCategories</a>
       <ul class="navbar-nav mr-auto">
@@ -19,7 +20,7 @@
       <span class="navbar-text px-2"><a href="{{ url_for('preferences') }}">Preferences</a></span>
       {{ authentication_area() }}
     </nav>
-    <main {% block main_tag_attributes %}class="container mt-3"{% endblock main_tag_attributes %}>
+    <main id="main" {% block main_tag_attributes %}class="container mt-3"{% endblock main_tag_attributes %}>
       {% block main %}
       {% endblock main %}
     </main>
