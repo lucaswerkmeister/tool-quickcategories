@@ -22,7 +22,10 @@
   (<a href="{{ url_for('batch_export', id=batch.id) }}">export</a>).
 </p>
 {% if background_run %}
+{% set make_form = currently_running and can_stop_background() %}
+{% if make_form %}
 <form method="post">
+  {% endif %}
   <p>
     {% if currently_running %}
     Running in background since {{ background_run[0][0] | render_datetime }},
@@ -33,14 +36,16 @@
     {% endif %}
     {% endif %}
     (<a href="{{ url_for('batch_background_history', id=batch.id) }}">full history</a>).
-    {% if currently_running and can_stop_background() %}
+    {% if make_form %}
     <input name="csrf_token" type="hidden" value="{{ csrf_token() }}">
     <input name="offset" type="hidden" value="{{ offset }}">
     <input name="limit" type="hidden" value="{{ limit }}">
     <button class="btn btn-danger btn-sm" formaction="{{ url_for('stop_batch_background', id=batch.id) }}">Stop</button>
     {% endif %}
   </p>
+  {% if make_form %}
 </form>
+{% endif %}
 {% endif %}
 {% set command_records_length = batch.command_records | length %}
 {% set nav %}
