@@ -70,6 +70,9 @@
   </span>
   {% endif %}
 </form>
+<p>
+  You can also <a href="{{ url_for('new_batch_from_pagepile') }}">create a new batch from a PagePile</a>.
+</p>
 {% if batches %}
 <h2 id="latest-batches">Latest batches</h2>
 {% set batch_list_label = "latest-batches" %}
