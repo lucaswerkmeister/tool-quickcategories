@@ -721,7 +721,7 @@ def login() -> werkzeug.Response:
     return flask.redirect(redirect)
 
 @app.route('/oauth/callback')
-def oauth_callback() -> werkzeug.Response:
+def oauth_callback() -> Union[werkzeug.Response, str]:
     oauth_request_token = flask.session.pop('oauth_request_token', None)
     if oauth_request_token is None:
         return flask.render_template('oauth_callback_error.html',
