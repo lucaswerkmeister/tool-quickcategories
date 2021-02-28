@@ -28,7 +28,10 @@ def internet_connection() -> Iterator[None]:
 def fresh_database_connection_params() -> Iterator[dict]:
     if 'MARIADB_ROOT_PASSWORD' not in os.environ:
         pytest.skip('MariaDB credentials not provided')
-    connection = pymysql.connect(host='localhost',
+    host = 'localhost'
+    port = int(os.environ.get('MARIADB_PORT', 0))
+    connection = pymysql.connect(host=host,
+                                 port=port,
                                  user='root',
                                  password=os.environ['MARIADB_ROOT_PASSWORD'])
     database_name = 'quickcategories_test_' + ''.join(random.choice(string.ascii_lowercase + string.digits) for i in range(16))
@@ -47,7 +50,7 @@ def fresh_database_connection_params() -> Iterator[dict]:
                     if query:
                         cursor.execute(query)
         connection.commit()
-        yield {'host': 'localhost', 'user': user_name, 'password': user_password, 'db': database_name}
+        yield {'host': host, 'port': port, 'user': user_name, 'password': user_password, 'db': database_name}
     finally:
         with connection.cursor() as cursor:
             cursor.execute('DROP DATABASE IF EXISTS `%s`' % database_name)

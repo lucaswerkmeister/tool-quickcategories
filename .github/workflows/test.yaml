@@ -1,0 +1,39 @@
+name: Test
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.7'
+            job-number: 1
+          # the job number is appended to the page title to form
+          # QuickCategories CI Test/1, QuickCategories CI Test/2, etc.;
+          # only subpages 1 and 2 exist so far, so if you add a third job,
+          # you need to manually create the extra page first
+          # (the bot password does not have permission to create pages)
+    services:
+      mariadb:
+        image: mariadb:10.1
+        env:
+          MYSQL_ROOT_PASSWORD: 'mariadb-root-password'
+        ports:
+          - 3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install --upgrade pip
+      - run: pip install -r requirements.txt
+      - run: make check
+        env:
+          MARIADB_ROOT_PASSWORD: 'mariadb-root-password'
+          MARIADB_PORT: ${{ job.services.mariadb.ports['3306'] }}
+          MW_USERNAME: ${{ secrets.MW_USERNAME }}
+          MW_PASSWORD: ${{ secrets.MW_PASSWORD }}
+          CI_JOB_NUMBER: ${{ matrix.job-number }}

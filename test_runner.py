@@ -24,9 +24,8 @@ def test_resolve_pages_and_run_commands() -> None:
                  lgtoken=lgtoken)
 
     suffix = ''
-    if 'TRAVIS_JOB_NUMBER' in os.environ:
-        job_number = os.environ['TRAVIS_JOB_NUMBER']
-        suffix = '/' + job_number[job_number.index('.')+1:]
+    if 'CI_JOB_NUMBER' in os.environ:
+        suffix = '/' + os.environ['CI_JOB_NUMBER']
 
     title_A = 'QuickCategories CI Test' + suffix
     title_B = 'QuickCategories CI Test Redirect' + suffix
