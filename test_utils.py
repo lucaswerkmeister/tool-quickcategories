@@ -7,7 +7,7 @@ class FakeSession:
 
     host: Optional[str]
 
-    def __init__(self, get_response: dict, post_response: Optional[Union[dict, BaseException]] = None) -> None:
+    def __init__(self, get_response: Union[dict, BaseException], post_response: Optional[Union[dict, BaseException]] = None) -> None:
         self.get_response = get_response
         self.post_response = post_response
         self.host = None
@@ -16,7 +16,10 @@ class FakeSession:
                                                      resource_owner_key='fake resource owner key', resource_owner_secret='fake resource owner secret')
 
     def get(self, *args: Any, **kwargs: Any) -> dict:
-        return self.get_response
+        if isinstance(self.get_response, BaseException):
+            raise self.get_response
+        else:
+            return self.get_response
 
     def post(self, *args: Any, **kwargs: Any) -> dict:
         if self.post_response:

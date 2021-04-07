@@ -16,12 +16,17 @@ summary_cache_lock = threading.RLock()
 def parse_summary(session: mwapi.Session, summary: str) -> flask.Markup:
     """Parses a summary text or fragment into HTML."""
 
-    response = session.get(action='parse',
-                           summary=summary,
-                           prop=[],
-                           formatversion=2)
-    summary_html = response['parse']['parsedsummary']
-    return fix_markup(summary_html, session.host)
+    try:
+        response = session.get(action='parse',
+                               summary=summary,
+                               prop=[],
+                               formatversion=2)
+    except mwapi.errors.APIError as e:
+        print("Error formatting summary {!r}: {}".format(summary, e))
+        return flask.Markup.escape(summary)
+    else:
+        summary_html = response['parse']['parsedsummary']
+        return fix_markup(summary_html, session.host)
 
 def fix_markup(html: str, host: str) -> flask.Markup:
     soup = bs4.BeautifulSoup(html, 'html.parser')

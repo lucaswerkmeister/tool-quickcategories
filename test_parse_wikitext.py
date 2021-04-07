@@ -1,4 +1,5 @@
 import flask
+import mwapi  # type: ignore
 
 import parse_wikitext
 
@@ -23,3 +24,10 @@ def test_parse_summary_two_wikis() -> None:
     })
     session2.host = 'https://de.wikipedia.org'
     assert parse_wikitext.parse_summary(session2, title) == flask.Markup(summary2)
+
+
+def test_parse_summary_error() -> None:
+    summary = '<script>alert("xss")</script>'
+    session = FakeSession(mwapi.errors.APIError('fake', 'XSS detected!', 'for more information see the mailing list blah blah'))
+    session.host = 'https://en.wikipedia.org'
+    assert parse_wikitext.parse_summary(session, summary) == flask.Markup('&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;')
