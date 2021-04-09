@@ -20,6 +20,7 @@ def parse_summary(session: mwapi.Session, summary: str) -> flask.Markup:
         response = session.get(action='parse',
                                summary=summary,
                                prop=[],
+                               title='Special:X',  # T279585
                                formatversion=2)
     except mwapi.errors.APIError as e:
         print("Error formatting summary {!r}: {}".format(summary, e))
