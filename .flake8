@@ -1,2 +1,13 @@
+# -*- mode: conf; -*-
 [flake8]
-ignore = E226,E302,E501,W503,W504
+ignore =
+    # missing whitespace around arithmetic operator
+    E226
+    # expected 2 blank lines
+    E302
+    # line too long
+    E501
+    # line break occurred before a binary operator
+    W503
+    # line break occurred after a binary operator
+    W504
