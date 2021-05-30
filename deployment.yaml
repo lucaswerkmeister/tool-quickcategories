@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: quickcategories.background-runner
+  name: background-runner
   labels:
-    name: quickcategories.background-runner
+    name: background-runner
     namespace: tool-quickcategories
     toolforge: tool
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: quickcategories.background-runner
+      name: background-runner
       toolforge: tool
   template:
     metadata:
       labels:
-        name: quickcategories.background-runner
+        name: background-runner
         toolforge: tool
     spec:
       containers:
