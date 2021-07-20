@@ -2,7 +2,7 @@ beautifulsoup4
 cachetools
 decorator
 flake8
-flask
+flask >= 2.0.0
 freezegun
 humanize
 mwapi
