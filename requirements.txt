@@ -11,8 +11,10 @@ mwparserfromhell
 mypy
 pymysql
 pytest
-pyyaml
+PyYAML
 requests
 requests_oauthlib
 toolforge
+types-PyYAML
+types-requests
 werkzeug

@@ -5,9 +5,9 @@ from typing import Dict, Iterable, Optional, Sequence, Tuple, Union
 import sitematrix
 
 
-def load_pagepile(session: mwapi.Session, id: int) -> Optional[Tuple[str, Sequence[str]]]:
+def load_pagepile(session: mwapi.Session, id: Union[int, str]) -> Optional[Tuple[str, Sequence[str]]]:
     try:
-        params: Dict[str, Union[int, str]] = {'id': id,
+        params: Dict[str, Union[int, str]] = {'id': str(id),
                                               'action': 'get_data',
                                               'format': 'json'}
         r = requests.get('https://pagepile.toolforge.org/api.php', params=params)

@@ -8,7 +8,7 @@ import humanize
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
 import os
-import pymysql.err
+import pymysql.err  # type: ignore
 import random
 import re
 import requests_oauthlib  # type: ignore
@@ -94,7 +94,7 @@ def csrf_token() -> str:
         log('CSRF', 'reusing token from session')
     return flask.session['csrf_token']
 
-@app.template_global()
+@app.template_global()  # type: ignore
 def form_value(name: str) -> flask.Markup:
     if 'repeat_form' in flask.g and name in flask.request.form:
         return (flask.Markup(r' value="') +
@@ -103,14 +103,14 @@ def form_value(name: str) -> flask.Markup:
     else:
         return flask.Markup()
 
-@app.template_global()
+@app.template_global()  # type: ignore
 def form_attributes(name: str) -> flask.Markup:
     return (flask.Markup(r' id="') +
             flask.Markup.escape(name) +
             flask.Markup(r'" name="') +
             flask.Markup.escape(name) +
             flask.Markup(r'" ') +
-            form_value(name))
+            form_value(name))  # type: ignore
 
 @app.template_filter()
 def user_link(user_name: str) -> flask.Markup:
@@ -160,7 +160,7 @@ def authentication_area() -> flask.Markup:
     area += flask.Markup(r'</span>')
     return area
 
-@app.template_global()
+@app.template_global()  # type: ignore
 def can_run_commands(command_records: List[CommandRecord]) -> bool:
     return flask.g.can_run_commands and any(filter(lambda command_record: isinstance(command_record, CommandPlan), command_records))
 
@@ -172,13 +172,15 @@ def can_start_background() -> bool:
 def can_stop_background() -> bool:
     return flask.g.can_stop_background
 
-@app.template_global()  # TODO make domain part of Command and turn this into a template filter?
+# TODO make domain part of Command and turn this into a template filter?
+@app.template_global()  # type: ignore
 def render_command(command: Command, domain: str) -> flask.Markup:
     return flask.Markup(flask.render_template('command.html',
                                               domain=domain,
                                               command=command))
 
-@app.template_global()  # TODO also turn into a template filter?
+# TODO also turn into a template filter?
+@app.template_global()  # type: ignore
 def render_command_record(command_record: CommandRecord, domain: str) -> flask.Markup:
     if isinstance(command_record, CommandPlan):
         command_record_markup = flask.render_template('command_plan.html',
@@ -258,7 +260,7 @@ def render_datetime(dt: datetime.datetime) -> flask.Markup:
             flask.Markup.escape(humanize.naturaltime(naive_dt)) +
             flask.Markup(r'</time>'))
 
-@app.template_global()
+@app.template_global()  # type: ignore
 def render_local_user(local_user: LocalUser) -> flask.Markup:
     return (flask.Markup(r'<a href="https://') +
             flask.Markup.escape(local_user.domain) +
@@ -268,7 +270,7 @@ def render_local_user(local_user: LocalUser) -> flask.Markup:
             flask.Markup.escape(local_user.user_name) +
             flask.Markup(r'</bdi></a>'))
 
-@app.template_global()
+@app.template_global()   # type: ignore
 def render_batch_title(batch: StoredBatch) -> Optional[flask.Markup]:
     if not batch.title:
         return None
@@ -280,12 +282,12 @@ def html_text(html: Union[str, flask.Markup]) -> flask.Markup:
     text = soup.text
     return flask.Markup.escape(text)
 
-@app.template_global()
+@app.template_global()   # type: ignore
 def render_batch_title_text(batch: StoredBatch) -> Optional[flask.Markup]:
-    title_html = render_batch_title(batch)
+    title_html = render_batch_title(batch)  # type: ignore
     if not title_html:
         return None
-    return html_text(title_html)
+    return html_text(title_html)  # type: ignore
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
@@ -509,7 +511,7 @@ def batch_export_metadata(id: int) -> Union[Tuple[Any, dict], Tuple[str, int]]:
             'global_user_id': batch.local_user.global_user_id,
         },
         'title_wikitext': batch.title,
-        'title_html': render_batch_title(batch),
+        'title_html': render_batch_title(batch),  # type: ignore
         'created': batch.created.isoformat(),
         'last_updated': batch.last_updated.isoformat(),
         'summary': {type.__name__: count
@@ -821,11 +823,11 @@ def current_url(external: bool = False) -> str:
                              _external=True,
                              _scheme=flask.request.headers.get('X-Forwarded-Proto', 'http'),
                              **flask.request.args.to_dict(flat=False),
-                             **flask.request.view_args)
+                             **flask.request.view_args or {})
     else:
         return flask.url_for(cast(str, flask.request.endpoint),
                              **flask.request.args.to_dict(flat=False),
-                             **flask.request.view_args)
+                             **flask.request.view_args or {})
 
 def submitted_request_valid() -> bool:
     """Check whether a submitted POST request is valid.
@@ -860,7 +862,7 @@ def submitted_request_valid() -> bool:
         return False
     return True
 
-@app.before_request
+@app.before_request  # type: ignore
 def require_valid_submitted_request() -> Optional[Tuple[str, int]]:
     if flask.request.method == 'POST' and not submitted_request_valid():
         return flask.render_template('csrf_error.html'), 400
