@@ -28,19 +28,19 @@ except FileNotFoundError:
     print('config.yaml file not found, cannot run in background')
     sys.exit(1)
 
-if 'oauth' in config:
-    consumer_token = mwoauth.ConsumerToken(config['oauth']['consumer_key'], config['oauth']['consumer_secret'])
+if 'OAUTH' in config:
+    consumer_token = mwoauth.ConsumerToken(config['OAUTH']['consumer_key'], config['OAUTH']['consumer_secret'])
 else:
     print('No OAuth configuration in config.yaml file, cannot run in background')
     sys.exit(1)
 
-if 'database' in config:
-    batch_store = DatabaseStore(config['database'])
+if 'DATABASE' in config:
+    batch_store = DatabaseStore(config['DATABASE'])
 else:
     print('No database configuration, cannot run in background')
     sys.exit(1)
 
-if 'read_only_reason' in config:
+if 'READ_ONLY_REASON' in config:
     print('Tool is in read-only mode according to config')
     sys.exit(1)
 
@@ -72,8 +72,8 @@ while not stopped:
     try:
         print('Running command %d of batch #%d... ' % (command_pending.id, batch.id), end='', flush=True)
 
-        if 'summary_batch_link' in config:
-            summary_batch_link = config['summary_batch_link'].format(batch.id)
+        if 'SUMMARY_BATCH_LINK' in config:
+            summary_batch_link = config['SUMMARY_BATCH_LINK'].format(batch.id)
         else:
             summary_batch_link = None
         runner = Runner(session, batch.title, summary_batch_link)

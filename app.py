@@ -3,6 +3,7 @@
 import bs4  # type: ignore
 import cachetools
 import datetime
+import decorator
 import flask
 import humanize
 import mwapi  # type: ignore
@@ -12,6 +13,7 @@ import pymysql.err  # type: ignore
 import random
 import re
 import requests_oauthlib  # type: ignore
+import stat
 import string
 import threading
 import toolforge
@@ -37,21 +39,37 @@ app = flask.Flask(__name__)
 
 user_agent = toolforge.set_user_agent('quickcategories', email='mail@lucaswerkmeister.de')
 
-__dir__ = os.path.dirname(__file__)
-try:
-    with open(os.path.join(__dir__, 'config.yaml')) as config_file:
-        app.config.update(yaml.safe_load(config_file))
-except FileNotFoundError:
+@decorator.decorator
+def read_private(func: Callable, *args: Any, **kwargs: Any) -> Any:
+    try:
+        f = args[0]
+        fd = f.fileno()
+    except AttributeError:
+        pass
+    except IndexError:
+        pass
+    else:
+        mode = os.stat(fd).st_mode
+        if (stat.S_IRGRP | stat.S_IROTH) & mode:
+            name = getattr(f, "name", "config file")
+            raise ValueError(f'{name} is readable to others, '
+                             'must be exclusively user-readable!')
+    return func(*args, **kwargs)
+
+has_config = app.config.from_file('config.yaml',
+                                  load=read_private(yaml.safe_load),
+                                  silent=True)
+if not has_config:
     print('config.yaml file not found, assuming local development setup')
     app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(64))
 
-if 'oauth' in app.config:
-    consumer_token = mwoauth.ConsumerToken(app.config['oauth']['consumer_key'], app.config['oauth']['consumer_secret'])
+if 'OAUTH' in app.config:
+    consumer_token = mwoauth.ConsumerToken(app.config['OAUTH']['consumer_key'], app.config['OAUTH']['consumer_secret'])
 
 batch_store: BatchStore
-if 'database' in app.config:
+if 'DATABASE' in app.config:
     from database import DatabaseStore
-    batch_store = DatabaseStore(app.config['database'])
+    batch_store = DatabaseStore(app.config['DATABASE'])
 
     def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
@@ -128,7 +146,7 @@ def user_logged_in() -> bool:
 
 @app.template_global()
 def authentication_area() -> flask.Markup:
-    if 'oauth' not in app.config:
+    if 'OAUTH' not in app.config:
         return flask.Markup()
 
     session = authenticated_session()
@@ -310,11 +328,11 @@ def index() -> str:
                                  default_domain=flask.session.get('default-domain', None),
                                  suggested_domains=flask.session.get('suggested-domains', []),
                                  batches=batch_store.get_batches_slice(offset=0, limit=10),
-                                 read_only_reason=app.config.get('read_only_reason'))
+                                 read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/new/commands', methods=['POST'])
 def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
-    read_only_reason = app.config.get('read_only_reason')
+    read_only_reason = app.config.get('READ_ONLY_REASON')
     if read_only_reason:  # TODO use walrus operator in Python 3.8
         return flask.render_template('new_batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
@@ -363,9 +381,9 @@ def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
                                      page_pile_id=flask.request.args.get('page_pile_id'),
-                                     read_only_reason=app.config.get('read_only_reason'))
+                                     read_only_reason=app.config.get('READ_ONLY_REASON'))
 
-    read_only_reason = app.config.get('read_only_reason')
+    read_only_reason = app.config.get('READ_ONLY_REASON')
     if read_only_reason:  # TODO use walrus operator in Python 3.8
         return flask.render_template('new_batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
@@ -473,7 +491,7 @@ def batch(id: int) -> Union[str, Tuple[str, int]]:
                                  batch=batch,
                                  offset=offset,
                                  limit=limit,
-                                 read_only_reason=app.config.get('read_only_reason'))
+                                 read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/<int:id>/background_history')
 def batch_background_history(id: int) -> Union[str, Tuple[str, int]]:
@@ -581,8 +599,8 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
         return flask.render_template('batch_error.html',
                                      message=message), 403
 
-    if 'summary_batch_link' in app.config:
-        summary_batch_link = app.config['summary_batch_link'].format(id)
+    if 'SUMMARY_BATCH_LINK' in app.config:
+        summary_batch_link = app.config['SUMMARY_BATCH_LINK'].format(id)
     else:
         summary_batch_link = None
 
@@ -883,4 +901,4 @@ def deny_frame(response: flask.Response) -> flask.Response:
 @app.errorhandler(pymysql.err.OperationalError)
 def handle_database_operational_error(e: pymysql.err.OperationalError) -> Tuple[str, int]:
     return flask.render_template('database_operational_error.html',
-                                 expected_database_error=app.config.get('expected_database_error')), 503
+                                 expected_database_error=app.config.get('EXPECTED_DATABASE_ERROR')), 503

@@ -1,14 +1,14 @@
 SECRET_KEY: "replace this with a long random string"
-oauth:
+OAUTH:
     consumer_key: ...
     consumer_secret: ...
-# summary_batch_link: "[[toolforge:quickcategories/batch/{0}/|QuickCategories batch #{0}]]"
-# database:
+# SUMMARY_BATCH_LINK: "[[toolforge:quickcategories/batch/{0}/|QuickCategories batch #{0}]]"
+# DATABASE:
 #     user: ...
 #     password: ...
 #     db: ...
 #     host: tools.db.svc.eqiad.wmflabs # on Toolforge
 #     read_default_file: ~/replica.my.cnf # on Toolforge, instead of user and password
-# read_only_reason: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
+# READ_ONLY_REASON: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
 # (If you set a read_only_reason, you probably also want to stop the background runner.)
-# expected_database_error: "The tool is temporarily non-functional for <a href=example.com>reasons</a>. <!-- HTML -->"
+# EXPECTED_DATABASE_ERROR: "The tool is temporarily non-functional for <a href=example.com>reasons</a>. <!-- HTML -->"
