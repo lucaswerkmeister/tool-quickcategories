@@ -20,7 +20,7 @@
       <span class="navbar-text px-2"><a href="{{ url_for('preferences') }}">Preferences</a></span>
       {{ authentication_area() }}
     </nav>
-    <main id="main" {% block main_tag_attributes %}class="container mt-3"{% endblock main_tag_attributes %}>
+    <main id="main" {% block main_tag_attributes %}class="container mt-3 mb-3"{% endblock main_tag_attributes %}>
       {% block main %}
       {% endblock main %}
     </main>
