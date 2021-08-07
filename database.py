@@ -225,16 +225,13 @@ class DatabaseStore(BatchStore):
 
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
         with self.connect() as connection:
+            # find a planned command and lock it
             with connection.cursor() as cursor:
                 now_utc_timestamp = datetime_to_utc_timestamp(now())
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`
+                cursor.execute('''SELECT `command_id`, `batch_id`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
-                                  JOIN `domain` ON `batch_domain` = `domain_id`
-                                  JOIN `actions` ON `command_actions` = `actions_id`
-                                  JOIN `localuser` ON `batch_localuser` = `localuser_id`
-                                  LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `background_stopped_utc_timestamp` IS NULL
                                   AND COALESCE(`background_suspended_until_utc_timestamp`, 0) < %s
                                   AND `command_status` = %s
@@ -247,12 +244,32 @@ class DatabaseStore(BatchStore):
                 connection.commit()  # finish the FOR UPDATE
                 return None
 
+            command_id = result[0]
+            batch_id = result[1]
+
+            # make it pending
             with connection.cursor() as cursor:
                 cursor.execute('''UPDATE `command`
                                   SET `command_status` = %s
                                   WHERE `command_id` = %s AND `command_batch` = %s''',
-                               (DatabaseStore._COMMAND_STATUS_PENDING, result[10], result[0]))
+                               (DatabaseStore._COMMAND_STATUS_PENDING, command_id, batch_id))
             connection.commit()
+
+            # get the rest of the data now that we know we need it (without locking it)
+            with connection.cursor() as cursor:
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`
+                                  FROM `background`
+                                  JOIN `batch` ON `background_batch` = `batch_id`
+                                  JOIN `command` ON `command_batch` = `batch_id`
+                                  JOIN `domain` ON `batch_domain` = `domain_id`
+                                  JOIN `actions` ON `command_actions` = `actions_id`
+                                  JOIN `localuser` ON `batch_localuser` = `localuser_id`
+                                  LEFT JOIN `title` ON `batch_title` = `title_id`
+                                  WHERE `command_id` = %s''',
+                               (command_id))
+                assert cursor.rowcount == 1
+                result = cursor.fetchone()
+                assert result is not None
 
         auth_data = json.loads(result[9])
         auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
