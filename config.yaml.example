@@ -9,6 +9,10 @@ OAUTH:
 #     db: ...
 #     host: tools.db.svc.eqiad.wmflabs # on Toolforge
 #     read_default_file: ~/replica.my.cnf # on Toolforge, instead of user and password
+# EDITGROUPS:
+#     commons.wikimedia.org:
+#         url: "https://editgroups-commons.toolforge.org/b/QC/{0}/"
+#         since: 2021-09-14T00:00:00Z
 # READ_ONLY_REASON: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
 # (If you set a read_only_reason, you probably also want to stop the background runner.)
 # EXPECTED_DATABASE_ERROR: "The tool is temporarily non-functional for <a href=example.com>reasons</a>. <!-- HTML -->"

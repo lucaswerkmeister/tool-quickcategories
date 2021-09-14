@@ -32,7 +32,7 @@ import parse_tpsv
 from querytime import flush_querytime, slow_queries, query_summary
 from runner import Runner
 from store import BatchStore
-from timestamp import now
+from timestamp import now, utc_timestamp_to_datetime
 
 
 app = flask.Flask(__name__)
@@ -487,8 +487,18 @@ def batch(id: int) -> Union[str, Tuple[str, int]]:
 
     offset, limit = slice_from_args(flask.request.args)
 
+    edit_group_link = None
+    for domain, edit_group_config in app.config.get('EDITGROUPS', {}).items():
+        if domain != batch.domain:
+            continue
+        if batch.created < edit_group_config.get('since', utc_timestamp_to_datetime(0)):
+            continue
+        edit_group_link = edit_group_config['url'].format(batch.id)
+        break
+
     return flask.render_template('batch.html',
                                  batch=batch,
+                                 edit_group_link=edit_group_link,
                                  offset=offset,
                                  limit=limit,
                                  read_only_reason=app.config.get('READ_ONLY_REASON'))

@@ -8,7 +8,10 @@
 {% set background_run = batch.background_runs.get_last() %}
 {% set currently_running = background_run and not background_run[1] %}
 <p class="lead">
-  Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>.
+  Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>
+  {%- if edit_group_link %}
+  (<a href="{{ edit_group_link }}">edit group</a>)
+  {%- endif %}.
   Created {{ batch.created | render_datetime }},
   last updated {{ batch.last_updated | render_datetime }}.
 </p>
