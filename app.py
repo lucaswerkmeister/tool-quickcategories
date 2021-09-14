@@ -332,8 +332,7 @@ def index() -> str:
 
 @app.route('/batch/new/commands', methods=['POST'])
 def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
-    read_only_reason = app.config.get('READ_ONLY_REASON')
-    if read_only_reason:  # TODO use walrus operator in Python 3.8
+    if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
 
@@ -383,8 +382,7 @@ def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
                                      page_pile_id=flask.request.args.get('page_pile_id'),
                                      read_only_reason=app.config.get('READ_ONLY_REASON'))
 
-    read_only_reason = app.config.get('READ_ONLY_REASON')
-    if read_only_reason:  # TODO use walrus operator in Python 3.8
+    if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
 
@@ -589,8 +587,7 @@ def batch_export_all_tpsv(id: int) -> Union[Tuple[werkzeug.Response, dict], Tupl
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
 def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
-    read_only_reason = app.config.get('read_only_reason')
-    if read_only_reason:  # TODO use walrus operator in Python 3.8
+    if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
 
@@ -647,8 +644,7 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
 def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
-    read_only_reason = app.config.get('read_only_reason')
-    if read_only_reason:  # TODO use walrus operator in Python 3.8
+    if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
 
@@ -683,8 +679,7 @@ def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
 def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
-    read_only_reason = app.config.get('read_only_reason')
-    if read_only_reason:  # TODO use walrus operator in Python 3.8
+    if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=flask.Markup(read_only_reason)), 503
 
