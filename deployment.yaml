@@ -45,6 +45,8 @@ spec:
             - name: src
               mountPath: '/srv/quickcategories/'
               readOnly: true
+            - name: cache-pip
+              mountPath: '/etc/.cache/pip/'
       volumes:
         - name: replica-my-cnf
           hostPath:
@@ -52,3 +54,6 @@ spec:
         - name: src
           hostPath:
             path: '/data/project/quickcategories/www/python/src/'
+        - name: cache-pip
+          hostPath:
+            path: '/data/project/quickcategories/.cache/pip/'
