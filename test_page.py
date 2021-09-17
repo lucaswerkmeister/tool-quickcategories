@@ -27,7 +27,6 @@ def test_Page_eq_different_title() -> None:
 def test_Page_eq_different_resolve_redirects() -> None:
     assert page1 != Page(page1.title, False)
     assert page1 != Page(page1.title, None)
-    assert page1 != Page(page1.title, 1)  # type: ignore
 
 def test_Page_str() -> None:
     assert str(page1) == 'Page 1'
