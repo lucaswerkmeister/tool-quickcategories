@@ -86,26 +86,8 @@ def test_AddCategoryAction_cleanup() -> None:
     action.cleanup()
     assert action == AddCategoryAction('User input from URL')
 
-def test_AddCategoryAction_eq_same() -> None:
-    assert addCategory1 == addCategory1
-
-def test_AddCategoryAction_eq_equal() -> None:
-    assert addCategory1 == AddCategoryAction(addCategory1.category)
-
-def test_AddCategoryAction_eq_different_type() -> None:
-    assert addCategory1 != RemoveCategoryAction(addCategory1.category)
-
-def test_AddCategoryAction_eq_different_category() -> None:
-    assert addCategory1 != addCategory2
-
-def test_AddCategoryAction_eq_different_category_normalization() -> None:
-    assert AddCategoryAction('Foo Bar') != AddCategoryAction('Foo_Bar')
-
 def test_AddCategoryAction_str() -> None:
     assert str(addCategory1) == '+Category:Cat 1'
-
-def test_AddCategoryAction_repr() -> None:
-    assert eval(repr(addCategory1)) == addCategory1
 
 
 @pytest.mark.parametrize('class_', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
@@ -128,26 +110,8 @@ def test_AddCategoryWithSortKeyAction_apply(wikitext: str, expected: str) -> Non
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
-def test_AddCategoryWithSortKeyAction_eq_same() -> None:
-    assert addCategoryWithSortKey1 == addCategoryWithSortKey1
-
-def test_AddCategoryWithSortKeyAction_eq_equal() -> None:
-    assert addCategoryWithSortKey1 == AddCategoryWithSortKeyAction(addCategoryWithSortKey1.category, addCategoryWithSortKey1.sort_key)
-
-def test_AddCategoryWithSortKeyAction_eq_different_type() -> None:
-    assert addCategoryWithSortKey1 != AddCategoryProvideSortKeyAction(addCategoryWithSortKey1.category, addCategoryWithSortKey1.sort_key)
-
-def test_AddCategoryWithSortKeyAction_eq_different_category() -> None:
-    assert addCategoryWithSortKey1 != AddCategoryWithSortKeyAction('Cat 2', addCategoryWithSortKey1.sort_key)
-
-def test_AddCategoryWithSortKeyAction_eq_different_sort_key() -> None:
-    assert addCategoryWithSortKey1 != AddCategoryWithSortKeyAction(addCategoryWithSortKey1.category, 'other sort key')
-
 def test_AddCategoryWithSortKeyAction_str() -> None:
     assert str(addCategoryWithSortKey1) == '+Category:Cat 1#sort key'
-
-def test_AddCategoryWithSortKeyAction_repr() -> None:
-    assert eval(repr(addCategoryWithSortKey1)) == addCategoryWithSortKey1
 
 
 @pytest.mark.parametrize('wikitext, expected', [
@@ -160,26 +124,8 @@ def test_AddCategoryProvideSortKeyAction_apply(wikitext: str, expected: str) -> 
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
-def test_AddCategoryProvideSortKeyAction_eq_same() -> None:
-    assert addCategoryProvideSortKey1 == addCategoryProvideSortKey1
-
-def test_AddCategoryProvideSortKeyAction_eq_equal() -> None:
-    assert addCategoryProvideSortKey1 == AddCategoryProvideSortKeyAction(addCategoryProvideSortKey1.category, addCategoryProvideSortKey1.sort_key)
-
-def test_AddCategoryProvideSortKeyAction_eq_different_type() -> None:
-    assert addCategoryProvideSortKey1 != AddCategoryWithSortKeyAction(addCategoryProvideSortKey1.category, addCategoryProvideSortKey1.sort_key)
-
-def test_AddCategoryProvideSortKeyAction_eq_different_category() -> None:
-    assert addCategoryProvideSortKey1 != AddCategoryProvideSortKeyAction('Cat 2', addCategoryProvideSortKey1.sort_key)
-
-def test_AddCategoryProvideSortKeyAction_eq_different_sort_key() -> None:
-    assert addCategoryProvideSortKey1 != AddCategoryProvideSortKeyAction(addCategoryProvideSortKey1.category, 'other sort key')
-
 def test_AddCategoryProvideSortKeyAction_str() -> None:
     assert str(addCategoryProvideSortKey1) == '+Category:Cat 1##sort key'
-
-def test_AddCategoryProvideSortKeyAction_repr() -> None:
-    assert eval(repr(addCategoryProvideSortKey1)) == addCategoryProvideSortKey1
 
 
 @pytest.mark.parametrize('wikitext, expected', [
@@ -199,26 +145,8 @@ def test_AddCategoryReplaceSortKeyAction_apply_remove_sort_key() -> None:
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
-def test_AddCategoryReplaceSortKeyAction_eq_same() -> None:
-    assert addCategoryReplaceSortKey1 == addCategoryReplaceSortKey1
-
-def test_AddCategoryReplaceSortKeyAction_eq_equal() -> None:
-    assert addCategoryReplaceSortKey1 == AddCategoryReplaceSortKeyAction(addCategoryReplaceSortKey1.category, addCategoryReplaceSortKey1.sort_key)
-
-def test_AddCategoryReplaceSortKeyAction_eq_different_type() -> None:
-    assert addCategoryReplaceSortKey1 != AddCategoryProvideSortKeyAction(addCategoryReplaceSortKey1.category, addCategoryReplaceSortKey1.sort_key)
-
-def test_AddCategoryReplaceSortKeyAction_eq_different_category() -> None:
-    assert addCategoryReplaceSortKey1 != AddCategoryReplaceSortKeyAction('Cat 2', addCategoryReplaceSortKey1.sort_key)
-
-def test_AddCategoryReplaceSortKeyAction_eq_different_sort_key() -> None:
-    assert addCategoryReplaceSortKey1 != AddCategoryReplaceSortKeyAction(addCategoryReplaceSortKey1.category, 'other sort key')
-
 def test_AddCategoryReplaceSortKeyAction_str() -> None:
     assert str(addCategoryReplaceSortKey1) == '+Category:Cat 1###sort key'
-
-def test_AddCategoryReplaceSortKeyAction_repr() -> None:
-    assert eval(repr(addCategoryReplaceSortKey1)) == addCategoryReplaceSortKey1
 
 
 @pytest.mark.parametrize('wikitext, expected', [
@@ -259,26 +187,8 @@ def test_RemoveCategoryAction_cleanup() -> None:
     action.cleanup()
     assert action == RemoveCategoryAction('User input from URL')
 
-def test_RemoveCategoryAction_eq_same() -> None:
-    assert removeCategory1 == removeCategory1
-
-def test_RemoveCategoryAction_eq_equal() -> None:
-    assert removeCategory1 == RemoveCategoryAction(removeCategory1.category)
-
-def test_RemoveCategoryAction_eq_different_type() -> None:
-    assert removeCategory1 != AddCategoryAction(removeCategory1.category)
-
-def test_RemoveCategoryAction_eq_different_category() -> None:
-    assert removeCategory1 != RemoveCategoryAction('Cat 2')
-
-def test_RemoveCategoryAction_eq_different_category_normalization() -> None:
-    assert RemoveCategoryAction('Foo Bar') != RemoveCategoryAction('Foo_Bar')
-
 def test_RemoveCategoryAction_str() -> None:
     assert str(removeCategory1) == '-Category:Cat 1'
-
-def test_RemoveCategoryAction_repr() -> None:
-    assert eval(repr(removeCategory1)) == removeCategory1
 
 
 def test_RemoveCategoryWithSortKeyAction_init_empty_sort_key() -> None:
@@ -298,23 +208,5 @@ def test_RemoveCategoryWithSortKeyAction_apply(wikitext: str, expected: str) -> 
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
-def test_RemoveCategoryWithSortKeyAction_eq_same() -> None:
-    assert removeCategoryWithSortKey1 == removeCategoryWithSortKey1
-
-def test_RemoveCategoryWithSortKeyAction_eq_equal() -> None:
-    assert removeCategoryWithSortKey1 == RemoveCategoryWithSortKeyAction(removeCategoryWithSortKey1.category, removeCategoryWithSortKey1.sort_key)
-
-def test_RemoveCategoryWithSortKeyAction_eq_different_type() -> None:
-    assert removeCategoryWithSortKey1 != AddCategoryWithSortKeyAction(removeCategoryWithSortKey1.category, removeCategoryWithSortKey1.sort_key)
-
-def test_RemoveCategoryWithSortKeyAction_eq_different_category() -> None:
-    assert removeCategoryWithSortKey1 != RemoveCategoryWithSortKeyAction('Cat 2', removeCategoryWithSortKey1.sort_key)
-
-def test_RemoveCategoryWithSortKeyAction_eq_different_sort_key() -> None:
-    assert removeCategoryWithSortKey1 != RemoveCategoryWithSortKeyAction(removeCategoryWithSortKey1.category, 'other sort key')
-
 def test_RemoveCategoryWithSortKeyAction_str() -> None:
     assert str(removeCategoryWithSortKey1) == '-Category:Cat 1#sort key'
-
-def test_RemoveCategoryWithSortKeyAction_repr() -> None:
-    assert eval(repr(removeCategoryWithSortKey1)) == removeCategoryWithSortKey1
