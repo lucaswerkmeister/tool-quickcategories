@@ -1,22 +1,26 @@
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import mwparserfromhell  # type: ignore
 from mwparserfromhell.nodes.wikilink import Wikilink  # type: ignore
-from typing import Any, Union
+from typing import ClassVar, Optional
 
 from siteinfo import CategoryInfo
 
 
-class Action:
+class Action(ABC):
     """A transformation to a piece of wikitext."""
 
+    @abstractmethod
     def apply(self, wikitext: str, category_info: CategoryInfo) -> str:
-        raise NotImplementedError
+        """Apply the action to the given wikitext, returning the resulting wikitext."""
 
+    @abstractmethod
     def summary(self, category_info: CategoryInfo) -> str:
-        raise NotImplementedError
+        """Generate an edit summary for the action."""
 
+    @abstractmethod
     def is_minor(self) -> bool:
         """Whether this action, on its own, can be considered a minor edit."""
-        raise NotImplementedError
 
     def cleanup(self) -> None:
         """Partially normalize the action, as a convenience for users.
@@ -27,18 +31,19 @@ class Action:
         pass
 
 
+@dataclass  # type: ignore
 class CategoryAction(Action):
     """An action to modify a category in the wikitext of a page."""
 
-    symbol = ''
+    symbol: ClassVar[str] = ''
 
-    def __init__(self, category: str) -> None:
-        assert category, 'category should not be empty'
-        assert not category.startswith('Category:'), 'category should not include namespace'
-        assert '[' not in category, 'category should not be a wikilink'
-        assert ']' not in category, 'category should not be a wikilink'
-        self.category = category
-        super().__init__()
+    category: str
+
+    def __post_init__(self) -> None:
+        assert self.category, 'category should not be empty'
+        assert not self.category.startswith('Category:'), 'category should not include namespace'
+        assert '[' not in self.category, 'category should not be a wikilink'
+        assert ']' not in self.category, 'category should not be a wikilink'
 
     def _is_category(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         for category_namespace_name in category_info[1]:
@@ -63,14 +68,11 @@ class CategoryAction(Action):
     def cleanup(self) -> None:
         self.category = self.category.replace('_', ' ')
 
-    def __eq__(self, value: Any) -> bool:
-        return type(self) is type(value) and \
-            self.category == value.category
-
     def __str__(self) -> str:
         return type(self).symbol + 'Category:' + self.category
 
 
+@dataclass
 class AddCategoryAction(CategoryAction):
     """An action to add a category to the wikitext of a page."""
 
@@ -104,33 +106,28 @@ class AddCategoryAction(CategoryAction):
     def is_minor(self) -> bool:
         return True
 
-    def __repr__(self) -> str:
-        return 'AddCategoryAction(' + repr(self.category) + ')'
 
-
+@dataclass
 class AddCategoryAndSortKeyAction(AddCategoryAction):
     """An action to add a category to the wikitext of a page, including a sort key."""
 
-    sort_key_symbol = ''
+    sort_key_symbol: ClassVar[str] = ''
 
-    def __init__(self, category: str, sort_key: Union[str, None]) -> None:
-        assert sort_key != '', 'sort key cannot be the empty string'
-        self.sort_key = sort_key
-        super().__init__(category)
+    sort_key: Optional[str]
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        assert self.sort_key != '', 'sort key cannot be the empty string'
 
     def summary(self, category_info: CategoryInfo) -> str:
         return '+[[' + category_info[0] + ':' + self.category + '|' + \
             category_info[0] + ':' + self.category + '|' + (self.sort_key or '') + ']]'
 
-    def __eq__(self, value: Any) -> bool:
-        return type(self) is type(value) and \
-            self.category == value.category and \
-            self.sort_key == value.sort_key
-
     def __str__(self) -> str:
         return super().__str__() + type(self).sort_key_symbol + (self.sort_key or '')
 
 
+@dataclass
 class AddCategoryWithSortKeyAction(AddCategoryAndSortKeyAction):
     """An action to add a category with a certain sort key to the wikitext of a page.
 
@@ -145,12 +142,8 @@ class AddCategoryWithSortKeyAction(AddCategoryAndSortKeyAction):
         return Wikilink(category_info[0] + ':' + self.category,
                         self.sort_key)
 
-    def __repr__(self) -> str:
-        return 'AddCategoryWithSortKeyAction(' + \
-            repr(self.category) + ', ' + \
-            repr(self.sort_key) + ')'
 
-
+@dataclass
 class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
     """An action to provide a category with a certain sort key in the wikitext of a page.
 
@@ -174,12 +167,8 @@ class AddCategoryProvideSortKeyAction(AddCategoryAndSortKeyAction):
         return Wikilink(category_info[0] + ':' + self.category,
                         self.sort_key)
 
-    def __repr__(self) -> str:
-        return 'AddCategoryProvideSortKeyAction(' + \
-            repr(self.category) + ', ' + \
-            repr(self.sort_key) + ')'
 
-
+@dataclass
 class AddCategoryReplaceSortKeyAction(AddCategoryAndSortKeyAction):
     """An action to replace a category’s sort key in the wikitext of a page.
 
@@ -199,12 +188,8 @@ class AddCategoryReplaceSortKeyAction(AddCategoryAndSortKeyAction):
         return Wikilink(category_info[0] + ':' + self.category,
                         self.sort_key)
 
-    def __repr__(self) -> str:
-        return 'AddCategoryReplaceSortKeyAction(' + \
-            repr(self.category) + ', ' + \
-            repr(self.sort_key) + ')'
 
-
+@dataclass
 class RemoveCategoryAction(CategoryAction):
     """An action to remove a category from the wikitext of a page."""
 
@@ -238,17 +223,16 @@ class RemoveCategoryAction(CategoryAction):
     def is_minor(self) -> bool:
         return False
 
-    def __repr__(self) -> str:
-        return 'RemoveCategoryAction(' + repr(self.category) + ')'
 
-
+@dataclass
 class RemoveCategoryWithSortKeyAction(RemoveCategoryAction):
     """An action to remove a category from the wikitext of a page if it matches a certain sort key."""
 
-    def __init__(self, category: str, sort_key: Union[str, None]) -> None:
-        assert sort_key != '', 'sort key cannot be the empty string'
-        self.sort_key = sort_key
-        super().__init__(category)
+    sort_key: Optional[str]
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        assert self.sort_key != '', 'sort key cannot be the empty string'
 
     def _reject_category_link(self, wikilink: Wikilink, category_info: CategoryInfo) -> bool:
         return super()._reject_category_link(wikilink, category_info) and \
@@ -258,15 +242,5 @@ class RemoveCategoryWithSortKeyAction(RemoveCategoryAction):
         return '-[[' + category_info[0] + ':' + self.category + '|' + \
             category_info[0] + ':' + self.category + '|' + (self.sort_key or '') + ']]'
 
-    def __eq__(self, value: Any) -> bool:
-        return type(self) is type(value) and \
-            self.category == value.category and \
-            self.sort_key == value.sort_key
-
     def __str__(self) -> str:
         return super().__str__() + '#' + (self.sort_key or '')
-
-    def __repr__(self) -> str:
-        return 'RemoveCategoryWithSortKeyAction(' + \
-            repr(self.category) + ', ' + \
-            repr(self.sort_key) + ')'

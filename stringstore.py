@@ -1,10 +1,12 @@
 import cachetools
+from dataclasses import dataclass
 import hashlib
 import operator
 import pymysql
 import threading
 
 
+@dataclass
 class StringTableStore:
     """Encapsulates access to a string that has been extracted into a separate table.
 
@@ -17,15 +19,12 @@ class StringTableStore:
     but to look up the string for an ID,
     callers should use a plain SQL JOIN for now."""
 
-    def __init__(self,
-                 table_name: str,
-                 id_column_name: str,
-                 hash_column_name: str,
-                 string_column_name: str):
-        self.table_name = table_name
-        self.id_column_name = id_column_name
-        self.hash_column_name = hash_column_name
-        self.string_column_name = string_column_name
+    table_name: str
+    id_column_name: str
+    hash_column_name: str
+    string_column_name: str
+
+    def __post_init__(self) -> None:
         self._cache: cachetools.LRUCache[str, int] = cachetools.LRUCache(maxsize=1024)
         self._cache_lock = threading.RLock()
 

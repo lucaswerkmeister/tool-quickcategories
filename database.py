@@ -1,4 +1,5 @@
 import contextlib
+from dataclasses import dataclass
 import datetime
 import itertools
 import json
@@ -422,11 +423,11 @@ class DatabaseStore(BatchStore):
             return bool(val)
 
 
+@dataclass(frozen=True)
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
-    def __init__(self, batch_id: int, store: DatabaseStore) -> None:
-        self.batch_id = batch_id
-        self.store = store
+    batch_id: int
+    store: DatabaseStore
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         command_records = []
@@ -595,12 +596,12 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             self.batch_id == value.batch_id
 
 
+@dataclass(frozen=True)
 class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
-    def __init__(self, batch_id: int, domain: str, store: DatabaseStore) -> None:
-        self.batch_id = batch_id
-        self.domain = domain
-        self.store = store
+    batch_id: int
+    domain: str
+    store: DatabaseStore
 
     def currently_running(self) -> bool:
         with self.store.connect() as connection, connection.cursor() as cursor:
@@ -662,14 +663,14 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             self.batch_id == value.batch_id
 
 
+@dataclass(frozen=True)
 class _LocalUserStore:
     """Encapsulates access to a local user account in the localuser table.
 
        When a user has been renamed, the same ID will still be used
        and the name will be updated once the user is stored the next time."""
 
-    def __init__(self, domain_store: StringTableStore) -> None:
-        self.domain_store = domain_store
+    domain_store: StringTableStore
 
     def acquire_localuser_id(self, connection: pymysql.connections.Connection, local_user: LocalUser) -> int:
         domain_id = self.domain_store.acquire_id(connection, local_user.domain)
