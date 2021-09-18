@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import datetime
 import mwapi  # type: ignore
 from typing import Dict, List, Optional, cast
@@ -7,14 +8,16 @@ from page import Page
 import siteinfo
 
 
+@dataclass
 class Runner():
 
-    def __init__(self, session: mwapi.Session, summary_batch_title: Optional[str] = None, summary_batch_link: Optional[str] = None) -> None:
-        self.session = session
-        self.csrf_token = session.get(action='query',
-                                      meta='tokens')['query']['tokens']['csrftoken']
-        self.summary_batch_title = summary_batch_title
-        self.summary_batch_link = summary_batch_link
+    session: mwapi.Session
+    summary_batch_title: Optional[str] = None
+    summary_batch_link: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        self.csrf_token = self.session.get(action='query',
+                                           meta='tokens')['query']['tokens']['csrftoken']
 
     def resolve_pages(self, pages: List[Page]) -> None:
         pages_with_resolve_redirects: List[Page] = []
