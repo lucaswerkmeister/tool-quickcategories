@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 
-@dataclass
+@dataclass(frozen=True)
 class LocalUser:
     """A user account local to one wiki."""
 

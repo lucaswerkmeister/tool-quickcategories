@@ -423,7 +423,7 @@ class DatabaseStore(BatchStore):
             return bool(val)
 
 
-@dataclass
+@dataclass(frozen=True)
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     batch_id: int
@@ -596,7 +596,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             self.batch_id == value.batch_id
 
 
-@dataclass
+@dataclass(frozen=True)
 class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
     batch_id: int
@@ -663,7 +663,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             self.batch_id == value.batch_id
 
 
-@dataclass
+@dataclass(frozen=True)
 class _LocalUserStore:
     """Encapsulates access to a local user account in the localuser table.
 

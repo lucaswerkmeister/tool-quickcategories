@@ -8,7 +8,7 @@ from page import Page
 from siteinfo import CategoryInfo
 
 
-@dataclass
+@dataclass(frozen=True)
 class Command:
     """A list of actions to perform on a page."""
 
@@ -46,7 +46,7 @@ class Command:
         return str(self.page) + '|' + self.actions_tpsv()
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandRecord(ABC):
     """A command that was recorded in some store."""
 
@@ -80,7 +80,7 @@ class CommandSuccess(CommandFinish):
     """A command that was successfully run."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandEdit(CommandSuccess):
     """A command that resulted in an edit on a page."""
 
@@ -91,7 +91,7 @@ class CommandEdit(CommandSuccess):
         assert self.base_revision < self.revision
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandNoop(CommandSuccess):
     """A command that resulted in no change to a page."""
 
@@ -131,7 +131,7 @@ class CommandFailure(CommandFinish):
         (i. e., suspend background runs but resume them automatically)."""
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandPageMissing(CommandFailure):
     """A command that failed because the specified page was found to be missing at the time."""
 
@@ -147,7 +147,7 @@ class CommandPageMissing(CommandFailure):
         return True
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandTitleInvalid(CommandFailure):
     """A command that failed because the specified title was invalid."""
 
@@ -163,7 +163,7 @@ class CommandTitleInvalid(CommandFailure):
         return True
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandPageProtected(CommandFailure):
     """A command that failed because the specified page was protected at the time."""
 
@@ -192,7 +192,7 @@ class CommandEditConflict(CommandFailure):
         return True
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandMaxlagExceeded(CommandFailure):
     """A command that failed because replication lag in the database cluster was too high."""
 
@@ -208,7 +208,7 @@ class CommandMaxlagExceeded(CommandFailure):
         return self.retry_after
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandBlocked(CommandFailure):
     """A command that failed because the user or IP address was blocked."""
 
@@ -228,7 +228,7 @@ class CommandBlocked(CommandFailure):
         return False
 
 
-@dataclass
+@dataclass(frozen=True)
 class CommandWikiReadOnly(CommandFailure):
     """A command that failed because the wiki was in read-only mode."""
 

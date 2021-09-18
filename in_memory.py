@@ -114,7 +114,7 @@ class InMemoryStore(BatchStore):
         return None
 
 
-@dataclass
+@dataclass(frozen=True)
 class _BatchCommandRecordsList(BatchCommandRecords):
 
     command_records: List[CommandRecord]
@@ -183,7 +183,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             self.command_records == value.command_records
 
 
-@dataclass
+@dataclass(frozen=True)
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
     background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]
