@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import datetime
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
@@ -113,12 +114,12 @@ class InMemoryStore(BatchStore):
         return None
 
 
+@dataclass
 class _BatchCommandRecordsList(BatchCommandRecords):
 
-    def __init__(self, command_records: List[CommandRecord], batch_id: int, store: InMemoryStore) -> None:
-        self.command_records = command_records
-        self.batch_id = batch_id
-        self.store = store
+    command_records: List[CommandRecord]
+    batch_id: int
+    store: InMemoryStore
 
     def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
         return self.command_records[offset:offset+limit]
@@ -182,11 +183,11 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             self.command_records == value.command_records
 
 
+@dataclass
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
-    def __init__(self, background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]], store: InMemoryStore) -> None:
-        self.background_runs = background_runs
-        self.store = store
+    background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]
+    store: InMemoryStore
 
     def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
         if self.background_runs:
