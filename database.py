@@ -10,7 +10,7 @@ import requests_oauthlib  # type: ignore
 from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
-from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 from page import Page
 import parse_tpsv
@@ -36,6 +36,7 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_WIKI_READ_ONLY = 133
     _COMMAND_STATUS_PAGE_PROTECTED = 134
     _COMMAND_STATUS_TITLE_INVALID = 135
+    _COMMAND_STATUS_TITLE_INTERWIKI = 136
 
     def __init__(self, connection_params: dict) -> None:
         connection_params.setdefault('charset', 'utf8mb4')
@@ -303,6 +304,9 @@ class DatabaseStore(BatchStore):
         elif isinstance(command_finish, CommandTitleInvalid):
             status = DatabaseStore._COMMAND_STATUS_TITLE_INVALID
             outcome = {'curtimestamp': command_finish.curtimestamp}
+        elif isinstance(command_finish, CommandTitleInterwiki):
+            status = DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI
+            outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandPageProtected):
             status = DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED
             outcome = {'curtimestamp': command_finish.curtimestamp}
@@ -361,6 +365,10 @@ class DatabaseStore(BatchStore):
             return CommandTitleInvalid(id,
                                        command,
                                        curtimestamp=outcome_dict['curtimestamp'])
+        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI:
+            return CommandTitleInterwiki(id,
+                                         command,
+                                         curtimestamp=outcome_dict['curtimestamp'])
         elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
             return CommandPageProtected(id,
                                         command,
@@ -403,6 +411,8 @@ class DatabaseStore(BatchStore):
             return CommandPageMissing
         elif status == DatabaseStore._COMMAND_STATUS_TITLE_INVALID:
             return CommandTitleInvalid
+        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI:
+            return CommandTitleInterwiki
         elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
             return CommandPageProtected
         elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:

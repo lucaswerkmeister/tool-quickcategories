@@ -5,7 +5,7 @@ import pytest  # type: ignore
 from typing import List, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from runner import Runner
 
@@ -569,6 +569,66 @@ def test_with_invalid_title() -> None:
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_unnormalized_interwiki_title() -> None:
+    curtimestamp = '2022-02-15T18:46:30Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'normalized': [
+                {
+                    'from': 'Commons: Sandbox',
+                    'to': 'commons:Sandbox',
+                },
+            ],
+            'interwiki': [
+                {
+                    'title': 'commons:Sandbox',
+                    'iw': 'commons',
+                },
+            ],
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('Commons: Sandbox', True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'interwiki': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandTitleInterwiki(command_pending.id, command_pending.command, curtimestamp)
 
 def test_with_protected_page() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'

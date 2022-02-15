@@ -24,7 +24,7 @@ import werkzeug
 import yaml
 
 from batch import StoredBatch, OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 from pagepile import load_pagepile, create_pagepile
 import parse_wikitext
@@ -224,6 +224,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
         command_record_markup = flask.render_template('command_title_invalid.html',
                                                       domain=domain,
                                                       command_title_invalid=command_record)
+    elif isinstance(command_record, CommandTitleInterwiki):
+        command_record_markup = flask.render_template('command_title_interwiki.html',
+                                                      domain=domain,
+                                                      command_title_interwiki=command_record)
     elif isinstance(command_record, CommandPageProtected):
         command_record_markup = flask.render_template('command_page_protected.html',
                                                       domain=domain,
@@ -258,6 +262,7 @@ def render_command_record_type(command_record_type: Type[CommandRecord]) -> flas
         CommandNoop: 'command_noop_badge.html',
         CommandPageMissing: 'command_page_missing_badge.html',
         CommandTitleInvalid: 'command_title_invalid_badge.html',
+        CommandTitleInterwiki: 'command_title_interwiki_badge.html',
         CommandPageProtected: 'command_page_protected_badge.html',
         CommandEditConflict: 'command_edit_conflict_badge.html',
         CommandMaxlagExceeded: 'command_maxlag_exceeded_badge.html',

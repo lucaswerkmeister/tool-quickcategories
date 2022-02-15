@@ -3,7 +3,7 @@ import datetime
 import mwapi  # type: ignore
 from typing import Dict, List, Optional, cast
 
-from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 import siteinfo
 
@@ -73,7 +73,14 @@ class Runner():
             for redirect in response['query'].get('redirects', []):
                 pages_by_title[redirect['to']] = pages_by_title[redirect['from']]
 
-        for response_page in response['query']['pages']:
+        for interwiki in response['query'].get('interwiki', []):
+            page = pages_by_title[interwiki['title']]
+            page.resolution = {
+                'interwiki': True,
+                'curtimestamp': response['curtimestamp'],
+            }
+
+        for response_page in response['query'].get('pages', []):
             title = response_page['title']
             page = pages_by_title[title]
             if 'missing' in response_page:
@@ -111,6 +118,8 @@ class Runner():
             return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
         if 'invalid' in resolution:
             return CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
+        if 'interwiki' in resolution:
+            return CommandTitleInterwiki(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
 
         wikitext, actions = command_pending.command.apply(resolution['wikitext'], category_info)
         summary = ''

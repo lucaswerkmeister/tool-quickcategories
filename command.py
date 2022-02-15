@@ -164,6 +164,22 @@ class CommandTitleInvalid(CommandFailure):
 
 
 @dataclass(frozen=True)
+class CommandTitleInterwiki(CommandFailure):
+    """A command that failed because the specified title was an interwiki link."""
+
+    curtimestamp: str
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_retry_later(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
+        return True
+
+
+@dataclass(frozen=True)
 class CommandPageProtected(CommandFailure):
     """A command that failed because the specified page was protected at the time."""
 

@@ -2,7 +2,7 @@ import datetime
 import pytest  # type: ignore
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 
 from test_action import addCategory1, removeCategory1, addCategory2
@@ -102,6 +102,23 @@ def test_CommandTitleInvalid_can_continue_batch() -> None:
 
 def test_CommandTitleInvalid_str() -> None:
     assert str(commandTitleInvalid1) == '# ' + str(commandWithInvalidTitle)
+
+
+commandWithInterwikiTitle = Command(Page('Commons: Sandbox', True), command2.actions)
+commandTitleInterwiki1 = CommandTitleInterwiki(42, commandWithInterwikiTitle, '2022-02-15T18:46:30Z')
+
+
+def test_CommandTitleInterwiki_can_retry_immediately() -> None:
+    assert not commandTitleInterwiki1.can_retry_immediately()
+
+def test_CommandTitleInterwiki_can_retry_later() -> None:
+    assert not commandTitleInterwiki1.can_retry_later()
+
+def test_CommandTitleInterwiki_can_continue_batch() -> None:
+    assert commandTitleInterwiki1.can_continue_batch()
+
+def test_CommandTitleInterwiki_str() -> None:
+    assert str(commandTitleInterwiki1) == '# ' + str(commandWithInterwikiTitle)
 
 
 commandWithProtectedPage = Command(Page('Main Page', True), command2.actions)
