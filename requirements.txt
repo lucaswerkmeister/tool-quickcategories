@@ -1,5 +1,5 @@
 beautifulsoup4
-cachetools
+cachetools >= 5.0.0
 decorator
 flake8
 Flask >= 2.0.2

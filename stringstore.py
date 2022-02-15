@@ -32,7 +32,7 @@ class StringTableStore:
         hex = hashlib.sha256(string.encode('utf8')).hexdigest()
         return int(hex[:8], base=16)
 
-    @cachetools.cachedmethod(operator.attrgetter('_cache'), key=lambda connection, string: string, lock=operator.attrgetter('_cache_lock'))
+    @cachetools.cachedmethod(operator.attrgetter('_cache'), key=lambda self, connection, string: string, lock=operator.attrgetter('_cache_lock'))
     def acquire_id(self, connection: pymysql.connections.Connection, string: str) -> int:
         hash = self._hash(string)
 
