@@ -267,8 +267,10 @@ class DatabaseStore(BatchStore):
                                   JOIN `actions` ON `command_actions` = `actions_id`
                                   JOIN `localuser` ON `batch_localuser` = `localuser_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
-                                  WHERE `command_id` = %s''',
-                               (command_id))
+                                  WHERE `command_id` = %s
+                                  AND `background_stopped_utc_timestamp` IS NULL
+                                  AND COALESCE(`background_suspended_until_utc_timestamp`, 0) < %s''',
+                               (command_id, now_utc_timestamp))
                 assert cursor.rowcount == 1
                 result = cursor.fetchone()
                 assert result is not None
