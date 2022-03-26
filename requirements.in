@@ -1,0 +1,20 @@
+beautifulsoup4
+cachetools >= 5.0.0
+decorator
+flake8
+Flask >= 2.0.2
+freezegun
+humanize
+mwapi
+mwoauth
+mwparserfromhell
+mypy
+pymysql
+pytest
+PyYAML
+requests
+requests_oauthlib
+toolforge
+types-PyYAML
+types-requests
+werkzeug
