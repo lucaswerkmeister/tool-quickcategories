@@ -908,7 +908,7 @@ def deny_frame(response: flask.Response) -> flask.Response:
     response.headers['X-Frame-Options'] = 'deny'
     return response
 
-@app.errorhandler(pymysql.err.OperationalError)  # type: ignore
+@app.errorhandler(pymysql.err.OperationalError)
 def handle_database_operational_error(e: pymysql.err.OperationalError) -> Tuple[str, int]:
     return flask.render_template('database_operational_error.html',
                                  expected_database_error=app.config.get('EXPECTED_DATABASE_ERROR')), 503
