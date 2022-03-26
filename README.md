@@ -54,8 +54,7 @@ git merge --ff-only @{u}
 # update webservice venv
 webservice shell
 source ~/www/python/venv/bin/activate
-pip3 install --upgrade pip
-pip3 install -r ~/www/python/src/requirements.txt
+pip-sync ~/www/python/src/requirements.txt
 exit
 
 # start new processes
