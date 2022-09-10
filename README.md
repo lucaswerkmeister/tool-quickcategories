@@ -79,8 +79,8 @@ If you want, you can do this inside some virtualenv too.
 ## Contributing
 
 To send a patch, you can submit a
-[pull request on GitHub](https://github.com/lucaswerkmeister/tool-lexeme-forms) or a
-[merge request on GitLab](https://gitlab.wikimedia.org/toolforge-repos/lexeme-forms/-/merge_requests).
+[pull request on GitHub](https://github.com/lucaswerkmeister/tool-quickcategories) or a
+[merge request on GitLab](https://gitlab.wikimedia.org/toolforge-repos/quickcategories).
 (E-mail / patch-based workflows are also acceptable.)
 
 ## License
