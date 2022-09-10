@@ -68,7 +68,7 @@ You can also run the tool locally, which is much more convenient for development
 (for example, Flask will automatically reload the application any time you save a file).
 
 ```
-git clone https://phabricator.wikimedia.org/source/tool-quickcategories.git
+git clone https://gitlab.wikimedia.org/toolforge-repos/quickcategories.git
 cd tool-quickcategories
 pip3 install -r requirements.txt
 FLASK_ENV=development flask run
@@ -78,19 +78,10 @@ If you want, you can do this inside some virtualenv too.
 
 ## Contributing
 
-To send a patch, you can use any of the following methods:
-
-* [Submit a pull request on GitHub.](https://github.com/lucaswerkmeister/tool-quickcategories)
-* Use `git send-email`.
-  (Send the patch(es) to the email address from the Git commit history.)
-* Upload the changes to a repository of your own and use `git request-pull` (same email address).
-* Upload a diff on [GitHub Gist](https://gist.github.com/)
-  and send the link to the tool’s maintainer(s) via email, Twitter, on-wiki message, or whatever.
-* [Create a Diff on Phabricator.](https://phabricator.wikimedia.org/differential/diff/create/)
-  Make sure to add @LucasWerkmeister as subscriber.
-
-They’re listed in the maintainer(s)’ order of preference, from most to least preferred,
-but feel free to use any of these methods as it best suits you.
+To send a patch, you can submit a
+[pull request on GitHub](https://github.com/lucaswerkmeister/tool-lexeme-forms) or a
+[merge request on GitLab](https://gitlab.wikimedia.org/toolforge-repos/lexeme-forms/-/merge_requests).
+(E-mail / patch-based workflows are also acceptable.)
 
 ## License
 
