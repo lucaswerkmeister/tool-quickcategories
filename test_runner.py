@@ -2,7 +2,7 @@ import datetime
 import mwapi  # type: ignore
 import os
 import pytest  # type: ignore
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -557,6 +557,118 @@ def test_with_invalid_title() -> None:
     runner = Runner(session)
 
     page = Page('Invalid%20title', True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'invalid': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_empty_title() -> None:
+    curtimestamp = '2023-02-14T20:51:21Z'
+
+    def get_response(**kwargs: Any) -> dict:
+        if 'meta' in kwargs:
+            return {
+                'query': {
+                    'tokens': {'csrftoken': '+\\'},
+                    'namespaces': {
+                        '14': {
+                            'id': 14,
+                            'name': 'Category',
+                            'canonical': 'Category',
+                            'case': 'first-letter',
+                        },
+                    },
+                    'namespacealiases': [],
+                    'allmessages': [
+                        {
+                            'name': 'comma-separator',
+                            'content': ', ',
+                        },
+                        {
+                            'name': 'semicolon-separator',
+                            'content': '; ',
+                        },
+                        {
+                            'name': 'parentheses',
+                            'content': '($1)',
+                        },
+                    ],
+                },
+            }
+        else:
+            return {
+                'curtimestamp': curtimestamp,
+                # no 'query'
+            }
+
+    session = FakeSession(get_response)
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('', True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'invalid': True,
+        'curtimestamp': curtimestamp,
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_hash_title() -> None:
+    curtimestamp = '2023-02-14T20:51:21Z'
+    session = FakeSession({
+        'curtimestamp': curtimestamp,
+        'query': {
+            'tokens': {'csrftoken': '+\\'},
+            'normalized': [
+                {
+                    'from': '#',
+                    'to': '',
+                },
+            ],
+            # notice there’s no actual pages for ''
+            'namespaces': {
+                '14': {
+                    'id': 14,
+                    'name': 'Category',
+                    'canonical': 'Category',
+                    'case': 'first-letter',
+                },
+            },
+            'namespacealiases': [],
+            'allmessages': [
+                {
+                    'name': 'comma-separator',
+                    'content': ', ',
+                },
+                {
+                    'name': 'semicolon-separator',
+                    'content': '; ',
+                },
+                {
+                    'name': 'parentheses',
+                    'content': '($1)',
+                },
+            ],
+        },
+    })
+    session.host = 'test.wikidata.org'
+    runner = Runner(session)
+
+    page = Page('#', True)
 
     runner.resolve_pages([page])
 

@@ -66,21 +66,21 @@ class Runner():
             params['redirects'] = True
         response = self.session.get(**params)
 
-        for normalization in response['query'].get('normalized', []):
+        for normalization in response.get('query', {}).get('normalized', []):
             pages_by_title[normalization['to']] = pages_by_title[normalization['from']]
 
         if do_resolve_redirects:
-            for redirect in response['query'].get('redirects', []):
+            for redirect in response.get('query', {}).get('redirects', []):
                 pages_by_title[redirect['to']] = pages_by_title[redirect['from']]
 
-        for interwiki in response['query'].get('interwiki', []):
+        for interwiki in response.get('query', {}).get('interwiki', []):
             page = pages_by_title[interwiki['title']]
             page.resolution = {
                 'interwiki': True,
                 'curtimestamp': response['curtimestamp'],
             }
 
-        for response_page in response['query'].get('pages', []):
+        for response_page in response.get('query', {}).get('pages', []):
             title = response_page['title']
             page = pages_by_title[title]
             if 'missing' in response_page:
@@ -105,6 +105,13 @@ class Runner():
                 'base_timestamp': revision['timestamp'],
                 'base_revid': revision['revid'],
                 'start_timestamp': response['curtimestamp'],
+            }
+
+        if '' in pages_by_title:
+            page = pages_by_title['']
+            page.resolution = {
+                'invalid': True,
+                'curtimestamp': response['curtimestamp'],
             }
 
     def run_command(self, command_pending: CommandPending) -> CommandFinish:

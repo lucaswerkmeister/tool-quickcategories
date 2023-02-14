@@ -149,7 +149,10 @@ class CommandPageMissing(CommandFailure):
 
 @dataclass(frozen=True)
 class CommandTitleInvalid(CommandFailure):
-    """A command that failed because the specified title was invalid."""
+    """A command that failed because the specified title was invalid.
+
+    This also includes empty titles (which in the API output are absent,
+    rather than reported as invalid)."""
 
     curtimestamp: str
 
