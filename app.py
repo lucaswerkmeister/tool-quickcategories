@@ -850,11 +850,11 @@ def current_url(external: bool = False) -> str:
         return flask.url_for(cast(str, flask.request.endpoint),
                              _external=True,
                              _scheme=flask.request.headers.get('X-Forwarded-Proto', 'http'),
-                             **flask.request.args.to_dict(flat=False),
+                             **flask.request.args.to_dict(flat=False),  # type: ignore
                              **flask.request.view_args or {})
     else:
         return flask.url_for(cast(str, flask.request.endpoint),
-                             **flask.request.args.to_dict(flat=False),
+                             **flask.request.args.to_dict(flat=False),  # type: ignore
                              **flask.request.view_args or {})
 
 def submitted_request_valid() -> bool:

@@ -5,7 +5,7 @@ from typing import Any, Dict
 import warnings
 
 
-_sitematrix_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, dict]
+_sitematrix_cache: cachetools.TTLCache[Any, dict] = cachetools.TTLCache(maxsize=1, ttl=24*60*60)
 _sitematrix_cache_lock = threading.RLock()
 
 

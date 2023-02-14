@@ -6,7 +6,7 @@ import threading
 from typing import Tuple
 
 
-summary_cache = cachetools.LRUCache(maxsize=1024)  # type: cachetools.LRUCache[Tuple[str, str], flask.Markup]
+summary_cache: cachetools.LRUCache[Tuple[str, str], flask.Markup] = cachetools.LRUCache(maxsize=1024)
 summary_cache_lock = threading.RLock()
 
 
