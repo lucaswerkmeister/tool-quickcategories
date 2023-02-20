@@ -9,6 +9,7 @@ OAUTH:
 #     db: ...
 #     host: tools.db.svc.eqiad.wmflabs # on Toolforge
 #     read_default_file: ~/replica.my.cnf # on Toolforge, instead of user and password
+#     enable_querytime: true # optional
 # EDITGROUPS:
 #     commons.wikimedia.org:
 #         url: "https://editgroups-commons.toolforge.org/b/QC/{0}/"

@@ -4,6 +4,7 @@ import pymysql
 import pytest  # type: ignore
 from typing import Any, Iterator, Tuple, cast
 
+from database import DatabaseStore
 from querytime import QueryTimingCursor, QueryTimingSSCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
 from timestamp import now, utc_timestamp_to_datetime
 
@@ -113,3 +114,18 @@ def test_query_summary(database_connection_params: dict) -> None:
         ('''SELECT "query 1"''', {'count': 3, 'avg': 4.0, 'min': 1.0, 'max': 8.0, 'sum': 12.0}),
         ('''SELECT "query 2"''', {'count': 2, 'avg': 2.0, 'min': 1.0, 'max': 3.0, 'sum': 4.0}),
     ]
+
+def test_DatabaseStore_enable_querytime_default(database_connection_params: dict) -> None:
+    store = DatabaseStore(database_connection_params)
+    store.get_batch(0)
+    assert not _query_times
+
+def test_DatabaseStore_enable_querytime_false(database_connection_params: dict) -> None:
+    store = DatabaseStore({'enable_querytime': False, **database_connection_params})
+    store.get_batch(0)
+    assert not _query_times
+
+def test_DatabaseStore_enable_querytime_true(database_connection_params: dict) -> None:
+    store = DatabaseStore({'enable_querytime': True, **database_connection_params})
+    store.get_batch(0)
+    assert _query_times

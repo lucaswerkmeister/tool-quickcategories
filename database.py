@@ -40,7 +40,24 @@ class DatabaseStore(BatchStore):
 
     def __init__(self, connection_params: dict) -> None:
         connection_params.setdefault('charset', 'utf8mb4')
-        self.connection_params = connection_params
+        if connection_params.pop('enable_querytime', False):
+            self.connection_params = {
+                'cursorclass': cast(Type[pymysql.cursors.Cursor], QueryTimingCursor),
+                **connection_params,
+            }
+            self.streaming_connection_params = {
+                'cursorclass': cast(Type[pymysql.cursors.SSCursor], QueryTimingSSCursor),
+                **connection_params,
+            }
+        else:
+            self.connection_params = {
+                'cursorclass': pymysql.cursors.Cursor,
+                **connection_params,
+            }
+            self.streaming_connection_params = {
+                'cursorclass': pymysql.cursors.SSCursor,
+                **connection_params,
+            }
         self.domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         self.title_store = StringTableStore('title', 'title_id', 'title_hash', 'title_text')
         self.actions_store = StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
@@ -48,8 +65,7 @@ class DatabaseStore(BatchStore):
 
     @contextlib.contextmanager
     def connect(self) -> Generator[pymysql.connections.Connection, None, None]:
-        connection = pymysql.connect(cursorclass=QueryTimingCursor,
-                                     **self.connection_params)
+        connection = pymysql.connect(**self.connection_params)
         try:
             yield connection
         finally:
@@ -57,8 +73,7 @@ class DatabaseStore(BatchStore):
 
     @contextlib.contextmanager
     def connect_streaming(self) -> Generator[pymysql.connections.Connection, None, None]:
-        connection = pymysql.connect(cursorclass=QueryTimingSSCursor,
-                                     **self.connection_params)
+        connection = pymysql.connect(**self.streaming_connection_params)
         try:
             yield connection
         finally:
