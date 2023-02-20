@@ -55,6 +55,9 @@ def test_flush_querytime(database_connection_params_with_cursorclass: dict) -> N
         assert sql == '''SELECT 1'''
         assert cursor.fetchone() is None
 
+def test_flush_querytime_empty() -> None:
+    flush_querytime(cast(pymysql.connections.Connection, None))  # should not crash
+
 def test_flush_querytime_twice_records_querytime_times(database_connection_params_with_cursorclass: dict) -> None:
     connection = pymysql.connect(**database_connection_params_with_cursorclass)
     with connection.cursor() as cursor:

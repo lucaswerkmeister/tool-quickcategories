@@ -65,6 +65,8 @@ def flush_querytime(connection: Connection) -> None:
         utc_timestamp = datetime_to_utc_timestamp(dt)
         query_id = _querytext_store.acquire_id(connection, query)
         querytime_values.append((utc_timestamp, query_id, duration))
+    if not querytime_values:
+        return
     with connection.cursor() as cursor:
         cursor.executemany('''INSERT INTO `querytime`
                               (`querytime_utc_timestamp`, `querytime_querytext`, `querytime_duration`)
