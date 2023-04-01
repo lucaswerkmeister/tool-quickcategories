@@ -157,7 +157,7 @@ def authentication_area() -> flask.Markup:
 
     response = session.get(action='query',
                            meta=['userinfo', 'notifications'],
-                           notcrosswikisummary='',  # TODO use =True after next mwapi release
+                           notcrosswikisummary=True,
                            notprop=['count'])
     user_name = response['query']['userinfo']['name']
     notifications = response['query']['notifications']['rawcount']

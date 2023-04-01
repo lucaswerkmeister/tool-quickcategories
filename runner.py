@@ -51,20 +51,14 @@ class Runner():
             pages_by_title[page.title] = page
             titles.append(page.title)
 
-        # TODO pass redirects=do_resolve_redirects to session.get()
-        # once there is an mwapi release with support for boolean parameters
-        params = {
-            'action': 'query',
-            'titles': titles,
-            'prop': ['revisions'],
-            'rvprop': ['ids', 'content', 'contentmodel', 'timestamp'],
-            'rvslots': ['main'],
-            'curtimestamp': True,
-            'formatversion': 2,
-        }
-        if do_resolve_redirects:
-            params['redirects'] = True
-        response = self.session.get(**params)
+        response = self.session.get(action='query',
+                                    titles=titles,
+                                    prop=['revisions'],
+                                    rvprop=['ids', 'content', 'contentmodel', 'timestamp'],
+                                    rvslots=['main'],
+                                    curtimestamp=True,
+                                    redirects=do_resolve_redirects,
+                                    formatversion=2)
 
         for normalization in response.get('query', {}).get('normalized', []):
             pages_by_title[normalization['to']] = pages_by_title[normalization['from']]
