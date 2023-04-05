@@ -878,16 +878,6 @@ def submitted_request_valid() -> bool:
         # incorrect token (could be outdated or incorrectly forged)
         log('CSRF', 'token mismatch')
         return False
-    if not (flask.request.referrer or '').startswith(full_url('index')):
-        # correct token but not coming from the correct page; for
-        # example, JS running on https://tools.wmflabs.org/tool-a is
-        # allowed to access https://tools.wmflabs.org/tool-b and
-        # extract CSRF tokens from it (since both of these pages are
-        # hosted on the https://tools.wmflabs.org domain), so checking
-        # the Referer header is our only protection against attackers
-        # from other Toolforge tools
-        log('CSRF', 'referrer mismatch: should start with %s, got %s' % (full_url('index'), flask.request.referrer))
-        return False
     return True
 
 @app.before_request
@@ -900,10 +890,7 @@ def require_valid_submitted_request() -> Optional[Tuple[str, int]]:
 def deny_frame(response: flask.Response) -> flask.Response:
     """Disallow embedding the tool’s pages in other websites.
 
-    If other websites can embed this tool’s pages, e. g. in <iframe>s,
-    other tools hosted on tools.wmflabs.org can send arbitrary web
-    requests from this tool’s context, bypassing the referrer-based
-    CSRF protection.
+    Main motivation is to protect against clickjacking attacks.
     """
     response.headers['X-Frame-Options'] = 'deny'
     return response
