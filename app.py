@@ -6,6 +6,7 @@ import datetime
 import decorator
 import flask
 import humanize
+from markupsafe import Markup
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
 import os
@@ -113,47 +114,47 @@ def csrf_token() -> str:
     return flask.session['csrf_token']
 
 @app.template_global()
-def form_value(name: str) -> flask.Markup:
+def form_value(name: str) -> Markup:
     if 'repeat_form' in flask.g and name in flask.request.form:
-        return (flask.Markup(r' value="') +
-                flask.Markup.escape(flask.request.form[name]) +
-                flask.Markup(r'" '))
+        return (Markup(r' value="') +
+                Markup.escape(flask.request.form[name]) +
+                Markup(r'" '))
     else:
-        return flask.Markup()
+        return Markup()
 
 @app.template_global()
-def form_attributes(name: str) -> flask.Markup:
-    return (flask.Markup(r' id="') +
-            flask.Markup.escape(name) +
-            flask.Markup(r'" name="') +
-            flask.Markup.escape(name) +
-            flask.Markup(r'" ') +
+def form_attributes(name: str) -> Markup:
+    return (Markup(r' id="') +
+            Markup.escape(name) +
+            Markup(r'" name="') +
+            Markup.escape(name) +
+            Markup(r'" ') +
             form_value(name))
 
 @app.template_filter()
-def user_link(user_name: str) -> flask.Markup:
-    return (flask.Markup(r'<a href="https://meta.wikimedia.org/wiki/User:') +
-            flask.Markup.escape(user_name.replace(' ', '_')) +
-            flask.Markup(r'">') +
-            flask.Markup(r'<bdi>') +
-            flask.Markup.escape(user_name) +
-            flask.Markup(r'</bdi>') +
-            flask.Markup(r'</a>'))
+def user_link(user_name: str) -> Markup:
+    return (Markup(r'<a href="https://meta.wikimedia.org/wiki/User:') +
+            Markup.escape(user_name.replace(' ', '_')) +
+            Markup(r'">') +
+            Markup(r'<bdi>') +
+            Markup.escape(user_name) +
+            Markup(r'</bdi>') +
+            Markup(r'</a>'))
 
 @app.template_global()
 def user_logged_in() -> bool:
     return authenticated_session() is not None
 
 @app.template_global()
-def authentication_area() -> flask.Markup:
+def authentication_area() -> Markup:
     if 'OAUTH' not in app.config:
-        return flask.Markup()
+        return Markup()
 
     session = authenticated_session()
     if not session:
-        return (flask.Markup(r'<span class="navbar-text pl-2"><a id="login" href="') +
-                flask.Markup.escape(flask.url_for('login')) +
-                flask.Markup(r'">Log in</a></span>'))
+        return (Markup(r'<span class="navbar-text pl-2"><a id="login" href="') +
+                Markup.escape(flask.url_for('login')) +
+                Markup(r'">Log in</a></span>'))
 
     response = session.get(action='query',
                            meta=['userinfo', 'notifications'],
@@ -162,20 +163,20 @@ def authentication_area() -> flask.Markup:
     user_name = response['query']['userinfo']['name']
     notifications = response['query']['notifications']['rawcount']
 
-    area = (flask.Markup(r'<span class="navbar-text pl-2">Logged in as ') +
+    area = (Markup(r'<span class="navbar-text pl-2">Logged in as ') +
             user_link(user_name))
 
     if notifications and flask.session.get('notifications', True):
         number = '99+' if notifications >= 99 else str(notifications)
         word = 'notification' if notifications == 1 else 'notifications'
-        area += (flask.Markup(r' (<a href="https://meta.wikimedia.org/wiki/Special:Notifications">') +
-                 flask.Markup(r'<span class="badge badge-light">') +
-                 flask.Markup.escape(number) +
-                 flask.Markup(r'</span><span class="d-md-none d-lg-inline"> ') +
-                 flask.Markup.escape(word) +
-                 flask.Markup(r'</span></a>)'))
+        area += (Markup(r' (<a href="https://meta.wikimedia.org/wiki/Special:Notifications">') +
+                 Markup(r'<span class="badge badge-light">') +
+                 Markup.escape(number) +
+                 Markup(r'</span><span class="d-md-none d-lg-inline"> ') +
+                 Markup.escape(word) +
+                 Markup(r'</span></a>)'))
 
-    area += flask.Markup(r'</span>')
+    area += Markup(r'</span>')
     return area
 
 @app.template_global()
@@ -192,14 +193,14 @@ def can_stop_background() -> bool:
 
 # TODO make domain part of Command and turn this into a template filter?
 @app.template_global()
-def render_command(command: Command, domain: str) -> flask.Markup:
-    return flask.Markup(flask.render_template('command.html',
-                                              domain=domain,
-                                              command=command))
+def render_command(command: Command, domain: str) -> Markup:
+    return Markup(flask.render_template('command.html',
+                                        domain=domain,
+                                        command=command))
 
 # TODO also turn into a template filter?
 @app.template_global()
-def render_command_record(command_record: CommandRecord, domain: str) -> flask.Markup:
+def render_command_record(command_record: CommandRecord, domain: str) -> Markup:
     if isinstance(command_record, CommandPlan):
         command_record_markup = flask.render_template('command_plan.html',
                                                       domain=domain,
@@ -251,10 +252,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> flask.M
     else:
         raise ValueError('Unknown command record type')
 
-    return flask.Markup(command_record_markup)
+    return Markup(command_record_markup)
 
 @app.template_filter()
-def render_command_record_type(command_record_type: Type[CommandRecord]) -> flask.Markup:
+def render_command_record_type(command_record_type: Type[CommandRecord]) -> Markup:
     template_names = {
         CommandPlan: 'command_plan_badge.html',
         CommandPending: 'command_pending_badge.html',
@@ -270,43 +271,43 @@ def render_command_record_type(command_record_type: Type[CommandRecord]) -> flas
         CommandWikiReadOnly: 'command_wiki_read_only_badge.html',
     }
     template_name = template_names[command_record_type]
-    return flask.Markup(flask.render_template(template_name))
+    return Markup(flask.render_template(template_name))
 
 @app.template_filter()
-def render_datetime(dt: datetime.datetime) -> flask.Markup:
+def render_datetime(dt: datetime.datetime) -> Markup:
     naive_dt = dt.astimezone().replace(tzinfo=None)  # humanize doesn’t support timezones :(
-    return (flask.Markup(r'<time datetime="') +
-            flask.Markup.escape(dt.isoformat()) +
-            flask.Markup(r'" title="') +
-            flask.Markup.escape(dt.isoformat()) +
-            flask.Markup(r'">') +
-            flask.Markup.escape(humanize.naturaltime(naive_dt)) +
-            flask.Markup(r'</time>'))
+    return (Markup(r'<time datetime="') +
+            Markup.escape(dt.isoformat()) +
+            Markup(r'" title="') +
+            Markup.escape(dt.isoformat()) +
+            Markup(r'">') +
+            Markup.escape(humanize.naturaltime(naive_dt)) +
+            Markup(r'</time>'))
 
 @app.template_global()
-def render_local_user(local_user: LocalUser) -> flask.Markup:
-    return (flask.Markup(r'<a href="https://') +
-            flask.Markup.escape(local_user.domain) +
-            flask.Markup(r'/wiki/Special:Redirect/user/') +
-            flask.Markup.escape(str(local_user.local_user_id)) +
-            flask.Markup(r'"><bdi>') +
-            flask.Markup.escape(local_user.user_name) +
-            flask.Markup(r'</bdi></a>'))
+def render_local_user(local_user: LocalUser) -> Markup:
+    return (Markup(r'<a href="https://') +
+            Markup.escape(local_user.domain) +
+            Markup(r'/wiki/Special:Redirect/user/') +
+            Markup.escape(str(local_user.local_user_id)) +
+            Markup(r'"><bdi>') +
+            Markup.escape(local_user.user_name) +
+            Markup(r'</bdi></a>'))
 
 @app.template_global()
-def render_batch_title(batch: StoredBatch) -> Optional[flask.Markup]:
+def render_batch_title(batch: StoredBatch) -> Optional[Markup]:
     if not batch.title:
         return None
     return parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title)
 
 @app.template_filter()
-def html_text(html: Union[str, flask.Markup]) -> flask.Markup:
+def html_text(html: Union[str, Markup]) -> Markup:
     soup = bs4.BeautifulSoup(html, 'html.parser')
     text = soup.text
-    return flask.Markup.escape(text)
+    return Markup.escape(text)
 
 @app.template_global()
-def render_batch_title_text(batch: StoredBatch) -> Optional[flask.Markup]:
+def render_batch_title_text(batch: StoredBatch) -> Optional[Markup]:
     title_html = render_batch_title(batch)
     if not title_html:
         return None
@@ -339,7 +340,7 @@ def index() -> str:
 def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
-                                     message=flask.Markup(read_only_reason)), 503
+                                     message=Markup(read_only_reason)), 503
 
     domain = flask.request.form.get('domain', '(not provided)')
     if not is_wikimedia_domain(domain):
@@ -389,7 +390,7 @@ def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
 
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
-                                     message=flask.Markup(read_only_reason)), 503
+                                     message=Markup(read_only_reason)), 503
 
     pile_id = flask.request.form.get('page_pile_id')
     if not pile_id:
@@ -594,7 +595,7 @@ def batch_export_all_tpsv(id: int) -> Union[Tuple[werkzeug.Response, dict], Tupl
 def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
-                                     message=flask.Markup(read_only_reason)), 503
+                                     message=Markup(read_only_reason)), 503
 
     batch = batch_store.get_batch(id)
     if batch is None:
@@ -651,7 +652,7 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
 def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
-                                     message=flask.Markup(read_only_reason)), 503
+                                     message=Markup(read_only_reason)), 503
 
     batch = batch_store.get_batch(id)
     if batch is None:
@@ -686,7 +687,7 @@ def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]
 def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
-                                     message=flask.Markup(read_only_reason)), 503
+                                     message=Markup(read_only_reason)), 503
 
     batch = batch_store.get_batch(id)
     if batch is None:
