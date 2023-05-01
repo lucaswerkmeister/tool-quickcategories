@@ -32,7 +32,7 @@ exceptiongroup==1.1.1
     # via pytest
 flake8==6.0.0
     # via -r requirements.in
-flask==2.3.1
+flask==2.3.2
     # via -r requirements.in
 freezegun==1.2.2
     # via -r requirements.in
@@ -126,13 +126,13 @@ types-pyyaml==6.0.12.9
     # via -r requirements.in
 types-requests==2.29.0.0
     # via -r requirements.in
-types-urllib3==1.26.25.11
+types-urllib3==1.26.25.12
     # via types-requests
 typing-extensions==4.5.0
     # via mypy
 urllib3==1.26.15
     # via requests
-werkzeug==2.3.2
+werkzeug==2.3.3
     # via
     #   -r requirements.in
     #   flask
