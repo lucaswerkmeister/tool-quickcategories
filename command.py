@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import datetime
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 from action import Action
 from page import Page
@@ -116,7 +116,7 @@ class CommandFailure(CommandFinish):
         will be appended to the end of the batch."""
 
     @abstractmethod
-    def can_continue_batch(self) -> Union[bool, datetime.datetime]:
+    def can_continue_batch(self) -> bool | datetime.datetime:
         """Whether it is okay to continue with other commands in this batch.
 
         If the failure only affects this command, we can proceed with the batch as usual;
@@ -260,5 +260,5 @@ class CommandWikiReadOnly(CommandFailure):
     def can_retry_later(self) -> bool:
         return True
 
-    def can_continue_batch(self) -> Union[bool, datetime.datetime]:
+    def can_continue_batch(self) -> bool | datetime.datetime:
         return self.retry_after or False

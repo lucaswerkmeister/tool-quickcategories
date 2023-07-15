@@ -2,7 +2,7 @@ import datetime
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor, SSCursor
 import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -91,7 +91,7 @@ def slow_queries(connection: Connection, since: datetime.datetime, until: dateti
         return ret
 
 
-def query_summary(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[str, Dict[str, Union[float, int]]]]:
+def query_summary(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[str, Dict[str, float | int]]]:
     with connection.cursor() as cursor:
         cursor.execute('''SELECT `querytext_sql`,
                           COUNT(*) AS `count`,

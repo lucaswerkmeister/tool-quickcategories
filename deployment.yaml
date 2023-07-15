@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: background-runner
-          image: docker-registry.tools.wmflabs.org/toolforge-python39-sssd-base:latest
+          image: docker-registry.tools.wmflabs.org/toolforge-python311-sssd-base:latest
           command: [ '/bin/bash', '-c' ]
           args:
             # venvs are not position-independent, so we build our own instead of

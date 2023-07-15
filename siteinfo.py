@@ -1,16 +1,16 @@
 import cachetools
 import mwapi  # type: ignore
 import threading
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, TypeAlias
 
 
-CategoryInfo = Tuple[str, List[str], str]
+CategoryInfo: TypeAlias = Tuple[str, List[str], str]
 """The primary name of the category namespace,
 all the names with which a category link may be formed,
 and the case of the category namespace ("first-letter" or "case-sensitive")."""
 
 
-_SiteInfo = Tuple[CategoryInfo, Dict[str, str]]
+_SiteInfo: TypeAlias = Tuple[CategoryInfo, Dict[str, str]]
 """The category info,
 and a dict from message key to message content."""
 

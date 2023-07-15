@@ -19,7 +19,7 @@ import string
 import threading
 import toolforge
 import traceback
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, Union, cast
+from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, cast
 import warnings
 import werkzeug
 import yaml
@@ -301,7 +301,7 @@ def render_batch_title(batch: StoredBatch) -> Optional[Markup]:
     return parse_wikitext.parse_summary(anonymous_session(batch.domain), batch.title)
 
 @app.template_filter()
-def html_text(html: Union[str, Markup]) -> Markup:
+def html_text(html: str | Markup) -> Markup:
     soup = bs4.BeautifulSoup(html, 'html.parser')
     text = soup.text
     return Markup.escape(text)
@@ -337,7 +337,7 @@ def index() -> str:
                                  read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/new/commands', methods=['POST'])
-def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
+def new_batch_from_commands() -> werkzeug.Response | Tuple[str, int]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -382,7 +382,7 @@ def new_batch_from_commands() -> Union[werkzeug.Response, Tuple[str, int]]:
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/new/pagepile', methods=['GET', 'POST'])
-def new_batch_from_pagepile() -> Union[werkzeug.Response, str, Tuple[str, int]]:
+def new_batch_from_pagepile() -> werkzeug.Response | str | Tuple[str, int]:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
                                      page_pile_id=flask.request.args.get('page_pile_id'),
@@ -448,7 +448,7 @@ def batches() -> str:
                                  count=batch_store.get_batches_count())
 
 @app.route('/batch/<int:id>/')
-def batch(id: int) -> Union[str, Tuple[str, int]]:
+def batch(id: int) -> str | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -508,7 +508,7 @@ def batch(id: int) -> Union[str, Tuple[str, int]]:
                                  read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/<int:id>/background_history')
-def batch_background_history(id: int) -> Union[str, Tuple[str, int]]:
+def batch_background_history(id: int) -> str | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -518,7 +518,7 @@ def batch_background_history(id: int) -> Union[str, Tuple[str, int]]:
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/')
-def batch_export(id: int) -> Union[str, Tuple[str, int]]:
+def batch_export(id: int) -> str | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -528,7 +528,7 @@ def batch_export(id: int) -> Union[str, Tuple[str, int]]:
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/metadata.json')
-def batch_export_metadata(id: int) -> Union[Tuple[Any, dict], Tuple[str, int]]:
+def batch_export_metadata(id: int) -> Tuple[Any, dict] | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -553,7 +553,7 @@ def batch_export_metadata(id: int) -> Union[Tuple[Any, dict], Tuple[str, int]]:
     }
 
 @app.route('/batch/<int:id>/export/titles/all.txt')
-def batch_export_all_titles(id: int) -> Union[Tuple[werkzeug.Response, dict], Tuple[str, int]]:
+def batch_export_all_titles(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -567,7 +567,7 @@ def batch_export_all_titles(id: int) -> Union[Tuple[werkzeug.Response, dict], Tu
     }
 
 @app.route('/batch/<int:id>/export/titles/all-pagepile', methods=['POST'])
-def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+def batch_export_all_pagepile(id: int) -> werkzeug.Response | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -578,7 +578,7 @@ def batch_export_all_pagepile(id: int) -> Union[werkzeug.Response, Tuple[str, in
     return flask.redirect('https://pagepile.toolforge.org/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/export/tpsv/all.txt')
-def batch_export_all_tpsv(id: int) -> Union[Tuple[werkzeug.Response, dict], Tuple[str, int]]:
+def batch_export_all_tpsv(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[str, int]:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -592,7 +592,7 @@ def batch_export_all_tpsv(id: int) -> Union[Tuple[werkzeug.Response, dict], Tupl
     }
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
-def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+def run_batch_slice(id: int) -> werkzeug.Response | Tuple[str, int]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -649,7 +649,7 @@ def run_batch_slice(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
                                         limit=limit))
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
-def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+def start_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -684,7 +684,7 @@ def start_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]
                                         limit=limit))
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
-def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
+def stop_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -716,7 +716,7 @@ def stop_batch_background(id: int) -> Union[werkzeug.Response, Tuple[str, int]]:
                                         limit=limit))
 
 @app.route('/preferences', methods=['GET', 'POST'])
-def preferences() -> Union[werkzeug.Response, str]:
+def preferences() -> werkzeug.Response | str:
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
                                      default_domain=flask.session.get('default-domain', None),
@@ -752,7 +752,7 @@ def login() -> werkzeug.Response:
     return flask.redirect(redirect)
 
 @app.route('/oauth/callback')
-def oauth_callback() -> Union[werkzeug.Response, str]:
+def oauth_callback() -> werkzeug.Response | str:
     oauth_request_token = flask.session.pop('oauth_request_token', None)
     if oauth_request_token is None:
         return flask.render_template('oauth_callback_error.html',
@@ -770,7 +770,7 @@ def logout() -> werkzeug.Response:
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/debug/query_times')
-def query_times() -> Union[str, Tuple[str, int]]:
+def query_times() -> str | Tuple[str, int]:
     session = authenticated_session()
     if not session:
         return 'not logged in', 403

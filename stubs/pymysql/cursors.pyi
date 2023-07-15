@@ -1,9 +1,9 @@
-from typing import Any, Iterable, Iterator, Optional, Tuple, TypeVar
+from typing import Any, Iterable, Iterator, Optional, Tuple, TypeAlias, TypeVar
 
 from .connections import Connection
 
 
-Gen = Tuple[Any, ...]  # rather than typeshed’s Union of that with Dict[str, Any]
+Gen: TypeAlias = Tuple[Any, ...]  # rather than typeshed’s Union of that with Dict[str, Any]
 _SelfT = TypeVar("_SelfT")
 
 class Cursor:

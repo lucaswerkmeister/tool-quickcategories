@@ -1,13 +1,13 @@
 import requests
 import requests_oauthlib  # type: ignore
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional
 
 
 class FakeSession:
 
     host: Optional[str]
 
-    def __init__(self, get_response: Union[dict, BaseException, Callable], post_response: Optional[Union[dict, BaseException, Callable]] = None) -> None:
+    def __init__(self, get_response: dict | BaseException | Callable, post_response: Optional[dict | BaseException | Callable] = None) -> None:
         self.get_response = get_response
         self.post_response = post_response
         self.host = None

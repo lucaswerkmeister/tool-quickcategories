@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: '3.9'
+          - python-version: '3.11'
             job-number: 1
           # the job number is appended to the page title to form
           # QuickCategories CI Test/1, QuickCategories CI Test/2, etc.;
