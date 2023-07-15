@@ -5,6 +5,7 @@ import cachetools
 import datetime
 import decorator
 import flask
+from flask.typing import ResponseReturnValue as RRV
 import humanize
 from markupsafe import Markup
 import mwapi  # type: ignore
@@ -329,7 +330,7 @@ def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
     return authenticated_session(domain) or anonymous_session(domain)
 
 @app.route('/')
-def index() -> str:
+def index() -> RRV:
     return flask.render_template('index.html',
                                  default_domain=flask.session.get('default-domain', None),
                                  suggested_domains=flask.session.get('suggested-domains', []),
@@ -337,7 +338,7 @@ def index() -> str:
                                  read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/new/commands', methods=['POST'])
-def new_batch_from_commands() -> werkzeug.Response | Tuple[str, int]:
+def new_batch_from_commands() -> RRV:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('new_batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -382,7 +383,7 @@ def new_batch_from_commands() -> werkzeug.Response | Tuple[str, int]:
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/new/pagepile', methods=['GET', 'POST'])
-def new_batch_from_pagepile() -> werkzeug.Response | str | Tuple[str, int]:
+def new_batch_from_pagepile() -> RRV:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
                                      page_pile_id=flask.request.args.get('page_pile_id'),
@@ -439,7 +440,7 @@ def new_batch_from_pagepile() -> werkzeug.Response | str | Tuple[str, int]:
     return flask.redirect(flask.url_for('batch', id=id))
 
 @app.route('/batch/')
-def batches() -> str:
+def batches() -> RRV:
     offset, limit = slice_from_args(flask.request.args)
     return flask.render_template('batches.html',
                                  batches=batch_store.get_batches_slice(offset=offset, limit=limit),
@@ -448,7 +449,7 @@ def batches() -> str:
                                  count=batch_store.get_batches_count())
 
 @app.route('/batch/<int:id>/')
-def batch(id: int) -> str | Tuple[str, int]:
+def batch(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -508,7 +509,7 @@ def batch(id: int) -> str | Tuple[str, int]:
                                  read_only_reason=app.config.get('READ_ONLY_REASON'))
 
 @app.route('/batch/<int:id>/background_history')
-def batch_background_history(id: int) -> str | Tuple[str, int]:
+def batch_background_history(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -518,7 +519,7 @@ def batch_background_history(id: int) -> str | Tuple[str, int]:
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/')
-def batch_export(id: int) -> str | Tuple[str, int]:
+def batch_export(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -528,7 +529,7 @@ def batch_export(id: int) -> str | Tuple[str, int]:
                                  batch=batch)
 
 @app.route('/batch/<int:id>/export/metadata.json')
-def batch_export_metadata(id: int) -> Tuple[Any, dict] | Tuple[str, int]:
+def batch_export_metadata(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -553,7 +554,7 @@ def batch_export_metadata(id: int) -> Tuple[Any, dict] | Tuple[str, int]:
     }
 
 @app.route('/batch/<int:id>/export/titles/all.txt')
-def batch_export_all_titles(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[str, int]:
+def batch_export_all_titles(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -567,7 +568,7 @@ def batch_export_all_titles(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[s
     }
 
 @app.route('/batch/<int:id>/export/titles/all-pagepile', methods=['POST'])
-def batch_export_all_pagepile(id: int) -> werkzeug.Response | Tuple[str, int]:
+def batch_export_all_pagepile(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -578,7 +579,7 @@ def batch_export_all_pagepile(id: int) -> werkzeug.Response | Tuple[str, int]:
     return flask.redirect('https://pagepile.toolforge.org/api.php?action=get_data&id=%d' % pile_id)
 
 @app.route('/batch/<int:id>/export/tpsv/all.txt')
-def batch_export_all_tpsv(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[str, int]:
+def batch_export_all_tpsv(id: int) -> RRV:
     batch = batch_store.get_batch(id)
     if batch is None:
         return flask.render_template('batch_not_found.html',
@@ -592,7 +593,7 @@ def batch_export_all_tpsv(id: int) -> Tuple[werkzeug.Response, dict] | Tuple[str
     }
 
 @app.route('/batch/<int:id>/run_slice', methods=['POST'])
-def run_batch_slice(id: int) -> werkzeug.Response | Tuple[str, int]:
+def run_batch_slice(id: int) -> RRV:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -649,7 +650,7 @@ def run_batch_slice(id: int) -> werkzeug.Response | Tuple[str, int]:
                                         limit=limit))
 
 @app.route('/batch/<int:id>/start_background', methods=['POST'])
-def start_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
+def start_batch_background(id: int) -> RRV:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -684,7 +685,7 @@ def start_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
                                         limit=limit))
 
 @app.route('/batch/<int:id>/stop_background', methods=['POST'])
-def stop_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
+def stop_batch_background(id: int) -> RRV:
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
         return flask.render_template('batch_error.html',
                                      message=Markup(read_only_reason)), 503
@@ -716,7 +717,7 @@ def stop_batch_background(id: int) -> werkzeug.Response | Tuple[str, int]:
                                         limit=limit))
 
 @app.route('/preferences', methods=['GET', 'POST'])
-def preferences() -> werkzeug.Response | str:
+def preferences() -> RRV:
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
                                      default_domain=flask.session.get('default-domain', None),
@@ -746,13 +747,13 @@ def preferences() -> werkzeug.Response | str:
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/login')
-def login() -> werkzeug.Response:
+def login() -> RRV:
     redirect, request_token = mwoauth.initiate('https://meta.wikimedia.org/w/index.php', consumer_token, user_agent=user_agent)
     flask.session['oauth_request_token'] = dict(zip(request_token._fields, request_token))
     return flask.redirect(redirect)
 
 @app.route('/oauth/callback')
-def oauth_callback() -> werkzeug.Response | str:
+def oauth_callback() -> RRV:
     oauth_request_token = flask.session.pop('oauth_request_token', None)
     if oauth_request_token is None:
         return flask.render_template('oauth_callback_error.html',
@@ -765,12 +766,12 @@ def oauth_callback() -> werkzeug.Response | str:
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/logout')
-def logout() -> werkzeug.Response:
+def logout() -> RRV:
     flask.session.clear()
     return flask.redirect(flask.url_for('index'))
 
 @app.route('/debug/query_times')
-def query_times() -> str | Tuple[str, int]:
+def query_times() -> RRV:
     session = authenticated_session()
     if not session:
         return 'not logged in', 403
