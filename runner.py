@@ -91,10 +91,17 @@ class Runner():
                 continue
             revision = response_page['revisions'][0]
             slot = revision['slots']['main']
-            if slot['contentmodel'] != 'wikitext' or slot['contentformat'] != 'text/x-wiki':
-                raise ValueError('Unexpected content model or format for revision %d of page %s, refusing to edit!' % (revision['revid'], title))
+            if slot['contentmodel'] not in ('wikitext', 'proofread-index'):
+                raise ValueError(f'Unexpected content model {slot["contentmodel"]} '
+                                 f'for revision {revision["revid"]} of page {title} '
+                                 f'on {self.session.host}, refusing to edit!')
+            elif slot['contentformat'] != 'text/x-wiki':
+                raise ValueError(f'Unexpected content format {slot["contentformat"]} '
+                                 f'for revision {revision["revid"]} of page {title} '
+                                 f'on {self.session.host}, refusing to edit!')
             page.resolution = {
                 'wikitext': slot['content'],
+                'contentmodel': slot['contentmodel'],
                 'page_id': response_page['pageid'],
                 'base_timestamp': revision['timestamp'],
                 'base_revid': revision['revid'],
@@ -159,7 +166,7 @@ class Runner():
                       'basetimestamp': resolution['base_timestamp'],
                       'starttimestamp': resolution['start_timestamp'],
                       'contentformat': 'text/x-wiki',
-                      'contentmodel': 'wikitext',
+                      'contentmodel': resolution['contentmodel'],  # usually 'wikitext'
                       'token': self.csrf_token,
                       'assert': 'user',
                       'maxlag': 5,

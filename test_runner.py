@@ -12,16 +12,7 @@ from runner import Runner
 from test_utils import FakeSession
 
 def test_resolve_pages_and_run_commands() -> None:
-    if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
-        pytest.skip('MediaWiki credentials not provided')
-    session = mwapi.Session('https://test.wikipedia.org', user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
-    lgtoken = session.get(action='query',
-                          meta='tokens',
-                          type=['login'])['query']['tokens']['logintoken']
-    session.post(action='login',
-                 lgname=os.environ['MW_USERNAME'],
-                 lgpassword=os.environ['MW_PASSWORD'],
-                 lgtoken=lgtoken)
+    session = logged_in_session('https://test.wikipedia.org')
 
     suffix = ''
     if 'CI_JOB_NUMBER' in os.environ:
@@ -106,6 +97,82 @@ def test_resolve_pages_and_run_commands() -> None:
     set_page_wikitext('teardown', title_B2, 'Test page for the QuickCategories tool.', runner)
     set_page_wikitext('teardown', title_C, '#REDIRECT [[' + title_C2 + ']]', runner)
     set_page_wikitext('teardown', title_C2, 'Test page for the QuickCategories tool.', runner)
+
+def test_resolve_pages_and_run_commands_test2wiki() -> None:
+    """test2wiki has ProofreadPage installed, so we can test Wikisource support here."""
+    session = logged_in_session('https://test2.wikipedia.org')
+
+    suffix = ''
+    if 'CI_JOB_NUMBER' in os.environ:
+        suffix = ' ' + os.environ['CI_JOB_NUMBER']
+    title = 'Index:QuickCategories CI Test' + suffix
+
+    actions: List[Action] = [AddCategoryAction('Added cat')]
+    command = Command(Page(title, True), actions)
+    runner = Runner(session, summary_batch_title='QuickCategories CI test')
+    base_content = '''
+{{:MediaWiki:Proofreadpage_index_template
+|Type=book
+|Title=%s
+|Language=en
+|Volume=
+|Author=
+|Translator=
+|Editor=
+|Illustrator=
+|School=
+|Publisher=
+|Address=
+|Year=
+|Key=
+|wikidata_item=
+|ISBN=
+|OCLC=
+|LCCN=
+|BNF_ARK=
+|ARC=
+|Source=_empty_
+|Image=1
+|Progress=X
+|Pages=<pagelist />
+|Volumes=
+|Remarks=
+|Width=
+|Css=
+|Header=
+|Footer=
+}}
+'''.strip() % title[len('Index:'):]
+    base = set_page_wikitext('setup', title, base_content, runner)
+
+    runner.resolve_pages([command.page])
+    edit = runner.run_command(CommandPending(0, command))
+
+    assert isinstance(edit, CommandEdit)
+    assert edit.base_revision == base
+    assert command.page.resolution is None
+
+    revision = get_page_revision(title, runner)
+    assert revision['comment'] == '+[[Category:Added cat]]; QuickCategories CI test'
+    assert revision['minor']
+
+    expected_page_content = base_content + '\n[[Category:Added cat]]'
+    assert revision['slots']['main']['content'] == expected_page_content
+
+    set_page_wikitext('teardown', title, base_content, runner)
+
+def logged_in_session(host: str) -> mwapi.Session:
+    if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:
+        pytest.skip('MediaWiki credentials not provided')
+    session = mwapi.Session(host, user_agent='QuickCategories test (mail@lucaswerkmeister.de)')
+    lgtoken = session.get(action='query',
+                          meta='tokens',
+                          type=['login'])['query']['tokens']['logintoken']
+    session.post(action='login',
+                 lgname=os.environ['MW_USERNAME'],
+                 lgpassword=os.environ['MW_PASSWORD'],
+                 lgtoken=lgtoken)
+    return session
 
 def set_page_wikitext(summary: str, title: str, wikitext: str, runner: Runner) -> int:
     response = runner.session.post(**{'action': 'edit',

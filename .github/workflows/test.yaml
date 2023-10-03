@@ -10,11 +10,11 @@ jobs:
         include:
           - python-version: '3.11'
             job-number: 1
-          # the job number is appended to the page title to form
-          # QuickCategories CI Test/1, QuickCategories CI Test/2, etc.;
-          # only subpages 1 and 2 exist so far, so if you add a third job,
-          # you need to manually create the extra page first
-          # (the bot password does not have permission to create pages)
+          # the job number is included in the page title;
+          # only pages for job numbers 1 and 2 have been set up so far,
+          # so if you add a third job, you must manually create the extra pages first
+          # (the bot password does not have permission to create pages) –
+          # see test_runner.py (note that it uses two test wikis!)
     services:
       mariadb:
         image: mariadb:10.1
