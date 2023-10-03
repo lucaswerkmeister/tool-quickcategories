@@ -758,7 +758,7 @@ def oauth_callback() -> RRV:
     if oauth_request_token is None:
         return flask.render_template('oauth_callback_error.html',
                                      already_logged_in='oauth_access_token' in flask.session,
-                                     query_string=flask.request.query_string.decode(flask.request.url_charset))
+                                     query_string=flask.request.query_string.decode('utf8'))
     request_token = mwoauth.RequestToken(**oauth_request_token)
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
