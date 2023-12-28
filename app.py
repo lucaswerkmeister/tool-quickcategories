@@ -808,7 +808,7 @@ def query_times() -> RRV:
 
 
 def is_wikimedia_domain(domain: str) -> bool:
-    return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage)|mediawiki|wiktionary)\.org', domain) is not None
+    return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage|functions)|mediawiki|wiktionary)\.org', domain) is not None
 
 def slice_from_args(args: dict) -> Tuple[int, int]:
     try:

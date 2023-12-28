@@ -16,6 +16,7 @@ import app as quickcategories
     ('de.wikivoyage.org', True),
     ('www.mediawiki.org', True),
     ('simple.wiktionary.org', True),
+    ('www.wikifunctions.org', True),
     # Wikimedia domains we don’t want to use
     ('www.m.wikidata.org', False),
     ('wikipedia.de', False),
