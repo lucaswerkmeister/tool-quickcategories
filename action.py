@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import mwparserfromhell  # type: ignore
 from mwparserfromhell.nodes.wikilink import Wikilink  # type: ignore
+import re
 from typing import ClassVar, Optional
 
 from siteinfo import CategoryInfo
@@ -60,7 +61,17 @@ class CategoryAction(Action):
         else:
             raise ValueError('Unknown case handling %s' % category_info[2])
 
-        return category1.replace(' ', '_') == category2.replace(' ', '_')
+        return self._clean_up_whitespace(category1) == self._clean_up_whitespace(category2)
+
+    def _clean_up_whitespace(self, title: str) -> str:
+        """Clean up whitespace in a title string (and convert it to dbkey form, i.e. underscores).
+
+        For the MediaWiki implementation of this, see MediaWikiTitleCodec::splitTitleString()."""
+        return re.sub(
+            r'[ _\u00A0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+',
+            '_',
+            title,
+        ).strip('_')
 
     def summary(self, category_info: CategoryInfo) -> str:
         return type(self).symbol + '[[' + category_info[0] + ':' + self.category + ']]'

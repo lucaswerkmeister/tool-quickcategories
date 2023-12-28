@@ -53,9 +53,17 @@ def test_AddCategoryAction_apply(wikitext: str, expected: str) -> None:
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
 
-def test_AddCategoryAction_apply_detects_underscores() -> None:
-    action = AddCategoryAction('My Test Category')
-    wikitext = '[[Category:My_Test_Category]]'
+@pytest.mark.parametrize('wikitext, category', [
+    # note: test_RemoveCategoryAction_apply_whitespace has a copy of these test cases
+    ('[[Category:A]]', ' A '),
+    ('[[Category: A ]]', 'A'),
+    ('[[Category:My_Test_Category]]', 'My Test Category'),
+    ('[[Category:My Test Category]]', 'My_Test_Category'),
+    ('[[Category:A B]]', 'A\u00a0B'),
+    ('[[Category:A\u00a0B]]', 'A B'),
+])
+def test_AddCategoryAction_apply_whitespace(wikitext: str, category: str) -> None:
+    action = AddCategoryAction(category)
     assert wikitext == action.apply(wikitext, ('Category', ['Category'], 'first-letter'))
 
 # note: the following test is no longer as relevant since we clean up all new batches to never contain underscores
@@ -170,6 +178,20 @@ def test_RemoveCategoryAction_apply(wikitext: str, expected: str) -> None:
     action = RemoveCategoryAction('Test')
     actual = action.apply(wikitext, ('Category', ['Category', 'Kategorie', 'K'], 'first-letter'))
     assert expected == actual
+
+@pytest.mark.parametrize('wikitext, category', [
+    # note: test_AddCategoryAction_apply_whitespace has a copy of these test cases
+    ('[[Category:A]]', ' A '),
+    ('[[Category: A ]]', 'A'),
+    ('[[Category:My_Test_Category]]', 'My Test Category'),
+    ('[[Category:My Test Category]]', 'My_Test_Category'),
+    ('[[Category:A B]]', 'A\u00a0B'),
+    ('[[Category:A\u00a0B]]', 'A B'),
+])
+def test_RemoveCategoryAction_apply_whitespace(wikitext: str, category: str) -> None:
+    action = RemoveCategoryAction(category)
+    actual = action.apply(wikitext, ('Category', ['Category'], 'first-letter'))
+    assert '' == actual
 
 def test_RemoveCategoryAction_apply_case_sensitive() -> None:
     action = RemoveCategoryAction('Test')
