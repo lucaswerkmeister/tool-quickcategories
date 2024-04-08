@@ -771,6 +771,10 @@ def logout() -> RRV:
     flask.session.clear()
     return flask.redirect(flask.url_for('index'))
 
+@app.route('/healthz')
+def health() -> RRV:
+    return ''
+
 @app.route('/debug/query_times')
 def query_times() -> RRV:
     session = authenticated_session()
