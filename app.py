@@ -762,6 +762,7 @@ def oauth_callback() -> RRV:
     request_token = mwoauth.RequestToken(**oauth_request_token)
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
     flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
+    flask.session.permanent = True
     flask.session.pop('csrf_token', None)
     return flask.redirect(flask.url_for('index'))
 
