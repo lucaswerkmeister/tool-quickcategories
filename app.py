@@ -3,30 +3,26 @@
 import bs4  # type: ignore
 import cachetools
 import datetime
-import decorator
 import flask
 from flask.typing import ResponseReturnValue as RRV
 import humanize
 from markupsafe import Markup
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
-import os
 import pymysql.err  # type: ignore
 import random
 import re
 import requests_oauthlib  # type: ignore
-import stat
 import string
 import threading
-import toolforge
 import traceback
 from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, cast
 import warnings
 import werkzeug
-import yaml
 
 from batch import StoredBatch, OpenBatch
 from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from init import user_agent, load_config, load_consumer_token, load_database_params
 from localuser import LocalUser
 from pagepile import load_pagepile, create_pagepile
 import parse_wikitext
@@ -39,39 +35,18 @@ from timestamp import now, utc_timestamp_to_datetime
 
 app = flask.Flask(__name__)
 
-user_agent = toolforge.set_user_agent('quickcategories', email='mail@lucaswerkmeister.de')
-
-@decorator.decorator
-def read_private(func: Callable, *args: Any, **kwargs: Any) -> Any:
-    try:
-        f = args[0]
-        fd = f.fileno()
-    except AttributeError:
-        pass
-    except IndexError:
-        pass
-    else:
-        mode = os.stat(fd).st_mode
-        if (stat.S_IRGRP | stat.S_IROTH) & mode:
-            name = getattr(f, "name", "config file")
-            raise ValueError(f'{name} is readable to others, '
-                             'must be exclusively user-readable!')
-    return func(*args, **kwargs)
-
-has_config = app.config.from_file('config.yaml',
-                                  load=read_private(yaml.safe_load),
-                                  silent=True)
+has_config = load_config(app.config)
 if not has_config:
-    print('config.yaml file not found, assuming local development setup')
+    print('No configuration found, assuming local development setup')
     app.secret_key = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(64))
 
-if 'OAUTH' in app.config:
-    consumer_token = mwoauth.ConsumerToken(app.config['OAUTH']['consumer_key'], app.config['OAUTH']['consumer_secret'])
+consumer_token = load_consumer_token(app.config)
 
 batch_store: BatchStore
-if 'DATABASE' in app.config:
+database_params = load_database_params(app.config)
+if database_params is not None:
     from database import DatabaseStore
-    batch_store = DatabaseStore(app.config['DATABASE'])
+    batch_store = DatabaseStore(database_params)
 
     def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
@@ -148,7 +123,7 @@ def user_logged_in() -> bool:
 
 @app.template_global()
 def authentication_area() -> Markup:
-    if 'OAUTH' not in app.config:
+    if consumer_token is None:
         return Markup()
 
     session = authenticated_session()
@@ -316,6 +291,7 @@ def render_batch_title_text(batch: StoredBatch) -> Optional[Markup]:
 
 def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
     if 'oauth_access_token' in flask.session:
+        assert consumer_token is not None
         access_token = mwoauth.AccessToken(**flask.session['oauth_access_token'])
         auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
                                         resource_owner_key=access_token.key, resource_owner_secret=access_token.secret)

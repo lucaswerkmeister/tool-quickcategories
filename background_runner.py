@@ -2,43 +2,38 @@
 # -*- coding: utf-8 -*-
 
 import datetime
-import mwoauth  # type: ignore
+import flask
 import os
 import random
 import signal
 import sys
 import time
-import toolforge
 from typing import Any
-import yaml
 
 from command import CommandFailure
 from database import DatabaseStore
+from init import user_agent, load_config, load_consumer_token, load_database_params
 from querytime import flush_querytime
 from runner import Runner
 
 
-user_agent = toolforge.set_user_agent('quickcategories', email='mail@lucaswerkmeister.de')
+config = flask.Config(os.path.dirname(__file__))
+has_config = load_config(config)
 
-__dir__ = os.path.dirname(__file__)
-try:
-    with open(os.path.join(__dir__, 'config.yaml')) as config_file:
-        config = yaml.safe_load(config_file)
-except FileNotFoundError:
-    print('config.yaml file not found, cannot run in background')
+if not has_config:
+    print('No configuration found, cannot run in background')
     sys.exit(1)
 
-if 'OAUTH' in config:
-    consumer_token = mwoauth.ConsumerToken(config['OAUTH']['consumer_key'], config['OAUTH']['consumer_secret'])
-else:
-    print('No OAuth configuration in config.yaml file, cannot run in background')
+consumer_token = load_consumer_token(config)
+if consumer_token is None:
+    print('No OAuth configuration found, cannot run in background')
     sys.exit(1)
 
-if 'DATABASE' in config:
-    batch_store = DatabaseStore(config['DATABASE'])
-else:
+database_params = load_database_params(config)
+if database_params is None:
     print('No database configuration, cannot run in background')
     sys.exit(1)
+batch_store = DatabaseStore(config['DATABASE'])
 
 if 'READ_ONLY_REASON' in config:
     print('Tool is in read-only mode according to config')
