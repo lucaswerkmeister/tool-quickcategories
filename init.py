@@ -31,9 +31,13 @@ def read_private(func: Callable, *args: Any, **kwargs: Any) -> Any:
 
 def load_config(config: flask.Config) -> bool:
     """Populate the given config from the configuration sources."""
-    has_config = config.from_file('config.yaml',
-                                  load=read_private(yaml.safe_load),
-                                  silent=True)
+    initial_config = dict(config)
+    config.from_file('config.yaml',
+                     load=read_private(yaml.safe_load),
+                     silent=True)
+    config.from_prefixed_env('TOOL',
+                             loads=yaml.safe_load)
+    has_config = initial_config != config
     return has_config
 
 
