@@ -49,11 +49,11 @@ def test_load_config_file_otherreadable(tmp_path: Path) -> None:
 
 def test_load_config_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv('TOOL_SECRET_KEY', 'secret key')
-    monkeypatch.setenv('TOOL_OAUTH__consumer_key', 'OAuth consumer key')
-    monkeypatch.setenv('TOOL_OAUTH__consumer_secret', 'OAuth consumer secret')
-    monkeypatch.setenv('TOOL_EDITGROUPS__commons.wikimedia.org__url',
+    monkeypatch.setenv('TOOL_OAUTH__CONSUMER_KEY', 'OAuth consumer key')
+    monkeypatch.setenv('TOOL_OAUTH__CONSUMER_SECRET', 'OAuth consumer secret')
+    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONS.WIKIMEDIA.ORG__URL',
                        'https://editgroups-commons.toolforge.org/b/QC/{0}/')
-    monkeypatch.setenv('TOOL_EDITGROUPS__commons.wikimedia.org__since',
+    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONS.WIKIMEDIA.ORG__SINCE',
                        '2021-09-14T00:00:00Z')
     config = flask.Config(root_path=tmp_path)
     load_config(config)
@@ -76,7 +76,7 @@ EDITGROUPS:
     # don’t do this outside of a unit test ;)
     config_file.chmod(0o600)
     monkeypatch.setenv('TOOL_SECRET_KEY', 'secret key')
-    monkeypatch.setenv('TOOL_OAUTH__consumer_secret', 'OAuth consumer secret')
+    monkeypatch.setenv('TOOL_OAUTH__CONSUMER_SECRET', 'OAuth consumer secret')
     config = flask.Config(root_path=tmp_path)
     load_config(config)
     assert config == expected_config

@@ -17,3 +17,5 @@ OAUTH:
 # READ_ONLY_REASON: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
 # (If you set a read_only_reason, you probably also want to stop the background runner.)
 # EXPECTED_DATABASE_ERROR: "The tool is temporarily non-functional for <a href=example.com>reasons</a>. <!-- HTML -->"
+# dev note: keys in nested dicts are always lowercased automatically (to work around T374780),
+# so code should never look for e.g. config['FOO']['BAR'], only config['FOO']['bar']

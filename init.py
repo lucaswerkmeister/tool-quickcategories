@@ -29,6 +29,15 @@ def read_private(func: Callable, *args: Any, **kwargs: Any) -> Any:
     return func(*args, **kwargs)
 
 
+def _lowercase_dict(d: Any) -> Any:
+    if not isinstance(d, dict):
+        return d
+    lowercased = {k.lower(): _lowercase_dict(v) for k, v in d.items()}
+    assert len(d) == len(lowercased), \
+        f'conflicting keys when lowercasing all the keys in {d}'
+    return lowercased
+
+
 def load_config(config: flask.Config) -> bool:
     """Populate the given config from the configuration sources."""
     initial_config = dict(config)
@@ -37,6 +46,9 @@ def load_config(config: flask.Config) -> bool:
                      silent=True)
     config.from_prefixed_env('TOOL',
                              loads=yaml.safe_load)
+    # lowercase all keys in nested dicts to work around T374780
+    for k, v in config.items():
+        config[k] = _lowercase_dict(v)
     has_config = initial_config != config
     return has_config
 
