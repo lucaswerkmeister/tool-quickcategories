@@ -7,8 +7,7 @@ OAUTH:
 #     user: ...
 #     password: ...
 #     db: ...
-#     host: tools.db.svc.wikimedia.cloud # on Toolforge
-#     read_default_file: ~/replica.my.cnf # on Toolforge, instead of user and password
+#     toolsdb: true # on Toolforge; automatically sets host, user, password
 #     enable_querytime: true # optional
 # EDITGROUPS:
 #     commons.wikimedia.org:

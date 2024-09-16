@@ -64,6 +64,12 @@ def load_consumer_token(config: flask.Config) -> Optional[mwoauth.ConsumerToken]
 def load_database_params(config: flask.Config) -> Optional[dict]:
     """Load the database connection_params from the given config."""
     try:
-        return config['DATABASE']
+        connection_params = config['DATABASE']
     except KeyError:
         return None
+    connection_params = dict(connection_params)
+    if connection_params.pop('toolsdb', False):
+        connection_params.setdefault('host', 'tools.db.svc.wikimedia.cloud')
+        connection_params.setdefault('user', config['TOOLSDB_USER'])
+        connection_params.setdefault('password', config['TOOLSDB_PASSWORD'])
+    return connection_params

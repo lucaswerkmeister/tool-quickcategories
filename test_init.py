@@ -98,7 +98,7 @@ def test_load_consumer_token_unconfigured(tmp_path: Path) -> None:
     consumer_token = load_consumer_token(config)
     assert consumer_token is None
 
-def test_load_database_params_configured(tmp_path: Path) -> None:
+def test_load_database_params_localhost(tmp_path: Path) -> None:
     config = flask.Config(root_path=tmp_path, defaults={
         'DATABASE': {
             'user': 'test user',
@@ -111,6 +111,23 @@ def test_load_database_params_configured(tmp_path: Path) -> None:
         'user': 'test user',
         'password': 'test password',
         'db': 'test database',
+    }
+
+def test_load_database_params_toolsdb(tmp_path: Path) -> None:
+    config = flask.Config(root_path=tmp_path, defaults={
+        'TOOLSDB_USER': 's53976',
+        'TOOLSDB_PASSWORD': 'test password',
+        'DATABASE': {
+            'toolsdb': True,
+            'db': 's53976__quickcategories',
+        },
+    })
+    database_params = load_database_params(config)
+    assert database_params == {
+        'db': 's53976__quickcategories',
+        'host': 'tools.db.svc.wikimedia.cloud',
+        'user': 's53976',
+        'password': 'test password',
     }
 
 def test_load_database_params_unconfigured(tmp_path: Path) -> None:
