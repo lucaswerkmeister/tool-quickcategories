@@ -33,7 +33,7 @@ database_params = load_database_params(config)
 if database_params is None:
     print('No database configuration, cannot run in background')
     sys.exit(1)
-batch_store = DatabaseStore(config['DATABASE'])
+batch_store = DatabaseStore(database_params)
 
 if 'READ_ONLY_REASON' in config:
     print('Tool is in read-only mode according to config')
