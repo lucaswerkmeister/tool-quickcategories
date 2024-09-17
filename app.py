@@ -469,8 +469,8 @@ def batch(id: int) -> RRV:
     offset, limit = slice_from_args(flask.request.args)
 
     edit_group_link = None
-    for domain, edit_group_config in app.config.get('EDITGROUPS', {}).items():
-        if domain != batch.domain:
+    for edit_group_config in app.config.get('EDITGROUPS', {}).values():
+        if edit_group_config['domain'] != batch.domain:
             continue
         if batch.created < edit_group_config.get('since', utc_timestamp_to_datetime(0)):
             continue

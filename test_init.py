@@ -12,7 +12,8 @@ expected_config = {
         'consumer_secret': 'OAuth consumer secret',
     },
     'EDITGROUPS': {
-        'commons.wikimedia.org': {
+        'commonswiki': {
+            'domain': 'commons.wikimedia.org',
             'url': 'https://editgroups-commons.toolforge.org/b/QC/{0}/',
             'since': datetime.datetime(2021, 9, 14, tzinfo=datetime.timezone.utc),
         },
@@ -27,7 +28,8 @@ OAUTH:
     consumer_key: 'OAuth consumer key'
     consumer_secret: 'OAuth consumer secret'
 EDITGROUPS:
-    commons.wikimedia.org:
+    commonswiki:
+        domain: commons.wikimedia.org
         url: "https://editgroups-commons.toolforge.org/b/QC/{0}/"
         since: 2021-09-14T00:00:00Z
 # READ_ONLY_REASON: 'commented out'
@@ -51,9 +53,11 @@ def test_load_config_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Non
     monkeypatch.setenv('TOOL_SECRET_KEY', 'secret key')
     monkeypatch.setenv('TOOL_OAUTH__CONSUMER_KEY', 'OAuth consumer key')
     monkeypatch.setenv('TOOL_OAUTH__CONSUMER_SECRET', 'OAuth consumer secret')
-    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONS.WIKIMEDIA.ORG__URL',
+    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONSWIKI__DOMAIN',
+                       'commons.wikimedia.org')
+    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONSWIKI__URL',
                        'https://editgroups-commons.toolforge.org/b/QC/{0}/')
-    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONS.WIKIMEDIA.ORG__SINCE',
+    monkeypatch.setenv('TOOL_EDITGROUPS__COMMONSWIKI__SINCE',
                        '2021-09-14T00:00:00Z')
     config = flask.Config(root_path=tmp_path)
     load_config(config)
@@ -67,7 +71,8 @@ OAUTH:
     consumer_key: 'OAuth consumer key'
     # consumer_secret: 'moved to env'
 EDITGROUPS:
-    commons.wikimedia.org:
+    commonswiki:
+        domain: commons.wikimedia.org
         url: "https://editgroups-commons.toolforge.org/b/QC/{0}/"
         since: 2021-09-14T00:00:00Z
 # READ_ONLY_REASON: 'commented out'

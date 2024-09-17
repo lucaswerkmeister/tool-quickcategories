@@ -10,7 +10,8 @@ OAUTH:
 #     toolsdb: true # on Toolforge; automatically sets host, user, password
 #     enable_querytime: true # optional
 # EDITGROUPS:
-#     commons.wikimedia.org:
+#     commonswiki:
+#         domain: commons.wikimedia.org
 #         url: "https://editgroups-commons.toolforge.org/b/QC/{0}/"
 #         since: 2021-09-14T00:00:00Z
 # READ_ONLY_REASON: "The tool is temporarily read-only for <a href=example.com>reasons</a>. <!-- HTML -->"
