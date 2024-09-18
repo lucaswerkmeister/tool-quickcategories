@@ -46,7 +46,7 @@ as described in the `jobs.yaml` file.
 To reload the jobs configuration, run the following command:
 
 ```sh
-curl -sL 'https://gitlab.wikimedia.org/toolforge-repos/quickcategories/-/raw/main/jobs.yaml' | toolforge jobs load
+curl -sL 'https://gitlab.wikimedia.org/toolforge-repos/quickcategories/-/raw/main/jobs.yaml' | toolforge jobs load /dev/stdin
 ```
 
 To inspect the job, you can use `toolforge jobs` commands:
