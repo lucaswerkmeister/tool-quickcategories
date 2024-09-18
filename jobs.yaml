@@ -2,3 +2,4 @@
   continuous: true
   image: tool-quickcategories/tool-quickcategories:latest
   name: background-runner
+  health-check-script: unlink /tmp/quickcategories-background-runner-healthy

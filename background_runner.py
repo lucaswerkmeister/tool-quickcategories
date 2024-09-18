@@ -4,6 +4,7 @@
 import datetime
 import flask
 import os
+import pathlib
 import random
 import signal
 import sys
@@ -48,15 +49,17 @@ def on_sigterm(signalnum: int, frame: Any) -> None:
 signal.signal(signal.SIGTERM, on_sigterm)  # NOQA: E305 (no blank lines after function definition)
 
 
+health_check_path = pathlib.Path('/tmp/quickcategories-background-runner-healthy')
+
+
 while not stopped:
+    health_check_path.touch()
     pending = batch_store.make_plan_pending_background(consumer_token, user_agent)
     if not pending:
         if random.randrange(16) == 0:
             with batch_store.connect() as connection:
                 flush_querytime(connection)
-        # TODO would be nicer to switch to some better notification mechanism for the app to let the runner know there’s work again
-        # (but note that suspended background commands can start yielding pending commands at basically any time again)
-        time.sleep(10)
+        time.sleep(5)
         continue
     else:
         if random.randrange(128) == 0:
