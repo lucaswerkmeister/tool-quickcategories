@@ -1,0 +1,4 @@
+- command: launcher background-runner
+  continuous: true
+  image: tool-quickcategories/tool-quickcategories:latest
+  name: background-runner

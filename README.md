@@ -6,60 +6,98 @@ please see the tool’s [on-wiki documentation page](https://meta.wikimedia.org/
 
 ## Toolforge setup
 
-On Wikimedia Toolforge, this tool runs under the `quickcategories` tool name.
-Source code resides in `~/www/python/src/`.
+On Wikimedia Toolforge, this tool runs under the `quickcategories` tool name,
+from a container built using the [Toolforge Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service).
+
+### Image build
+
+To build a new version of the image,
+run the following command on Toolforge after becoming the tool account:
+
+```sh
+toolforge build start https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+```
+
+The image will contain all the dependencies listed in `requirements.txt`,
+as well as the commands specified in the `Procfile`.
 
 ### Webservice
 
-The web frontend of the tool runs as a standard Python web service,
-with a virtual environment in `~/www/python/venv/`
-and logs ending up in `~/uwsgi.log`.
+The web frontend of the tool runs as a webservice using the `buildpack` type.
+The web service runs the first command in the `Procfile` (`web`),
+which runs the Flask WSGI app using gunicorn.
 
-If the web service is not running for some reason, run the following command:
 ```
 webservice start
 ```
+
+Or, if the `~/service.template` file went missing:
+
+```
+webservice --mount=none buildservice start
+```
+
 If it’s acting up, try the same command with `restart` instead of `start`.
-Both should pull their config from the `service.template` file,
-which is symlinked from the source code directory into the tool home directory.
 
 ### Background runner
 
-The background runner for batches runs as a [Kubernetes continuous job](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Kubernetes#Kubernetes_continuous_jobs),
-with a deployment described by the `deployment.yaml` file in the source code repository.
-To inspect the current status, get the currently running pod via `kubectl get pods`;
-you can then, for example, view its logs with `kubectl logs NAME`
-or enter a debugging shell with `kubectl exec -it NAME bash`.
+The background runner for batches runs as a [continuous job](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Jobs_framework#Creating_continuous_jobs),
+as described in the `jobs.yaml` file.
+To reload the jobs configuration, run the following command:
 
-To stop the runner, use `kubectl delete deployment quickcategories.background-runner`.
-You can start a new one with `kubectl create -f deployment.yaml`
-(or `~/www/python/src/deployment.yaml` if you’re not in the source code directory).
-It sets up its own virtual environment, so it should be ready after a minute or so.
+```sh
+curl -sL 'https://gitlab.wikimedia.org/toolforge-repos/quickcategories/-/raw/main/jobs.yaml' | toolforge jobs load
+```
+
+To inspect the job, you can use `toolforge jobs` commands:
+
+```sh
+toolforge jobs list
+toolforge jobs show background-runner
+toolforge jobs logs background-runner
+```
+
+Or underlying Kubernetes commands:
+
+```sh
+kubectl get deployments
+kubectl get pods
+kubectl logs background-runner-5b74775c8d-h9kcd # the hashes will vary
+kubectl exec -it background-runner-5b74775c8d-h9kcd -- bash # ditto
+```
+
+### Configuration
+
+The tool reads configuration from both the `config.yaml` file (if it exists)
+and from any environment variables starting with `TOOL_*`.
+The config file is more convenient for local development;
+the environment variables are used on Toolforge:
+list them with `toolforge envvars list`.
+Nested dicts are specified with envvar names where `__` separates the key components,
+and the tool lowercases keys in nested dicts,
+so that e.g. the following are equivalent:
+
+```sh
+toolforge envvars create TOOL_OAUTH__CONSUMER_KEY 41ed6aa0a3983a8cd9ce4c2c7f93e58b
+```
+
+```yaml
+OAUTH:
+    consumer_key: 41ed6aa0a3983a8cd9ce4c2c7f93e58b
+```
+
+For the available configuration variables, see the `config.yaml.example` file.
+(I think there might also be one or two additional configs that aren’t documented in there.)
 
 ### Update
 
-The following commands should work to update the tool after becoming the tool account:
+To update the tool, build a new version of the image as described above,
+then restart the webservice and background runner:
 
-```
-# stop current processes
-webservice stop
-kubectl delete deployment quickcategories.background-runner
-
-# update source code
-cd ~/www/python/src
-git fetch
-git diff @ @{u} # inspect changes
-git merge --ff-only @{u}
-
-# update webservice venv
-webservice shell
-source ~/www/python/venv/bin/activate
-pip-sync ~/www/python/src/requirements.txt
-exit
-
-# start new processes
-webservice start
-kubectl create -f deployment.yaml
+```sh
+toolforge build start https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+webservice restart
+toolforge jobs restart background-runner
 ```
 
 ## Local development setup
@@ -71,7 +109,7 @@ You can also run the tool locally, which is much more convenient for development
 git clone https://gitlab.wikimedia.org/toolforge-repos/quickcategories.git
 cd tool-quickcategories
 pip3 install -r requirements.txt
-FLASK_ENV=development flask run
+flask --debugrun
 ```
 
 If you want, you can do this inside some virtualenv too.
