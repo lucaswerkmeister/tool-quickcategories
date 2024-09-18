@@ -4,6 +4,7 @@ decorator
 flake8
 Flask >= 2.0.3
 freezegun
+gunicorn
 humanize
 MarkupSafe
 mwapi >= 0.6.0
