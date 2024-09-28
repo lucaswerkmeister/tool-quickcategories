@@ -1,9 +1,9 @@
-import bs4  # type: ignore
+import bs4
 import cachetools
 from markupsafe import Markup
 import mwapi  # type: ignore
 import threading
-from typing import Tuple
+from typing import Tuple, cast
 
 
 summary_cache: cachetools.LRUCache[Tuple[str, str], Markup] = cachetools.LRUCache(maxsize=1024)
@@ -32,7 +32,7 @@ def parse_summary(session: mwapi.Session, summary: str) -> Markup:
 def fix_markup(html: str, host: str) -> Markup:
     soup = bs4.BeautifulSoup(html, 'html.parser')
     for link in soup.select('a[href]'):
-        href = link['href']
+        href = cast(str, link['href'])  # href is never multi-valued
         if href.startswith('/') and not href.startswith('//'):
             link['href'] = host + href
     return Markup(str(soup))

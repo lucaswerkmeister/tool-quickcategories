@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import bs4  # type: ignore
+import bs4
 import cachetools
 import datetime
 import flask
@@ -9,7 +9,7 @@ import humanize
 from markupsafe import Markup
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
-import pymysql.err  # type: ignore
+import pymysql.err
 import random
 import re
 import requests_oauthlib  # type: ignore

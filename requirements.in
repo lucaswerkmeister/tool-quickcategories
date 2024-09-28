@@ -17,6 +17,8 @@ PyYAML
 requests
 requests_oauthlib
 toolforge
+types-beautifulsoup4
+types-PyMySQL
 types-PyYAML
 types-requests
 werkzeug
