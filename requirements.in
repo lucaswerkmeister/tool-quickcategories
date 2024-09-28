@@ -18,6 +18,8 @@ requests
 requests_oauthlib
 toolforge
 types-beautifulsoup4
+types-cachetools
+types-decorator
 types-PyMySQL
 types-PyYAML
 types-requests

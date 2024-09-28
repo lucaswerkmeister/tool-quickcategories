@@ -116,6 +116,10 @@ toolforge==6.0.0
     # via -r requirements.in
 types-beautifulsoup4==4.12.0.20240907
     # via -r requirements.in
+types-cachetools==5.5.0.20240820
+    # via -r requirements.in
+types-decorator==5.1.8.20240310
+    # via -r requirements.in
 types-html5lib==1.1.11.20240806
     # via types-beautifulsoup4
 types-pymysql==1.1.0.20240524

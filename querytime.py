@@ -42,7 +42,7 @@ class QueryTimingCursor(Cursor):
         _query_times.append((now(), query, end-begin))
         return ret
 
-    def executemany(self, query: str, args: Iterable[Any]) -> int:
+    def executemany(self, query: str, args: Iterable[Any]) -> Optional[int]:
         self._in_executemany = True
         try:
             begin = time.time()

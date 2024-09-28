@@ -1,5 +1,6 @@
 import pymysql
 import pytest
+from typing import cast
 
 from stringstore import StringTableStore
 
@@ -49,4 +50,5 @@ def test_StringTableStore_acquire_id_cached() -> None:
     with store._cache_lock:
         store._cache['test.wikipedia.org'] = 1
 
-    assert store.acquire_id(None, 'test.wikipedia.org') == 1
+    connection = cast(pymysql.connections.Connection, None)
+    assert store.acquire_id(connection, 'test.wikipedia.org') == 1
