@@ -1,6 +1,6 @@
 import datetime
 import mwoauth  # type: ignore
-import pytest  # type: ignore
+import pytest
 import random
 from typing import Any, Iterator, cast
 

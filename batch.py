@@ -35,7 +35,7 @@ class NewBatch:
             return command_strs
 
 
-@dataclass  # type: ignore
+@dataclass
 class StoredBatch(ABC):
     """A list of commands to be performed for one user that has been registered."""
 

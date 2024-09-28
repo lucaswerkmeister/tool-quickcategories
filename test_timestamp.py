@@ -1,5 +1,5 @@
 import datetime
-import pytest  # type: ignore
+import pytest
 
 from timestamp import datetime_to_utc_timestamp, utc_timestamp_to_datetime
 

@@ -32,7 +32,7 @@ class Action(ABC):
         pass
 
 
-@dataclass  # type: ignore
+@dataclass
 class CategoryAction(Action):
     """An action to modify a category in the wikitext of a page."""
 

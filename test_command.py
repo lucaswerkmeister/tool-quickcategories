@@ -1,5 +1,5 @@
 import datetime
-import pytest  # type: ignore
+import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly

@@ -1,6 +1,6 @@
 import json
 import pymysql
-import pytest  # type: ignore
+import pytest
 from typing import Any, List, Optional, Tuple, cast
 
 from batch import StoredBatch

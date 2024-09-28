@@ -1,5 +1,5 @@
 import pymysql
-import pytest  # type: ignore
+import pytest
 
 from stringstore import StringTableStore
 

@@ -1,7 +1,7 @@
 import datetime
 import mwapi  # type: ignore
 import os
-import pytest  # type: ignore
+import pytest
 from typing import Any, List, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction

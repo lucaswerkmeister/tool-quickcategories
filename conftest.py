@@ -1,8 +1,8 @@
-import freezegun  # type: ignore
+import freezegun
 import mwapi  # type: ignore
 import os
 import pymysql
-import pytest  # type: ignore
+import pytest
 import random
 import re
 import string

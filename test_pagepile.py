@@ -1,6 +1,6 @@
 import mwapi  # type: ignore
 import os
-import pytest  # type: ignore
+import pytest
 
 from pagepile import load_pagepile, create_pagepile
 

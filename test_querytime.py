@@ -1,7 +1,7 @@
 import datetime
-import freezegun  # type: ignore
+import freezegun
 import pymysql
-import pytest  # type: ignore
+import pytest
 from typing import Any, Iterator, Tuple, cast
 
 from database import DatabaseStore
