@@ -1,3 +1,4 @@
+from collections.abc import Generator, Iterator, Sequence
 import contextlib
 from dataclasses import dataclass
 import datetime
@@ -7,7 +8,7 @@ import mwapi  # type: ignore
 import mwoauth  # type: ignore
 import pymysql
 import requests_oauthlib  # type: ignore
-from typing import Any, Dict, Generator, Iterator, List, Optional, Sequence, Tuple, Type, cast
+from typing import Any, Optional, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -42,11 +43,11 @@ class DatabaseStore(BatchStore):
         connection_params.setdefault('charset', 'utf8mb4')
         if connection_params.pop('enable_querytime', False):
             self.connection_params = {
-                'cursorclass': cast(Type[pymysql.cursors.Cursor], QueryTimingCursor),
+                'cursorclass': cast(type[pymysql.cursors.Cursor], QueryTimingCursor),
                 **connection_params,
             }
             self.streaming_connection_params = {
-                'cursorclass': cast(Type[pymysql.cursors.SSCursor], QueryTimingSSCursor),
+                'cursorclass': cast(type[pymysql.cursors.SSCursor], QueryTimingSSCursor),
                 **connection_params,
             }
         else:
@@ -240,7 +241,7 @@ class DatabaseStore(BatchStore):
             if cursor.rowcount > 1:
                 raise RuntimeError('Should have suspended at most 1 background run, actually affected %d!' % cursor.rowcount)
 
-    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[tuple[OpenBatch, CommandPending, mwapi.Session]]:
         with self.connect() as connection:
             # find a planned command and lock it
             with connection.cursor() as cursor:
@@ -306,7 +307,7 @@ class DatabaseStore(BatchStore):
         assert isinstance(command_pending, CommandPending), "must be pending since we just set that status"
         return batch, command_pending, session
 
-    def _command_finish_to_row(self, command_finish: CommandFinish) -> Tuple[int, dict]:
+    def _command_finish_to_row(self, command_finish: CommandFinish) -> tuple[int, dict]:
         status: int
         outcome: dict
         if isinstance(command_finish, CommandEdit):
@@ -415,7 +416,7 @@ class DatabaseStore(BatchStore):
         else:
             raise ValueError('Unknown command status %d' % status)
 
-    def _status_to_command_record_type(self, status: int) -> Type[CommandRecord]:
+    def _status_to_command_record_type(self, status: int) -> type[CommandRecord]:
         if status == DatabaseStore._COMMAND_STATUS_PLAN:
             return CommandPlan
         elif status == DatabaseStore._COMMAND_STATUS_EDIT:
@@ -456,7 +457,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
     batch_id: int
     store: DatabaseStore
 
-    def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
+    def get_slice(self, offset: int, limit: int) -> list[CommandRecord]:
         command_records = []
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_id`, `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv`, `command_status`, `command_outcome`
@@ -469,7 +470,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                 command_records.append(self.store._row_to_command_record(id, title, resolve_redirects, actions_tpsv, status, outcome))
         return command_records
 
-    def get_summary(self) -> Dict[Type[CommandRecord], int]:
+    def get_summary(self) -> dict[type[CommandRecord], int]:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `command_status`, COUNT(*) AS `count`
                               FROM `command`
@@ -507,9 +508,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
             (count,) = result
         return count
 
-    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
+    def make_plans_pending(self, offset: int, limit: int) -> list[CommandPending]:
         with self.store.connect() as connection:
-            command_ids: List[int] = []
+            command_ids: list[int] = []
 
             with connection.cursor() as cursor:
                 # the extra subquery layer below is necessary to work around a MySQL/MariaDB restriction;
@@ -557,7 +558,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                 command_records.append(command_record)
         return command_records
 
-    def make_pendings_planned(self, command_record_ids: List[int]) -> None:
+    def make_pendings_planned(self, command_record_ids: list[int]) -> None:
         if not command_record_ids:
             return
 
@@ -643,9 +644,9 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
     def _row_to_background_run(self,
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
-                               -> Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]:  # NOQA: E127 (indentation)
+                               -> tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]:  # NOQA: E127 (indentation)
         background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
-        background_stop: Optional[Tuple[datetime.datetime, Optional[LocalUser]]]
+        background_stop: Optional[tuple[datetime.datetime, Optional[LocalUser]]]
         if stopped_utc_timestamp:
             stopped_local_user: Optional[LocalUser]
             if stopped_user_name:
@@ -657,7 +658,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             background_stop = None
         return (background_start, background_stop)
 
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
@@ -673,7 +674,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             else:
                 return None
 
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_all(self) -> Sequence[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`

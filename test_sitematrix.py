@@ -1,6 +1,6 @@
+from collections.abc import Iterator
 import mwapi  # type: ignore
 import pytest
-from typing import Iterator
 
 from sitematrix import dbname_to_domain, domain_to_dbname, _sitematrix_cache, _sitematrix_cache_lock
 

@@ -1,10 +1,11 @@
+from collections.abc import Callable
 import decorator
 import flask
 import mwoauth  # type: ignore
 import os
 import stat
 import toolforge
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 import yaml
 
 

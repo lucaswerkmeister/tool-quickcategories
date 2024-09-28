@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 import freezegun
 import mwapi  # type: ignore
 import os
@@ -6,7 +7,7 @@ import pytest
 import random
 import re
 import string
-from typing import Any, Iterator
+from typing import Any
 
 
 @pytest.fixture

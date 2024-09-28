@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
+from collections.abc import Sequence
 import datetime
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
-from typing import Optional, Sequence, Tuple
+from typing import Optional
 
 from batch import NewBatch, StoredBatch, OpenBatch
 from command import CommandPending
@@ -40,7 +41,7 @@ class BatchStore(ABC):
         """Mark the given batch to stop background runs until the given datetime."""
 
     @abstractmethod
-    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[tuple[OpenBatch, CommandPending, mwapi.Session]]:
         """Pick one planned command from a batch that’s marked to be run in the background,
            mark that command as pending and return it with credentials."""
 

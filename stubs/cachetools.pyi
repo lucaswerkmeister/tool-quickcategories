@@ -1,5 +1,6 @@
+from collections.abc import Callable, Iterator, MutableMapping
 import threading
-from typing import Any, Callable, Iterator, MutableMapping, TypeVar
+from typing import Any, TypeVar
 
 
 Key = TypeVar('Key')

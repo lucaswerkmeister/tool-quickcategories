@@ -2,7 +2,7 @@ import datetime
 import mwapi  # type: ignore
 import os
 import pytest
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
@@ -24,7 +24,7 @@ def test_resolve_pages_and_run_commands() -> None:
     title_C = 'QuickCategories CI Test Other Redirect' + suffix
     title_C2 = 'QuickCategories CI Test Other Redirect Target' + suffix
 
-    actions: List[Action] = [AddCategoryAction('Added cat'),
+    actions: list[Action] = [AddCategoryAction('Added cat'),
                              AddCategoryAction('Already present cat'),
                              RemoveCategoryAction('Removed cat'),
                              RemoveCategoryAction('Not present cat')]
@@ -107,7 +107,7 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
         suffix = ' ' + os.environ['CI_JOB_NUMBER']
     title = 'Index:QuickCategories CI Test' + suffix
 
-    actions: List[Action] = [AddCategoryAction('Added cat')]
+    actions: list[Action] = [AddCategoryAction('Added cat')]
     command = Command(Page(title, True), actions)
     runner = Runner(session, summary_batch_title='QuickCategories CI test')
     base_content = '''

@@ -1,8 +1,9 @@
+from collections.abc import Iterable
 import datetime
 from pymysql.connections import Connection
 from pymysql.cursors import Cursor, SSCursor
 import time
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Optional
 
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
@@ -14,7 +15,7 @@ _querytext_store = StringTableStore('querytext',
                                     'querytext_sql')
 
 
-_query_times: List[Tuple[datetime.datetime, str, float]] = []
+_query_times: list[tuple[datetime.datetime, str, float]] = []
 
 
 class QueryTimingCursor(Cursor):
@@ -60,7 +61,7 @@ class QueryTimingSSCursor(QueryTimingCursor, SSCursor):
 def flush_querytime(connection: Connection) -> None:
     query_times = _query_times.copy()
     _query_times.clear()
-    querytime_values: List[Tuple[int, int, float]] = []
+    querytime_values: list[tuple[int, int, float]] = []
     for dt, query, duration in query_times:
         utc_timestamp = datetime_to_utc_timestamp(dt)
         query_id = _querytext_store.acquire_id(connection, query)
@@ -75,7 +76,7 @@ def flush_querytime(connection: Connection) -> None:
     connection.commit()
 
 
-def slow_queries(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[datetime.datetime, float, str]]:
+def slow_queries(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> list[tuple[datetime.datetime, float, str]]:
     with connection.cursor() as cursor:
         cursor.execute('''SELECT `querytime_utc_timestamp`, `querytime_duration`, `querytext_sql`
                           FROM `querytime`
@@ -85,13 +86,13 @@ def slow_queries(connection: Connection, since: datetime.datetime, until: dateti
                           ORDER BY `querytime_duration` DESC
                           LIMIT 50''',
                        (datetime_to_utc_timestamp(since), datetime_to_utc_timestamp(until)))
-        ret: List[Tuple[datetime.datetime, float, str]] = []
+        ret: list[tuple[datetime.datetime, float, str]] = []
         for utc_timestamp, duration, sql in cursor.fetchall():
             ret.append((utc_timestamp_to_datetime(utc_timestamp), duration, sql))
         return ret
 
 
-def query_summary(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> List[Tuple[str, Dict[str, float | int]]]:
+def query_summary(connection: Connection, since: datetime.datetime, until: datetime.datetime) -> list[tuple[str, dict[str, float | int]]]:
     with connection.cursor() as cursor:
         cursor.execute('''SELECT `querytext_sql`,
                           COUNT(*) AS `count`,

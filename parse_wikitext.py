@@ -3,10 +3,10 @@ import cachetools
 from markupsafe import Markup
 import mwapi  # type: ignore
 import threading
-from typing import Tuple, cast
+from typing import cast
 
 
-summary_cache: cachetools.LRUCache[Tuple[str, str], Markup] = cachetools.LRUCache(maxsize=1024)
+summary_cache: cachetools.LRUCache[tuple[str, str], Markup] = cachetools.LRUCache(maxsize=1024)
 summary_cache_lock = threading.RLock()
 
 

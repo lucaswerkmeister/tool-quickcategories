@@ -1,7 +1,7 @@
 import cachetools
 import mwapi  # type: ignore
 import threading
-from typing import Any, Dict
+from typing import Any
 import warnings
 
 
@@ -13,7 +13,7 @@ _sitematrix_cache_lock = threading.RLock()
                    key=lambda session: '#sitematrix',
                    lock=_sitematrix_cache_lock)
 def _get_sitematrix(session: mwapi.Session) -> dict:
-    sitematrix: Dict[str, Dict[str, dict]] = {
+    sitematrix: dict[str, dict[str, dict]] = {
         'by_dbname': {},
         'by_url': {},
     }

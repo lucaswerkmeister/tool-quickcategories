@@ -1,6 +1,7 @@
+from collections.abc import Callable
 import requests
 import requests_oauthlib  # type: ignore
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 
 class FakeSession:

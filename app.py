@@ -2,6 +2,7 @@
 
 import bs4
 import cachetools
+from collections.abc import Callable, Iterator
 import datetime
 import flask
 from flask.typing import ResponseReturnValue as RRV
@@ -16,7 +17,7 @@ import requests_oauthlib  # type: ignore
 import string
 import threading
 import traceback
-from typing import Any, Callable, Iterator, List, Optional, Tuple, Type, cast
+from typing import Any, Optional, cast
 import warnings
 import werkzeug
 
@@ -66,7 +67,7 @@ else:
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
     batch_store = InMemoryStore()
 
-stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, List[int]]
+stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, list[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
 
 
@@ -156,7 +157,7 @@ def authentication_area() -> Markup:
     return area
 
 @app.template_global()
-def can_run_commands(command_records: List[CommandRecord]) -> bool:
+def can_run_commands(command_records: list[CommandRecord]) -> bool:
     return flask.g.can_run_commands and any(filter(lambda command_record: isinstance(command_record, CommandPlan), command_records))
 
 @app.template_global()
@@ -231,7 +232,7 @@ def render_command_record(command_record: CommandRecord, domain: str) -> Markup:
     return Markup(command_record_markup)
 
 @app.template_filter()
-def render_command_record_type(command_record_type: Type[CommandRecord]) -> Markup:
+def render_command_record_type(command_record_type: type[CommandRecord]) -> Markup:
     template_names = {
         CommandPlan: 'command_plan_badge.html',
         CommandPending: 'command_pending_badge.html',
@@ -442,7 +443,7 @@ def batch(id: int) -> RRV:
                 # user is viewing a batch for a wiki where they do not have a local user account
                 # treat as anonymous on the local wiki, but query Meta to find out if they’re a steward
                 local_user_id: Optional[int] = None
-                groups: List[str] = []
+                groups: list[str] = []
                 meta_session: mwapi.Session = authenticated_session('meta.wikimedia.org')
                 meta_userinfo = meta_session.get(action='query',
                                                  meta='userinfo',
@@ -791,7 +792,7 @@ def query_times() -> RRV:
 def is_wikimedia_domain(domain: str) -> bool:
     return re.fullmatch(r'[a-z0-9-]+\.(?:wiki(?:pedia|media|books|data|news|quote|source|versity|voyage|functions)|mediawiki|wiktionary)\.org', domain) is not None
 
-def slice_from_args(args: dict) -> Tuple[int, int]:
+def slice_from_args(args: dict) -> tuple[int, int]:
     try:
         offset = int(args['offset'])
     except (KeyError, ValueError):
@@ -809,7 +810,7 @@ def slice_from_args(args: dict) -> Tuple[int, int]:
 @cachetools.cached(cache=stewards_global_user_ids_cache,
                    key=lambda: '#stewards',
                    lock=stewards_global_user_ids_cache_lock)
-def steward_global_user_ids() -> List[int]:
+def steward_global_user_ids() -> list[int]:
     session = mwapi.Session(host='https://meta.wikimedia.org', user_agent=user_agent)
     ids = []
     for result in session.get(action='query',
@@ -864,7 +865,7 @@ def submitted_request_valid() -> bool:
     return True
 
 @app.before_request
-def require_valid_submitted_request() -> Optional[Tuple[str, int]]:
+def require_valid_submitted_request() -> Optional[tuple[str, int]]:
     if flask.request.method == 'POST' and not submitted_request_valid():
         return flask.render_template('csrf_error.html'), 400
     return None
@@ -879,6 +880,6 @@ def deny_frame(response: flask.Response) -> flask.Response:
     return response
 
 @app.errorhandler(pymysql.err.OperationalError)
-def handle_database_operational_error(e: pymysql.err.OperationalError) -> Tuple[str, int]:
+def handle_database_operational_error(e: pymysql.err.OperationalError) -> tuple[str, int]:
     return flask.render_template('database_operational_error.html',
                                  expected_database_error=app.config.get('EXPECTED_DATABASE_ERROR')), 503

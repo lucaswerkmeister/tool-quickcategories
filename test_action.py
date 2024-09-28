@@ -1,5 +1,4 @@
 import pytest
-from typing import Type
 
 from action import AddCategoryAction, AddCategoryAndSortKeyAction, AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction, CategoryAction, RemoveCategoryAction, RemoveCategoryWithSortKeyAction
 
@@ -14,19 +13,19 @@ removeCategoryWithSortKey1 = RemoveCategoryWithSortKeyAction('Cat 1', 'sort key'
 
 
 @pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_empty(class_: Type[CategoryAction]) -> None:
+def test_CategoryAction_init_empty(class_: type[CategoryAction]) -> None:
     with pytest.raises(AssertionError):
         class_('')
 
 @pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_wikilink(class_: Type[CategoryAction]) -> None:
+def test_CategoryAction_init_wikilink(class_: type[CategoryAction]) -> None:
     with pytest.raises(AssertionError):
         class_('[[Category:Cat 1]]')
     with pytest.raises(AssertionError):
         class_('[[other link]]')
 
 @pytest.mark.parametrize('class_', [AddCategoryAction, RemoveCategoryAction])
-def test_CategoryAction_init_category_namespace(class_: Type[CategoryAction]) -> None:
+def test_CategoryAction_init_category_namespace(class_: type[CategoryAction]) -> None:
     with pytest.raises(AssertionError):
         class_('Category:Cat 1')
 
@@ -99,12 +98,12 @@ def test_AddCategoryAction_str() -> None:
 
 
 @pytest.mark.parametrize('class_', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
-def test_AddCategoryAndSortKeyAction_init_empty_sort_key(class_: Type[AddCategoryAndSortKeyAction]) -> None:
+def test_AddCategoryAndSortKeyAction_init_empty_sort_key(class_: type[AddCategoryAndSortKeyAction]) -> None:
     with pytest.raises(AssertionError):
         class_('Category', '')
 
 @pytest.mark.parametrize('class_', [AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction])
-def test_AddCategoryAndSortKeyAction_summary(class_: Type[AddCategoryAndSortKeyAction]) -> None:
+def test_AddCategoryAndSortKeyAction_summary(class_: type[AddCategoryAndSortKeyAction]) -> None:
     assert class_('Test', 'Sortierschlüssel').summary(('Kategorie', ['Kategorie', 'Category'], 'first-letter')) == '+[[Kategorie:Test|Kategorie:Test|Sortierschlüssel]]'
 
 

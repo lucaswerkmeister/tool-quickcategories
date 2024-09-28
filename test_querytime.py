@@ -1,8 +1,9 @@
+from collections.abc import Iterator
 import datetime
 import freezegun
 import pymysql
 import pytest
-from typing import Any, Iterator, Tuple, cast
+from typing import Any, cast
 
 from database import DatabaseStore
 from querytime import QueryTimingCursor, QueryTimingSSCursor, flush_querytime, slow_queries, query_summary, _querytext_store, _query_times
@@ -50,7 +51,7 @@ def test_flush_querytime(database_connection_params_with_cursorclass: dict) -> N
         cursor.execute('''SELECT querytime_utc_timestamp, querytext_sql, querytime_duration
                           FROM `querytime`
                           JOIN `querytext` ON `querytime_querytext` = `querytext_id`''')
-        timestamp, sql, duration = cast(Tuple[Any, ...], cursor.fetchone())
+        timestamp, sql, duration = cast(tuple[Any, ...], cursor.fetchone())
         assert timestamp == 1557340918
         assert sql == '''SELECT 1'''
         assert cursor.fetchone() is None
@@ -69,7 +70,7 @@ def test_flush_querytime_twice_records_querytime_times(database_connection_param
                           FROM `querytime`
                           JOIN `querytext` ON `querytime_querytext` = `querytext_id`
                           WHERE `querytext_sql` LIKE '%querytime%\'''')
-        (count,) = cast(Tuple[Any, ...], cursor.fetchone())
+        (count,) = cast(tuple[Any, ...], cursor.fetchone())
         assert count > 0
 
 def test_slow_queries(database_connection_params: dict) -> None:

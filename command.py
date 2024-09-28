@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import datetime
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from action import Action
 from page import Page
@@ -13,9 +13,9 @@ class Command:
     """A list of actions to perform on a page."""
 
     page: Page
-    actions: List['Action']
+    actions: list['Action']
 
-    def apply(self, wikitext: str, category_info: CategoryInfo) -> Tuple[str, List[Tuple[Action, bool]]]:
+    def apply(self, wikitext: str, category_info: CategoryInfo) -> tuple[str, list[tuple[Action, bool]]]:
         """Apply the actions of this command to the given wikitext and return
         the result as well as the actions together with the
         information whether they were a no-op or not.

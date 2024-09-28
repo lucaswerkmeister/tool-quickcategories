@@ -1,6 +1,6 @@
 """Functions to parse batches from tab/pipe-separated values syntax."""
 
-from typing import List, Optional
+from typing import Optional
 
 from action import Action, AddCategoryAction, AddCategoryWithSortKeyAction, AddCategoryProvideSortKeyAction, AddCategoryReplaceSortKeyAction, RemoveCategoryAction, RemoveCategoryWithSortKeyAction
 from batch import NewBatch
@@ -76,14 +76,14 @@ def parse_action(field: str) -> Action:
 
 class ParseBatchError(ValueError):
 
-    def __init__(self, errors: List[Exception]) -> None:
+    def __init__(self, errors: list[Exception]) -> None:
         self.errors = errors
         super().__init__('errors parsing batch: %s' % '; '.join(map(str, errors)))
 
 
 class ParseCommandError(ValueError):
 
-    def __init__(self, page: Page, errors: List[Exception]) -> None:
+    def __init__(self, page: Page, errors: list[Exception]) -> None:
         self.page = page
         self.errors = errors
         super().__init__("errors parsing command for page '%s': %s" % (str(page), ', '.join(map(str, errors))))

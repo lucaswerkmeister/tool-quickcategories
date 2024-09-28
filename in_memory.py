@@ -1,8 +1,9 @@
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 import datetime
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
-from typing import Any, Dict, Iterator, List, Optional, Sequence, Tuple, Type, cast
+from typing import Any, Optional, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from batch_background_runs import BatchBackgroundRuns
@@ -19,15 +20,15 @@ class InMemoryStore(BatchStore):
     def __init__(self) -> None:
         self.next_batch_id = 1
         self.next_command_id = 1
-        self.batches: Dict[int, StoredBatch] = {}
-        self.background_sessions: Dict[int, mwapi.Session] = {}
-        self.background_suspensions: Dict[int, datetime.datetime] = {}
+        self.batches: dict[int, StoredBatch] = {}
+        self.background_sessions: dict[int, mwapi.Session] = {}
+        self.background_suspensions: dict[int, datetime.datetime] = {}
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
         local_user = _local_user_from_session(session)
 
-        command_plans: List[CommandRecord] = []
+        command_plans: list[CommandRecord] = []
         for command in new_batch.commands:
             command_plans.append(CommandPlan(self.next_command_id, command))
             self.next_command_id += 1
@@ -93,7 +94,7 @@ class InMemoryStore(BatchStore):
     def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
         self.background_suspensions[batch.id] = until
 
-    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[Tuple[OpenBatch, CommandPending, mwapi.Session]]:
+    def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[tuple[OpenBatch, CommandPending, mwapi.Session]]:
         batches_by_last_updated = sorted(self.batches.values(), key=lambda batch: batch.last_updated)
         for batch in batches_by_last_updated:
             if not batch.background_runs.currently_running():
@@ -117,15 +118,15 @@ class InMemoryStore(BatchStore):
 @dataclass(frozen=True)
 class _BatchCommandRecordsList(BatchCommandRecords):
 
-    command_records: List[CommandRecord]
+    command_records: list[CommandRecord]
     batch_id: int
     store: InMemoryStore
 
-    def get_slice(self, offset: int, limit: int) -> List[CommandRecord]:
+    def get_slice(self, offset: int, limit: int) -> list[CommandRecord]:
         return self.command_records[offset:offset+limit]
 
-    def get_summary(self) -> Dict[Type[CommandRecord], int]:
-        ret: Dict[Type[CommandRecord], int] = {}
+    def get_summary(self) -> dict[type[CommandRecord], int]:
+        ret: dict[type[CommandRecord], int] = {}
         for command_record in self.command_records:
             t = type(command_record)
             ret[t] = ret.get(t, 0) + 1
@@ -139,7 +140,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
         for command_record in self.command_records:
             yield command_record.command
 
-    def make_plans_pending(self, offset: int, limit: int) -> List[CommandPending]:
+    def make_plans_pending(self, offset: int, limit: int) -> list[CommandPending]:
         command_pendings = []
         for index, command_plan in enumerate(self.command_records[offset:offset+limit]):
             if not isinstance(command_plan, CommandPlan):
@@ -149,7 +150,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
             command_pendings.append(command_pending)
         return command_pendings
 
-    def make_pendings_planned(self, command_record_ids: List[int]) -> None:
+    def make_pendings_planned(self, command_record_ids: list[int]) -> None:
         for index, command_pending in enumerate(self.command_records):
             if not isinstance(command_pending, CommandPending):
                 continue
@@ -186,16 +187,16 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 @dataclass(frozen=True)
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
-    background_runs: List[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]
+    background_runs: list[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]
     store: InMemoryStore
 
-    def get_last(self) -> Optional[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
         if self.background_runs:
             return self.background_runs[-1]
         else:
             return None
 
-    def get_all(self) -> Sequence[Tuple[Tuple[datetime.datetime, LocalUser], Optional[Tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_all(self) -> Sequence[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
         return self.background_runs
 
     def __eq__(self, value: Any) -> bool:

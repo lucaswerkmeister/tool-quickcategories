@@ -1,7 +1,7 @@
 import json
 import pymysql
 import pytest
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
 from batch import StoredBatch
 from command import CommandEdit, CommandFinish, CommandNoop, CommandRecord
@@ -42,7 +42,7 @@ def test_DatabaseStore_store_batch(database_connection_params: dict) -> None:
     with store.connect() as connection:
         with connection.cursor() as cursor:
             cursor.execute('SELECT `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
-            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cast(Tuple[Any, ...], cursor.fetchone())
+            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cast(tuple[Any, ...], cursor.fetchone())
             assert command2_page_title == command2.command.page.title
             assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
@@ -78,7 +78,7 @@ def test_DatabaseStore_start_background_inserts_row(database_connection_params: 
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        user_name, auth = cast(Tuple[Any, ...], cursor.fetchone())
+        user_name, auth = cast(tuple[Any, ...], cursor.fetchone())
         assert user_name == 'Lucas Werkmeister'
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
@@ -90,7 +90,7 @@ def test_DatabaseStore_start_background_does_not_insert_extra_row(database_conne
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
         assert cursor.rowcount == 1
-        background_id, background_started_utc_timestamp = cast(Tuple[Any, ...], cursor.fetchone())
+        background_id, background_started_utc_timestamp = cast(tuple[Any, ...], cursor.fetchone())
     store.start_background(open_batch, fake_session)  # should be no-op
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_id`, `background_started_utc_timestamp` FROM `background`')
@@ -105,7 +105,7 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        auth, stopped_utc_timestamp, stopped_user_name = cast(Tuple[Any, ...], cursor.fetchone())
+        auth, stopped_utc_timestamp, stopped_user_name = cast(tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_user_name == 'Lucas Werkmeister'
         assert auth is None
@@ -118,7 +118,7 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser = cast(Tuple[Any, ...], cursor.fetchone())
+        stopped_utc_timestamp, stopped_localuser = cast(tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
@@ -147,16 +147,16 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
     with store.connect() as connection, connection.cursor() as cursor:
         cursor.execute('SELECT `background_stopped_utc_timestamp`, `background_stopped_localuser` FROM `background`')
         assert cursor.rowcount == 1
-        stopped_utc_timestamp, stopped_localuser = cast(Tuple[Any, ...], cursor.fetchone())
+        stopped_utc_timestamp, stopped_localuser = cast(tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
 
-command_unfinishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]] = [
+command_unfinishes_and_rows: list[tuple[CommandRecord, tuple[int, Optional[dict]]]] = [
     (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
     (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
 ]
-command_finishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]] = [
+command_finishes_and_rows: list[tuple[CommandRecord, tuple[int, Optional[dict]]]] = [
     (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
     (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
     (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
@@ -171,12 +171,12 @@ command_finishes_and_rows: List[Tuple[CommandRecord, Tuple[int, Optional[dict]]]
 ]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
-def test_DatabaseStore_command_finish_to_row(command_finish: CommandFinish, expected_row: Tuple[int, Optional[dict]]) -> None:
+def test_DatabaseStore_command_finish_to_row(command_finish: CommandFinish, expected_row: tuple[int, Optional[dict]]) -> None:
     actual_row = DatabaseStore({})._command_finish_to_row(command_finish)
     assert expected_row == actual_row
 
 @pytest.mark.parametrize('expected_command_record, row', command_unfinishes_and_rows + command_finishes_and_rows)
-def test_DatabaseStore_row_to_command_record(expected_command_record: CommandRecord, row: Tuple[int, Optional[dict]]) -> None:
+def test_DatabaseStore_row_to_command_record(expected_command_record: CommandRecord, row: tuple[int, Optional[dict]]) -> None:
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
     full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json

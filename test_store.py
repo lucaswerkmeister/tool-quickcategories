@@ -1,8 +1,9 @@
+from collections.abc import Iterator
 import datetime
 import mwoauth  # type: ignore
 import pytest
 import random
-from typing import Any, Iterator, cast
+from typing import Any, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import datetime
 import mwapi  # type: ignore
-from typing import Dict, List, Optional, cast
+from typing import Optional, cast
 
 from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
@@ -19,9 +19,9 @@ class Runner():
         self.csrf_token = self.session.get(action='query',
                                            meta='tokens')['query']['tokens']['csrftoken']
 
-    def resolve_pages(self, pages: List[Page]) -> None:
-        pages_with_resolve_redirects: List[Page] = []
-        pages_without_resolve_redirects: List[Page] = []
+    def resolve_pages(self, pages: list[Page]) -> None:
+        pages_with_resolve_redirects: list[Page] = []
+        pages_without_resolve_redirects: list[Page] = []
 
         for page in pages:
             if self.do_resolve_redirects(page.resolve_redirects):
@@ -37,14 +37,14 @@ class Runner():
     def do_resolve_redirects(self, resolve_redirects: Optional[bool]) -> bool:
         return resolve_redirects is True  # None is equivalent to False
 
-    def resolve_pages_of_one_kind(self, pages: List[Page]) -> None:
+    def resolve_pages_of_one_kind(self, pages: list[Page]) -> None:
         assert pages
         assert len(pages) <= 50
 
         do_resolve_redirects = self.do_resolve_redirects(pages[0].resolve_redirects)
 
-        pages_by_title: Dict[str, Page] = {}
-        titles: List[str] = []
+        pages_by_title: dict[str, Page] = {}
+        titles: list[str] = []
         for page in pages:
             if self.do_resolve_redirects(page.resolve_redirects) != do_resolve_redirects:
                 raise ValueError('pages were not all of one kind')

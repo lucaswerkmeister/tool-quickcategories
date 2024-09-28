@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import datetime
-from typing import List, Optional
+from typing import Optional
 
 from batch_background_runs import BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
@@ -13,7 +13,7 @@ from localuser import LocalUser
 class NewBatch:
     """A list of commands to be performed."""
 
-    commands: List[Command]
+    commands: list[Command]
     title: Optional[str]
 
     def cleanup(self) -> None:
