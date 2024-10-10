@@ -198,6 +198,53 @@ class CommandPageProtected(CommandFailure):
         return True
 
 
+@dataclass(frozen=True)
+class CommandPageBadContentFormat(CommandFailure):
+    """A command that failed because the page has a bad content format.
+
+    The content format is the lower level beneath a content model.
+    Multiple content models can share the same content format.
+    QuickCategories only supports the text/x-wiki content format,
+    and this is unlikely to ever change."""
+
+    content_format: str
+    content_model: str
+    revision: int
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_retry_later(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
+        return True
+
+
+@dataclass(frozen=True)
+class CommandPageBadContentModel(CommandFailure):
+    """A command that failed because the page has a bad content model.
+
+    The content format is the lower level beneath a content model.
+    Multiple content models can share the same content format.
+    QuickCategories supports a small number of known content models
+    as long as they use the text/x-wiki content format;
+    an error of this kind can potentially be made supported later."""
+
+    content_format: str
+    content_model: str
+    revision: int
+
+    def can_retry_immediately(self) -> bool:
+        return False
+
+    def can_retry_later(self) -> bool:
+        return False
+
+    def can_continue_batch(self) -> bool:
+        return True
+
+
 class CommandEditConflict(CommandFailure):
     """A command that failed due to an edit conflict."""
 

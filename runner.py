@@ -3,7 +3,7 @@ import datetime
 import mwapi  # type: ignore
 from typing import Optional, cast
 
-from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 import siteinfo
 
@@ -91,22 +91,40 @@ class Runner():
                 continue
             revision = response_page['revisions'][0]
             slot = revision['slots']['main']
-            if slot['contentmodel'] not in ('wikitext', 'proofread-index'):
-                raise ValueError(f'Unexpected content model {slot["contentmodel"]} '
-                                 f'for revision {revision["revid"]} of page {title} '
-                                 f'on {self.session.host}, refusing to edit!')
-            elif slot['contentformat'] != 'text/x-wiki':
-                raise ValueError(f'Unexpected content format {slot["contentformat"]} '
-                                 f'for revision {revision["revid"]} of page {title} '
-                                 f'on {self.session.host}, refusing to edit!')
             page.resolution = {
-                'wikitext': slot['content'],
+                'contentformat': slot['contentformat'],
                 'contentmodel': slot['contentmodel'],
                 'page_id': response_page['pageid'],
                 'base_timestamp': revision['timestamp'],
                 'base_revid': revision['revid'],
                 'start_timestamp': response['curtimestamp'],
             }
+            if slot['contentformat'] != 'text/x-wiki':
+                # not wikitext, we almost certainly can’t work with this
+                page.resolution |= {
+                    'badcontentformat': True,
+                }
+            elif slot['contentmodel'] not in ('wikitext', 'proofread-index'):
+                # wikitext but unknown context model, better be safe and not use it
+                # (but it might be possible to add support later if users request it –
+                # we just need an example page to try it out on)
+                page.resolution |= {
+                    'badcontentmodel': True,
+                    # we *could* add 'wikitext': slot['content'] here but nothing would use it anyway
+                }
+            else:
+                # wikitext we can edit \o/ (this is the normal case)
+                page.resolution |= {
+                    'wikitext': slot['content'],
+                }
+
+#                 raise ValueError(f'Unexpected content model {slot["contentmodel"]} '
+#                                  f'for revision {revision["revid"]} of page {title} '
+#                                  f'on {self.session.host}, refusing to edit!')
+#             elif slot['contentformat'] != 'text/x-wiki':
+#                 raise ValueError(f'Unexpected content format {slot["contentformat"]} '
+#                                  f'for revision {revision["revid"]} of page {title} '
+#                                  f'on {self.session.host}, refusing to edit!')
 
         if '' in pages_by_title:
             page = pages_by_title['']
@@ -123,11 +141,24 @@ class Runner():
         category_info = siteinfo.category_info(self.session)
 
         if 'missing' in resolution:
-            return CommandPageMissing(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
+            return CommandPageMissing(command_pending.id, command_pending.command,
+                                      curtimestamp=resolution['curtimestamp'])
         if 'invalid' in resolution:
-            return CommandTitleInvalid(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
+            return CommandTitleInvalid(command_pending.id, command_pending.command,
+                                       curtimestamp=resolution['curtimestamp'])
         if 'interwiki' in resolution:
-            return CommandTitleInterwiki(command_pending.id, command_pending.command, curtimestamp=resolution['curtimestamp'])
+            return CommandTitleInterwiki(command_pending.id, command_pending.command,
+                                         curtimestamp=resolution['curtimestamp'])
+        if 'badcontentformat' in resolution:
+            return CommandPageBadContentFormat(command_pending.id, command_pending.command,
+                                               content_format=resolution['contentformat'],
+                                               content_model=resolution['contentmodel'],
+                                               revision=resolution['base_revid'])
+        if 'badcontentmodel' in resolution:
+            return CommandPageBadContentModel(command_pending.id, command_pending.command,
+                                              content_format=resolution['contentformat'],
+                                              content_model=resolution['contentmodel'],
+                                              revision=resolution['base_revid'])
 
         wikitext, actions = command_pending.command.apply(resolution['wikitext'], category_info)
         summary = ''

@@ -2,7 +2,7 @@ import datetime
 import pytest
 
 from action import AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 
 from test_action import addCategory1, removeCategory1, addCategory2
@@ -136,6 +136,44 @@ def test_CommandPageProtected_can_continue_batch() -> None:
 
 def test_CommandPageProtected_str() -> None:
     assert str(commandPageProtected1) == '# ' + str(commandWithProtectedPage)
+
+
+commandPageBadContentFormat = CommandPageBadContentFormat(42, command1, content_format='text/css', content_model='sanitized-css', revision=12345)
+
+
+def test_CommandPageBadContentFormat_can_retry_immediately() -> None:
+    assert not commandPageBadContentFormat.can_retry_immediately()
+
+
+def test_CommandPageBadContentFormat_can_retry_later() -> None:
+    assert not commandPageBadContentFormat.can_retry_later()
+
+
+def test_CommandPageBadContentFormat_can_continue_batch() -> None:
+    assert commandPageBadContentFormat.can_continue_batch()
+
+
+def test_CommandPageBadContentFormat_str() -> None:
+    assert str(commandPageBadContentFormat) == '# ' + str(command1)
+
+
+commandPageBadContentModel = CommandPageBadContentModel(42, command1, content_format='text/x-wiki', content_model='unknown', revision=12345)
+
+
+def test_CommandPageBadContentModel_can_retry_immediately() -> None:
+    assert not commandPageBadContentModel.can_retry_immediately()
+
+
+def test_CommandPageBadContentModel_can_retry_later() -> None:
+    assert not commandPageBadContentModel.can_retry_later()
+
+
+def test_CommandPageBadContentModel_can_continue_batch() -> None:
+    assert commandPageBadContentModel.can_continue_batch()
+
+
+def test_CommandPageBadContentModel_str() -> None:
+    assert str(commandPageBadContentModel) == '# ' + str(command1)
 
 
 commandEditConflict1 = CommandEditConflict(42, command1)

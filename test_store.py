@@ -6,7 +6,7 @@ import random
 from typing import Any, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from database import DatabaseStore
 from in_memory import InMemoryStore
 from localuser import LocalUser
@@ -93,22 +93,26 @@ def test_BatchStore_get_batch_missing(store: BatchStore) -> None:
     assert loaded_batch is None
 
 def test_BatchCommandRecords_get_summary(store: BatchStore) -> None:
-    batch = store.store_batch(NewBatch([command1]*9, title=None), fake_session)
-    [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9] = batch.command_records.get_slice(0, 9)
+    batch = store.store_batch(NewBatch([command1]*11, title=None), fake_session)
+    [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9, cr10, cr11] = batch.command_records.get_slice(0, 11)
     batch.command_records.store_finish(CommandEdit(cr1.id, cr1.command, 1, 4))
     batch.command_records.store_finish(CommandNoop(cr2.id, cr2.command, 2))
     batch.command_records.store_finish(CommandEdit(cr3.id, cr3.command, 3, 5))
     batch.command_records.store_finish(CommandPageMissing(cr4.id, cr4.command, "curtimestamp"))
     batch.command_records.store_finish(CommandPageProtected(cr5.id, cr5.command, "curtimestamp"))
-    batch.command_records.store_finish(CommandEditConflict(cr6.id, cr6.command))
-    batch.command_records.store_finish(CommandMaxlagExceeded(cr7.id, cr7.command, now()))
-    batch.command_records.store_finish(CommandBlocked(cr8.id, cr8.command, False, None))
-    batch.command_records.store_finish(CommandWikiReadOnly(cr9.id, cr9.command, None, now()))
+    batch.command_records.store_finish(CommandPageBadContentFormat(cr6.id, cr6.command, "text/css", "sanitized-css", 12345))
+    batch.command_records.store_finish(CommandPageBadContentModel(cr7.id, cr7.command, "text/x-wiki", "unknown", 12345))
+    batch.command_records.store_finish(CommandEditConflict(cr8.id, cr8.command))
+    batch.command_records.store_finish(CommandMaxlagExceeded(cr9.id, cr9.command, now()))
+    batch.command_records.store_finish(CommandBlocked(cr10.id, cr10.command, False, None))
+    batch.command_records.store_finish(CommandWikiReadOnly(cr11.id, cr11.command, None, now()))
     assert batch.command_records.get_summary() == {
         CommandEdit: 2,
         CommandNoop: 1,
         CommandPageMissing: 1,
         CommandPageProtected: 1,
+        CommandPageBadContentFormat: 1,
+        CommandPageBadContentModel: 1,
         CommandEditConflict: 1,
         CommandMaxlagExceeded: 1,
         CommandBlocked: 1,

@@ -22,7 +22,7 @@ import warnings
 import werkzeug
 
 from batch import StoredBatch, OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from init import user_agent, load_config, load_consumer_token, load_database_params
 from localuser import LocalUser
 from pagepile import load_pagepile, create_pagepile
@@ -210,6 +210,14 @@ def render_command_record(command_record: CommandRecord, domain: str) -> Markup:
         command_record_markup = flask.render_template('command_page_protected.html',
                                                       domain=domain,
                                                       command_page_protected=command_record)
+    elif isinstance(command_record, CommandPageBadContentFormat):
+        command_record_markup = flask.render_template('command_page_bad_content_format.html',
+                                                      domain=domain,
+                                                      command_page_bad_content_format=command_record)
+    elif isinstance(command_record, CommandPageBadContentModel):
+        command_record_markup = flask.render_template('command_page_bad_content_model.html',
+                                                      domain=domain,
+                                                      command_page_bad_content_model=command_record)
     elif isinstance(command_record, CommandEditConflict):
         command_record_markup = flask.render_template('command_edit_conflict.html',
                                                       domain=domain,
@@ -242,6 +250,8 @@ def render_command_record_type(command_record_type: type[CommandRecord]) -> Mark
         CommandTitleInvalid: 'command_title_invalid_badge.html',
         CommandTitleInterwiki: 'command_title_interwiki_badge.html',
         CommandPageProtected: 'command_page_protected_badge.html',
+        CommandPageBadContentFormat: 'command_page_bad_content_format_badge.html',
+        CommandPageBadContentModel: 'command_page_bad_content_model_badge.html',
         CommandEditConflict: 'command_edit_conflict_badge.html',
         CommandMaxlagExceeded: 'command_maxlag_exceeded_badge.html',
         CommandBlocked: 'command_blocked_badge.html',

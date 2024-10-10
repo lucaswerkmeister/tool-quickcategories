@@ -5,7 +5,7 @@ import pytest
 from typing import Any, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from runner import Runner
 
@@ -871,6 +871,18 @@ def test_with_protected_page() -> None:
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_bad_content_format() -> None:
+    session = logged_in_session('https://test.wikipedia.org')
+    title = 'User:Lucas Werkmeister/test-styles.css'
+    command = Command(Page(title, True), [AddCategoryAction('Added cat')])
+    runner = Runner(session)
+
+    record = runner.run_command(CommandPending(0, command))
+
+    assert isinstance(record, CommandPageBadContentFormat)
+    assert record.content_format == 'text/css'
+    assert record.content_model == 'css'
 
 def test_with_edit_conflict() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'

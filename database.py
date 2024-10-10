@@ -11,7 +11,7 @@ import requests_oauthlib  # type: ignore
 from typing import Any, Optional, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
-from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 from page import Page
 import parse_tpsv
@@ -38,6 +38,8 @@ class DatabaseStore(BatchStore):
     _COMMAND_STATUS_PAGE_PROTECTED = 134
     _COMMAND_STATUS_TITLE_INVALID = 135
     _COMMAND_STATUS_TITLE_INTERWIKI = 136
+    _COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT = 137
+    _COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL = 138
 
     def __init__(self, connection_params: dict) -> None:
         connection_params.setdefault('charset', 'utf8mb4')
@@ -328,6 +330,20 @@ class DatabaseStore(BatchStore):
         elif isinstance(command_finish, CommandPageProtected):
             status = DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED
             outcome = {'curtimestamp': command_finish.curtimestamp}
+        elif isinstance(command_finish, CommandPageBadContentFormat):
+            status = DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT
+            outcome = {
+                'content_format': command_finish.content_format,
+                'content_model': command_finish.content_model,
+                'revision': command_finish.revision,
+            }
+        elif isinstance(command_finish, CommandPageBadContentModel):
+            status = DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL
+            outcome = {
+                'content_format': command_finish.content_format,
+                'content_model': command_finish.content_model,
+                'revision': command_finish.revision,
+            }
         elif isinstance(command_finish, CommandEditConflict):
             status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
             outcome = {}
@@ -391,6 +407,18 @@ class DatabaseStore(BatchStore):
             return CommandPageProtected(id,
                                         command,
                                         curtimestamp=outcome_dict['curtimestamp'])
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
+            return CommandPageBadContentFormat(id,
+                                               command,
+                                               content_format=outcome_dict['content_format'],
+                                               content_model=outcome_dict['content_model'],
+                                               revision=outcome_dict['revision'])
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
+            return CommandPageBadContentModel(id,
+                                              command,
+                                              content_format=outcome_dict['content_format'],
+                                              content_model=outcome_dict['content_model'],
+                                              revision=outcome_dict['revision'])
         elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict(id,
                                        command)
@@ -433,6 +461,10 @@ class DatabaseStore(BatchStore):
             return CommandTitleInterwiki
         elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
             return CommandPageProtected
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
+            return CommandPageBadContentFormat
+        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
+            return CommandPageBadContentModel
         elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict
         elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
