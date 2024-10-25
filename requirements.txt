@@ -32,7 +32,7 @@ flask==3.0.3
     # via -r requirements.in
 freezegun==1.5.1
     # via -r requirements.in
-frozenlist==1.4.1
+frozenlist==1.5.0
     # via
     #   aiohttp
     #   aiosignal
@@ -50,7 +50,7 @@ itsdangerous==2.2.0
     # via flask
 jinja2==3.1.4
     # via flask
-markupsafe==3.0.1
+markupsafe==3.0.2
     # via
     #   -r requirements.in
     #   jinja2
@@ -67,7 +67,7 @@ mwoauth==0.4.0
     # via -r requirements.in
 mwparserfromhell==0.6.6
     # via -r requirements.in
-mypy==1.11.2
+mypy==1.13.0
     # via -r requirements.in
 mypy-extensions==1.0.0
     # via mypy
@@ -116,19 +116,19 @@ soupsieve==2.6
     # via beautifulsoup4
 toolforge==6.0.0
     # via -r requirements.in
-types-beautifulsoup4==4.12.0.20240907
+types-beautifulsoup4==4.12.0.20241020
     # via -r requirements.in
 types-cachetools==5.5.0.20240820
     # via -r requirements.in
 types-decorator==5.1.8.20240310
     # via -r requirements.in
-types-html5lib==1.1.11.20240806
+types-html5lib==1.1.11.20241018
     # via types-beautifulsoup4
 types-pymysql==1.1.0.20240524
     # via -r requirements.in
 types-pyyaml==6.0.12.20240917
     # via -r requirements.in
-types-requests==2.32.0.20240914
+types-requests==2.32.0.20241016
     # via -r requirements.in
 typing-extensions==4.12.2
     # via mypy
@@ -136,9 +136,9 @@ urllib3==2.2.3
     # via
     #   requests
     #   types-requests
-werkzeug==3.0.4
+werkzeug==3.0.6
     # via
     #   -r requirements.in
     #   flask
-yarl==1.15.1
+yarl==1.16.0
     # via aiohttp
