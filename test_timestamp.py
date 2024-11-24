@@ -10,11 +10,15 @@ def test_datetime_to_utc_timestamp() -> None:
 
 @pytest.mark.parametrize('dt', [
     datetime.datetime.now(),
-    datetime.datetime.utcnow(),
     datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=1))),
-    datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
 ])
 def test_datetime_to_utc_timestamp_invalid_timezone(dt: datetime.datetime) -> None:
+    dt = dt.replace(microsecond=0)  # test the tz check, not the μs check
+    with pytest.raises(AssertionError):
+        datetime_to_utc_timestamp(dt)
+
+def test_datetime_to_utc_timestamp_invalid_microsecond() -> None:
+    dt = datetime.datetime(2019, 3, 17, 13, 23, 28, 251638, tzinfo=datetime.timezone.utc)
     with pytest.raises(AssertionError):
         datetime_to_utc_timestamp(dt)
 
