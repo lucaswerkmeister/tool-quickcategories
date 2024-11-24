@@ -17,7 +17,7 @@ jobs:
           # see test_runner.py (note that it uses two test wikis!)
     services:
       mariadb:
-        image: mariadb:10.1
+        image: mariadb:10.6
         env:
           MYSQL_ROOT_PASSWORD: 'mariadb-root-password'
         ports:
