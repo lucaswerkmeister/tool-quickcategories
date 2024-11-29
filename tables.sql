@@ -110,12 +110,12 @@ CREATE UNIQUE INDEX localuser_local_user_id_domain_id ON localuser (localuser_lo
 
 -- retries of certain failed commands, linking the original to the retried command row
 CREATE TABLE retry (
-  retry_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  retry_failure int unsigned NOT NULL, -- referencing command.command_id
+  retry_failure int unsigned NOT NULL PRIMARY KEY, -- referencing command.command_id
   retry_new int unsigned NOT NULL -- referencing command.command_id
 )
 CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
+-- we could enforce the bijection with a unique index on retry_new but it hardly seems necessary
 
 
 -- runtime of SQL queries, to investigate what needs to be optimized
