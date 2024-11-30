@@ -5,7 +5,7 @@ from typing import Any, Optional, cast
 
 from batch import StoredBatch
 from command import CommandEdit, CommandFinish, CommandNoop, CommandRecord
-from database import DatabaseStore, _LocalUserStore
+from database import DatabaseBatchStore, _LocalUserStore
 from localuser import LocalUser
 from stringstore import StringTableStore
 
@@ -34,8 +34,8 @@ fake_session = FakeSession({
 fake_session.host = 'https://commons.wikimedia.org'
 
 
-def test_DatabaseStore_store_batch(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_store_batch(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     command2 = open_batch.command_records.get_slice(1, 1)[0]
 
@@ -47,8 +47,8 @@ def test_DatabaseStore_store_batch(database_connection_params: dict) -> None:
             assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
-def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_time: Any) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_update_batch(database_connection_params: dict, frozen_time: Any) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     stored_batch = store.store_batch(newBatch1, fake_session)
     loaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
 
@@ -71,8 +71,8 @@ def test_DatabaseStore_update_batch(database_connection_params: dict, frozen_tim
     reloaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
     assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseStore_start_background_inserts_row(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_start_background_inserts_row(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
@@ -83,8 +83,8 @@ def test_DatabaseStore_start_background_inserts_row(database_connection_params: 
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
 
-def test_DatabaseStore_start_background_does_not_insert_extra_row(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_start_background_does_not_insert_extra_row(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
@@ -97,8 +97,8 @@ def test_DatabaseStore_start_background_does_not_insert_extra_row(database_conne
         assert cursor.rowcount == 1
         assert (background_id, background_started_utc_timestamp) == cursor.fetchone()
 
-def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_stop_background_updates_row_removes_auth(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch, fake_session)
@@ -110,8 +110,8 @@ def test_DatabaseStore_stop_background_updates_row_removes_auth(database_connect
         assert stopped_user_name == 'Lucas Werkmeister'
         assert auth is None
 
-def test_DatabaseStore_stop_background_without_session(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_stop_background_without_session(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch)
@@ -122,8 +122,8 @@ def test_DatabaseStore_stop_background_without_session(database_connection_param
         assert stopped_utc_timestamp > 0
         assert stopped_localuser is None
 
-def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_stop_background_multiple_closes_all_raises_exception(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
@@ -137,8 +137,8 @@ def test_DatabaseStore_stop_background_multiple_closes_all_raises_exception(data
         cursor.execute('SELECT 1 FROM `background` WHERE `background_stopped_utc_timestamp` IS NULL')
         assert cursor.rowcount == 0
 
-def test_DatabaseStore_closing_batch_stops_background(database_connection_params: dict) -> None:
-    store = DatabaseStore(database_connection_params)
+def test_DatabaseBatchStore_closing_batch_stops_background(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     [command_record_1, command_record_2] = open_batch.command_records.get_slice(0, 2)
@@ -153,36 +153,36 @@ def test_DatabaseStore_closing_batch_stops_background(database_connection_params
 
 
 command_unfinishes_and_rows: list[tuple[CommandRecord, tuple[int, Optional[dict]]]] = [
-    (commandPlan1, (DatabaseStore._COMMAND_STATUS_PLAN, None)),
-    (commandPending1, (DatabaseStore._COMMAND_STATUS_PENDING, None)),
+    (commandPlan1, (DatabaseBatchStore._COMMAND_STATUS_PLAN, None)),
+    (commandPending1, (DatabaseBatchStore._COMMAND_STATUS_PENDING, None)),
 ]
 command_finishes_and_rows: list[tuple[CommandRecord, tuple[int, Optional[dict]]]] = [
-    (commandEdit1, (DatabaseStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
-    (commandNoop1, (DatabaseStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
-    (commandPageMissing1, (DatabaseStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
-    (commandTitleInvalid1, (DatabaseStore._COMMAND_STATUS_TITLE_INVALID, {'curtimestamp': '2019-03-11T23:26:02Z'})),
-    (commandPageProtected1, (DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED, {'curtimestamp': '2019-03-11T23:26:02Z'})),
-    (commandPageBadContentFormat, (DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT, {'content_format': 'text/css', 'content_model': 'sanitized-css', 'revision': 12345})),
-    (commandPageBadContentModel, (DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL, {'content_format': 'text/x-wiki', 'content_model': 'unknown', 'revision': 12345})),
-    (commandEditConflict1, (DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
-    (commandMaxlagExceeded1, (DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842})),
-    (commandBlocked1, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': blockinfo})),
-    (commandBlocked2, (DatabaseStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
-    (commandWikiReadOnly1, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance', 'retry_after_utc_timestamp': 1552749842})),
-    (commandWikiReadOnly2, (DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
+    (commandEdit1, (DatabaseBatchStore._COMMAND_STATUS_EDIT, {'base_revision': 1234, 'revision': 1235})),
+    (commandNoop1, (DatabaseBatchStore._COMMAND_STATUS_NOOP, {'revision': 1234})),
+    (commandPageMissing1, (DatabaseBatchStore._COMMAND_STATUS_PAGE_MISSING, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+    (commandTitleInvalid1, (DatabaseBatchStore._COMMAND_STATUS_TITLE_INVALID, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+    (commandPageProtected1, (DatabaseBatchStore._COMMAND_STATUS_PAGE_PROTECTED, {'curtimestamp': '2019-03-11T23:26:02Z'})),
+    (commandPageBadContentFormat, (DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT, {'content_format': 'text/css', 'content_model': 'sanitized-css', 'revision': 12345})),
+    (commandPageBadContentModel, (DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL, {'content_format': 'text/x-wiki', 'content_model': 'unknown', 'revision': 12345})),
+    (commandEditConflict1, (DatabaseBatchStore._COMMAND_STATUS_EDIT_CONFLICT, {})),
+    (commandMaxlagExceeded1, (DatabaseBatchStore._COMMAND_STATUS_MAXLAG_EXCEEDED, {'retry_after_utc_timestamp': 1552749842})),
+    (commandBlocked1, (DatabaseBatchStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': blockinfo})),
+    (commandBlocked2, (DatabaseBatchStore._COMMAND_STATUS_BLOCKED, {'auto': False, 'blockinfo': None})),
+    (commandWikiReadOnly1, (DatabaseBatchStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': 'maintenance', 'retry_after_utc_timestamp': 1552749842})),
+    (commandWikiReadOnly2, (DatabaseBatchStore._COMMAND_STATUS_WIKI_READ_ONLY, {'reason': None})),
 ]
 
 @pytest.mark.parametrize('command_finish, expected_row', command_finishes_and_rows)
-def test_DatabaseStore_command_finish_to_row(command_finish: CommandFinish, expected_row: tuple[int, Optional[dict]]) -> None:
-    actual_row = DatabaseStore({})._command_finish_to_row(command_finish)
+def test_DatabaseBatchStore_command_finish_to_row(command_finish: CommandFinish, expected_row: tuple[int, Optional[dict]]) -> None:
+    actual_row = DatabaseBatchStore({})._command_finish_to_row(command_finish)
     assert expected_row == actual_row
 
 @pytest.mark.parametrize('expected_command_record, row', command_unfinishes_and_rows + command_finishes_and_rows)
-def test_DatabaseStore_row_to_command_record(expected_command_record: CommandRecord, row: tuple[int, Optional[dict]]) -> None:
+def test_DatabaseBatchStore_row_to_command_record(expected_command_record: CommandRecord, row: tuple[int, Optional[dict]]) -> None:
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
     full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json
-    actual_command_record = DatabaseStore({})._row_to_command_record(*full_row)
+    actual_command_record = DatabaseBatchStore({})._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 
 

@@ -46,12 +46,12 @@ consumer_token = load_consumer_token(app.config)
 batch_store: BatchStore
 database_params = load_database_params(app.config)
 if database_params is not None:
-    from database import DatabaseStore
-    batch_store = DatabaseStore(database_params)
+    from database import DatabaseBatchStore
+    batch_store = DatabaseBatchStore(database_params)
 
     def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
-            with cast(DatabaseStore, batch_store).connect() as connection:
+            with cast(DatabaseBatchStore, batch_store).connect() as connection:
                 flush_querytime(connection)
 
     class SometimesFlushQuerytimeMiddleware:
@@ -63,9 +63,9 @@ if database_params is not None:
 
     app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app)  # type: ignore # “cannot assign to a method”
 else:
-    from in_memory import InMemoryStore
+    from in_memory import InMemoryBatchStore
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
-    batch_store = InMemoryStore()
+    batch_store = InMemoryBatchStore()
 
 stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, list[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
@@ -777,7 +777,7 @@ def query_times() -> RRV:
     if userinfo['centralids']['CentralAuth'] not in allowed_global_user_ids:
         return 'not allowed', 403
 
-    if not isinstance(batch_store, DatabaseStore):
+    if not isinstance(batch_store, DatabaseBatchStore):
         return '', 204  # no content
 
     until = now()

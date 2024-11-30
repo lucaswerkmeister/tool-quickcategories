@@ -12,7 +12,7 @@ import time
 from typing import Any
 
 from command import CommandFailure
-from database import DatabaseStore
+from database import DatabaseBatchStore
 from init import user_agent, load_config, load_consumer_token, load_database_params
 from querytime import flush_querytime
 from runner import Runner
@@ -34,7 +34,7 @@ database_params = load_database_params(config)
 if database_params is None:
     print('No database configuration, cannot run in background')
     sys.exit(1)
-batch_store = DatabaseStore(database_params)
+batch_store = DatabaseBatchStore(database_params)
 
 if 'READ_ONLY_REASON' in config:
     print('Tool is in read-only mode according to config')

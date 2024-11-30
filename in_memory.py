@@ -15,7 +15,7 @@ from store import BatchStore, _local_user_from_session
 from timestamp import now
 
 
-class InMemoryStore(BatchStore):
+class InMemoryBatchStore(BatchStore):
 
     def __init__(self) -> None:
         self.next_batch_id = 1
@@ -120,7 +120,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 
     command_records: list[CommandRecord]
     batch_id: int
-    store: InMemoryStore
+    store: InMemoryBatchStore
 
     def get_slice(self, offset: int, limit: int) -> list[CommandRecord]:
         return self.command_records[offset:offset+limit]
@@ -188,7 +188,7 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
     background_runs: list[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]
-    store: InMemoryStore
+    store: InMemoryBatchStore
 
     def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
         if self.background_runs:

@@ -21,7 +21,7 @@ from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
 
 
-class DatabaseStore(BatchStore):
+class DatabaseBatchStore(BatchStore):
 
     _BATCH_STATUS_OPEN = 0
     _BATCH_STATUS_CLOSED = 128
@@ -96,12 +96,12 @@ class DatabaseStore(BatchStore):
             localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
             with connection.cursor() as cursor:
                 cursor.execute('INSERT INTO `batch` (`batch_localuser`, `batch_domain`, `batch_title`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`) VALUES (%s, %s, %s, %s, %s, %s)',
-                               (localuser_id, domain_id, title_id, created_utc_timestamp, created_utc_timestamp, DatabaseStore._BATCH_STATUS_OPEN))
+                               (localuser_id, domain_id, title_id, created_utc_timestamp, created_utc_timestamp, DatabaseBatchStore._BATCH_STATUS_OPEN))
                 batch_id = cursor.lastrowid
 
             with connection.cursor() as cursor:
                 cursor.executemany('INSERT INTO `command` (`command_batch`, `command_page_title`, `command_page_resolve_redirects`, `command_actions`, `command_status`, `command_outcome`) VALUES (%s, %s, %s, %s, %s, NULL)',
-                                   [(batch_id, command.page.title, command.page.resolve_redirects, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
+                                   [(batch_id, command.page.title, command.page.resolve_redirects, self.actions_store.acquire_id(connection, command.actions_tpsv()), DatabaseBatchStore._COMMAND_STATUS_PLAN) for command in new_batch.commands])
 
             connection.commit()
 
@@ -133,7 +133,7 @@ class DatabaseStore(BatchStore):
         created = utc_timestamp_to_datetime(created_utc_timestamp)
         last_updated = utc_timestamp_to_datetime(last_updated_utc_timestamp)
         local_user = LocalUser(user_name, domain, local_user_id, global_user_id)
-        if status == DatabaseStore._BATCH_STATUS_OPEN:
+        if status == DatabaseBatchStore._BATCH_STATUS_OPEN:
             return OpenBatch(id,
                              local_user,
                              local_user.domain,
@@ -142,7 +142,7 @@ class DatabaseStore(BatchStore):
                              last_updated,
                              _BatchCommandRecordsDatabase(id, self),
                              _BatchBackgroundRunsDatabase(id, local_user.domain, self))
-        elif status == DatabaseStore._BATCH_STATUS_CLOSED:
+        elif status == DatabaseBatchStore._BATCH_STATUS_CLOSED:
             return ClosedBatch(id,
                                local_user,
                                local_user.domain,
@@ -258,7 +258,7 @@ class DatabaseStore(BatchStore):
                                   ORDER BY `batch_last_updated_utc_timestamp` ASC, `command_id` ASC
                                   LIMIT 1
                                   FOR UPDATE''',
-                               (now_utc_timestamp, DatabaseStore._COMMAND_STATUS_PLAN))
+                               (now_utc_timestamp, DatabaseBatchStore._COMMAND_STATUS_PLAN))
                 result = cursor.fetchone()
             if not result:
                 connection.commit()  # finish the FOR UPDATE
@@ -272,7 +272,7 @@ class DatabaseStore(BatchStore):
                 cursor.execute('''UPDATE `command`
                                   SET `command_status` = %s
                                   WHERE `command_id` = %s AND `command_batch` = %s''',
-                               (DatabaseStore._COMMAND_STATUS_PENDING, command_id, batch_id))
+                               (DatabaseBatchStore._COMMAND_STATUS_PENDING, command_id, batch_id))
             connection.commit()
 
             # get the rest of the data now that we know we need it (without locking it)
@@ -301,7 +301,7 @@ class DatabaseStore(BatchStore):
                                                       result[11],
                                                       result[12],
                                                       result[13],
-                                                      DatabaseStore._COMMAND_STATUS_PENDING,
+                                                      DatabaseBatchStore._COMMAND_STATUS_PENDING,
                                                       outcome=None)
         batch = self._result_to_batch(result[0:9])
 
@@ -313,48 +313,48 @@ class DatabaseStore(BatchStore):
         status: int
         outcome: dict
         if isinstance(command_finish, CommandEdit):
-            status = DatabaseStore._COMMAND_STATUS_EDIT
+            status = DatabaseBatchStore._COMMAND_STATUS_EDIT
             outcome = {'base_revision': command_finish.base_revision, 'revision': command_finish.revision}
         elif isinstance(command_finish, CommandNoop):
-            status = DatabaseStore._COMMAND_STATUS_NOOP
+            status = DatabaseBatchStore._COMMAND_STATUS_NOOP
             outcome = {'revision': command_finish.revision}
         elif isinstance(command_finish, CommandPageMissing):
-            status = DatabaseStore._COMMAND_STATUS_PAGE_MISSING
+            status = DatabaseBatchStore._COMMAND_STATUS_PAGE_MISSING
             outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandTitleInvalid):
-            status = DatabaseStore._COMMAND_STATUS_TITLE_INVALID
+            status = DatabaseBatchStore._COMMAND_STATUS_TITLE_INVALID
             outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandTitleInterwiki):
-            status = DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI
+            status = DatabaseBatchStore._COMMAND_STATUS_TITLE_INTERWIKI
             outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandPageProtected):
-            status = DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED
+            status = DatabaseBatchStore._COMMAND_STATUS_PAGE_PROTECTED
             outcome = {'curtimestamp': command_finish.curtimestamp}
         elif isinstance(command_finish, CommandPageBadContentFormat):
-            status = DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT
+            status = DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT
             outcome = {
                 'content_format': command_finish.content_format,
                 'content_model': command_finish.content_model,
                 'revision': command_finish.revision,
             }
         elif isinstance(command_finish, CommandPageBadContentModel):
-            status = DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL
+            status = DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL
             outcome = {
                 'content_format': command_finish.content_format,
                 'content_model': command_finish.content_model,
                 'revision': command_finish.revision,
             }
         elif isinstance(command_finish, CommandEditConflict):
-            status = DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT
+            status = DatabaseBatchStore._COMMAND_STATUS_EDIT_CONFLICT
             outcome = {}
         elif isinstance(command_finish, CommandMaxlagExceeded):
-            status = DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED
+            status = DatabaseBatchStore._COMMAND_STATUS_MAXLAG_EXCEEDED
             outcome = {'retry_after_utc_timestamp': datetime_to_utc_timestamp(command_finish.retry_after)}
         elif isinstance(command_finish, CommandBlocked):
-            status = DatabaseStore._COMMAND_STATUS_BLOCKED
+            status = DatabaseBatchStore._COMMAND_STATUS_BLOCKED
             outcome = {'auto': command_finish.auto, 'blockinfo': command_finish.blockinfo}
         elif isinstance(command_finish, CommandWikiReadOnly):
-            status = DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY
+            status = DatabaseBatchStore._COMMAND_STATUS_WIKI_READ_ONLY
             outcome = {'reason': command_finish.reason}
             if command_finish.retry_after:
                 outcome['retry_after_utc_timestamp'] = datetime_to_utc_timestamp(command_finish.retry_after)
@@ -376,62 +376,62 @@ class DatabaseStore(BatchStore):
 
         command = self._row_to_command(title, resolve_redirects, actions_tpsv)
 
-        if status == DatabaseStore._COMMAND_STATUS_PLAN:
+        if status == DatabaseBatchStore._COMMAND_STATUS_PLAN:
             assert outcome is None
             return CommandPlan(id, command)
-        elif status == DatabaseStore._COMMAND_STATUS_EDIT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_EDIT:
             return CommandEdit(id,
                                command,
                                base_revision=outcome_dict['base_revision'],
                                revision=outcome_dict['revision'])
-        elif status == DatabaseStore._COMMAND_STATUS_NOOP:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_NOOP:
             return CommandNoop(id,
                                command,
                                revision=outcome_dict['revision'])
-        elif status == DatabaseStore._COMMAND_STATUS_PENDING:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PENDING:
             assert outcome is None
             return CommandPending(id, command)
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_MISSING:
             return CommandPageMissing(id,
                                       command,
                                       curtimestamp=outcome_dict['curtimestamp'])
-        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INVALID:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_TITLE_INVALID:
             return CommandTitleInvalid(id,
                                        command,
                                        curtimestamp=outcome_dict['curtimestamp'])
-        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_TITLE_INTERWIKI:
             return CommandTitleInterwiki(id,
                                          command,
                                          curtimestamp=outcome_dict['curtimestamp'])
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_PROTECTED:
             return CommandPageProtected(id,
                                         command,
                                         curtimestamp=outcome_dict['curtimestamp'])
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
             return CommandPageBadContentFormat(id,
                                                command,
                                                content_format=outcome_dict['content_format'],
                                                content_model=outcome_dict['content_model'],
                                                revision=outcome_dict['revision'])
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
             return CommandPageBadContentModel(id,
                                               command,
                                               content_format=outcome_dict['content_format'],
                                               content_model=outcome_dict['content_model'],
                                               revision=outcome_dict['revision'])
-        elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict(id,
                                        command)
-        elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
             return CommandMaxlagExceeded(id,
                                          command,
                                          utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp']))
-        elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_BLOCKED:
             return CommandBlocked(id,
                                   command,
                                   auto=outcome_dict['auto'],
                                   blockinfo=outcome_dict['blockinfo'])
-        elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_WIKI_READ_ONLY:
             retry_after: Optional[datetime.datetime]
             if 'retry_after_utc_timestamp' in outcome_dict:
                 retry_after = utc_timestamp_to_datetime(outcome_dict['retry_after_utc_timestamp'])
@@ -445,33 +445,33 @@ class DatabaseStore(BatchStore):
             raise ValueError('Unknown command status %d' % status)
 
     def _status_to_command_record_type(self, status: int) -> type[CommandRecord]:
-        if status == DatabaseStore._COMMAND_STATUS_PLAN:
+        if status == DatabaseBatchStore._COMMAND_STATUS_PLAN:
             return CommandPlan
-        elif status == DatabaseStore._COMMAND_STATUS_EDIT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_EDIT:
             return CommandEdit
-        elif status == DatabaseStore._COMMAND_STATUS_NOOP:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_NOOP:
             return CommandNoop
-        elif status == DatabaseStore._COMMAND_STATUS_PENDING:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PENDING:
             return CommandPending
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_MISSING:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_MISSING:
             return CommandPageMissing
-        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INVALID:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_TITLE_INVALID:
             return CommandTitleInvalid
-        elif status == DatabaseStore._COMMAND_STATUS_TITLE_INTERWIKI:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_TITLE_INTERWIKI:
             return CommandTitleInterwiki
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_PROTECTED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_PROTECTED:
             return CommandPageProtected
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT:
             return CommandPageBadContentFormat
-        elif status == DatabaseStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL:
             return CommandPageBadContentModel
-        elif status == DatabaseStore._COMMAND_STATUS_EDIT_CONFLICT:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_EDIT_CONFLICT:
             return CommandEditConflict
-        elif status == DatabaseStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_MAXLAG_EXCEEDED:
             return CommandMaxlagExceeded
-        elif status == DatabaseStore._COMMAND_STATUS_BLOCKED:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_BLOCKED:
             return CommandBlocked
-        elif status == DatabaseStore._COMMAND_STATUS_WIKI_READ_ONLY:
+        elif status == DatabaseBatchStore._COMMAND_STATUS_WIKI_READ_ONLY:
             return CommandWikiReadOnly
         else:
             raise ValueError('Unknown command status %d' % status)
@@ -487,7 +487,7 @@ class DatabaseStore(BatchStore):
 class _BatchCommandRecordsDatabase(BatchCommandRecords):
 
     batch_id: int
-    store: DatabaseStore
+    store: DatabaseBatchStore
 
     def get_slice(self, offset: int, limit: int) -> list[CommandRecord]:
         command_records = []
@@ -558,7 +558,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                                   ) AS temporary_table)
                                   AND `command_status` = %s
                                   ORDER BY `command_id` ASC
-                                  FOR UPDATE''', (self.batch_id, limit, offset, DatabaseStore._COMMAND_STATUS_PLAN))
+                                  FOR UPDATE''', (self.batch_id, limit, offset, DatabaseBatchStore._COMMAND_STATUS_PLAN))
                 for (command_id,) in cursor.fetchall():
                     command_ids.append(command_id)
 
@@ -570,7 +570,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                 cursor.executemany('''UPDATE `command`
                                       SET `command_status` = %s
                                       WHERE `command_id` = %s AND `command_batch` = %s''',
-                                   zip(itertools.repeat(DatabaseStore._COMMAND_STATUS_PENDING),
+                                   zip(itertools.repeat(DatabaseBatchStore._COMMAND_STATUS_PENDING),
                                        command_ids,
                                        itertools.repeat(self.batch_id)))
             connection.commit()
@@ -583,7 +583,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                                   WHERE `command_id` IN (%s)''' % ', '.join(['%s'] * len(command_ids)),
                                command_ids)
             for id, title, resolve_redirects, actions_tpsv, status, outcome in cursor.fetchall():
-                assert status == DatabaseStore._COMMAND_STATUS_PENDING
+                assert status == DatabaseBatchStore._COMMAND_STATUS_PENDING
                 assert outcome is None
                 command_record = self.store._row_to_command_record(id, title, resolve_redirects, actions_tpsv, status, outcome)
                 assert isinstance(command_record, CommandPending)
@@ -599,9 +599,9 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                               SET `command_status` = %%s
                               WHERE `command_id` IN (%s)
                               AND `command_status` = %%s''' % ', '.join(['%s'] * len(command_record_ids)),
-                           [DatabaseStore._COMMAND_STATUS_PLAN,
+                           [DatabaseBatchStore._COMMAND_STATUS_PLAN,
                             *command_record_ids,
-                            DatabaseStore._COMMAND_STATUS_PENDING])
+                            DatabaseBatchStore._COMMAND_STATUS_PENDING])
             connection.commit()
 
     def store_finish(self, command_finish: CommandFinish) -> None:
@@ -627,7 +627,7 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                                   SELECT `command_batch`, `command_page_title`, `command_page_resolve_redirects`, `command_actions`, %s, NULL
                                   FROM `command`
                                   WHERE `command_id` = %s''',
-                               (DatabaseStore._COMMAND_STATUS_PLAN, command_finish.id))
+                               (DatabaseBatchStore._COMMAND_STATUS_PLAN, command_finish.id))
                 command_plan_id = cursor.lastrowid
                 cursor.execute('''INSERT INTO `retry`
                                   (`retry_failure`, `retry_new`)
@@ -641,12 +641,12 @@ class _BatchCommandRecordsDatabase(BatchCommandRecords):
                                   WHERE `command_batch` = %s
                                   AND `command_status` IN (%s, %s)
                                   LIMIT 1''',
-                               (self.batch_id, DatabaseStore._COMMAND_STATUS_PLAN, DatabaseStore._COMMAND_STATUS_PENDING))
+                               (self.batch_id, DatabaseBatchStore._COMMAND_STATUS_PLAN, DatabaseBatchStore._COMMAND_STATUS_PENDING))
                 if not cursor.fetchone():
                     cursor.execute('''UPDATE `batch`
                                       SET `batch_status` = %s
                                       WHERE `batch_id` = %s''',
-                                   (DatabaseStore._BATCH_STATUS_CLOSED, self.batch_id))
+                                   (DatabaseBatchStore._BATCH_STATUS_CLOSED, self.batch_id))
                     connection.commit()
                     self.store._stop_background_by_id(self.batch_id)
 
@@ -661,7 +661,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
 
     batch_id: int
     domain: str
-    store: DatabaseStore
+    store: DatabaseBatchStore
 
     def currently_running(self) -> bool:
         with self.store.connect() as connection, connection.cursor() as cursor:

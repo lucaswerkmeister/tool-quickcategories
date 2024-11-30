@@ -2,13 +2,13 @@
 --- convert all batches with no open commands to this status.
 
 UPDATE batch
-SET batch_status = 128 -- DatabaseStore._BATCH_STATUS_CLOSED
+SET batch_status = 128 -- DatabaseBatchStore._BATCH_STATUS_CLOSED
 WHERE batch_id NOT IN (
   SELECT DISTINCT command_batch
   FROM command
   WHERE command_status IN (
-    0, -- DatabaseStore._COMMAND_STATUS_PLAN
-    16 -- DatabaseStore._COMMAND_STATUS_PENDING
+    0, -- DatabaseBatchStore._COMMAND_STATUS_PLAN
+    16 -- DatabaseBatchStore._COMMAND_STATUS_PENDING
   )
 );
 
