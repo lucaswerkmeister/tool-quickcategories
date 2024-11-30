@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
+import cachetools
 from collections.abc import Sequence
 import datetime
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
+import requests_oauthlib  # type: ignore
+import threading
 from typing import Optional
 
 from batch import NewBatch, StoredBatch, OpenBatch
@@ -46,6 +49,15 @@ class BatchStore(ABC):
            mark that command as pending and return it with credentials."""
 
 
+_local_user_cache: cachetools.LRUCache[tuple[str, str], LocalUser] = cachetools.LRUCache(maxsize=1024)
+_local_user_cache_lock = threading.RLock()
+def _local_user_cache_key(session: mwapi.Session) -> tuple[str, str]:
+    assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
+    return session.host, session.session.auth.client.resource_owner_key
+
+@cachetools.cached(cache=_local_user_cache,
+                   key=_local_user_cache_key,
+                   lock=_local_user_cache_lock)
 def _local_user_from_session(session: mwapi.Session) -> LocalUser:
     domain = session.host[len('https://'):]
     response = session.get(**{'action': 'query',
