@@ -5,6 +5,7 @@ from typing import Optional, cast
 
 from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
+from store import WatchlistParam
 import siteinfo
 
 
@@ -12,6 +13,7 @@ import siteinfo
 class Runner():
 
     session: mwapi.Session
+    watchlist_param: WatchlistParam
     summary_batch_title: Optional[str] = None
     summary_batch_link: Optional[str] = None
 
@@ -196,6 +198,7 @@ class Runner():
                       'bot': True,
                       'basetimestamp': resolution['base_timestamp'],
                       'starttimestamp': resolution['start_timestamp'],
+                      'watchlist': self.watchlist_param.name,
                       'contentformat': 'text/x-wiki',
                       'contentmodel': resolution['contentmodel'],  # usually 'wikitext'
                       'token': self.csrf_token,

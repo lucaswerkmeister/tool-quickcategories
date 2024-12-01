@@ -16,7 +16,7 @@ from localuser import LocalUser
 from page import Page
 import parse_tpsv
 from querytime import QueryTimingCursor, QueryTimingSSCursor
-from store import BatchStore, _local_user_from_session
+from store import BatchStore, PreferenceStore, WatchlistParam, _local_user_from_session
 from stringstore import StringTableStore
 from timestamp import now, datetime_to_utc_timestamp, utc_timestamp_to_datetime
 
@@ -755,3 +755,37 @@ class _LocalUserStore:
                 assert cursor.fetchone() is None
         connection.commit()
         return localuser_id
+
+
+class DatabasePreferenceStore(PreferenceStore):
+
+    _PREFERENCE_WATCHLIST_PARAM = 0
+
+    def __init__(self, store: DatabaseBatchStore) -> None:
+        self.store = store  # to avoid duplicating connect()
+
+    def get_watchlist_param(self, session: Optional[mwapi.Session]) -> Optional[WatchlistParam]:
+        if session is None:
+            return None
+        local_user = _local_user_from_session(session)
+        with self.store.connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `preference_value`
+                              FROM `preference`
+                              WHERE `preference_global_user_id` = %s
+                              AND `preference_key` = %s''',
+                           (local_user.global_user_id, DatabasePreferenceStore._PREFERENCE_WATCHLIST_PARAM))
+            result = cursor.fetchone()
+            if result:
+                return WatchlistParam(result[0])
+            else:
+                return None
+
+    def set_watchlist_param(self, session: mwapi.Session, value: WatchlistParam) -> None:
+        local_user = _local_user_from_session(session)
+        with self.store.connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''INSERT INTO `preference`
+                              (`preference_global_user_id`, `preference_key`, `preference_value`)
+                              VALUES (%s, %s, %s)
+                              ON DUPLICATE KEY UPDATE `preference_value` = %s''',
+                           (local_user.global_user_id, DatabasePreferenceStore._PREFERENCE_WATCHLIST_PARAM, value.value, value.value))
+            connection.commit()

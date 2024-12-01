@@ -11,7 +11,7 @@ from batch_command_records import BatchCommandRecords
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
 from page import Page
-from store import BatchStore, _local_user_from_session
+from store import BatchStore, PreferenceStore, WatchlistParam, _local_user_from_session
 from timestamp import now
 
 
@@ -202,3 +202,19 @@ class _BatchBackgroundRunsList(BatchBackgroundRuns):
     def __eq__(self, value: Any) -> bool:
         return type(value) is _BatchBackgroundRunsList and \
             self.background_runs == value.background_runs
+
+
+class InMemoryPreferenceStore(PreferenceStore):
+
+    def __init__(self) -> None:
+        self.watchlist_params: dict[LocalUser, WatchlistParam] = {}
+
+    def get_watchlist_param(self, session: Optional[mwapi.Session]) -> Optional[WatchlistParam]:
+        if session is None:
+            return None
+        local_user = _local_user_from_session(session)
+        return self.watchlist_params.get(local_user)
+
+    def set_watchlist_param(self, session: mwapi.Session, value: WatchlistParam) -> None:
+        local_user = _local_user_from_session(session)
+        self.watchlist_params[local_user] = value

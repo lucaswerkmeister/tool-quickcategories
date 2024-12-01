@@ -30,7 +30,7 @@ import parse_wikitext
 import parse_tpsv
 from querytime import flush_querytime, slow_queries, query_summary
 from runner import Runner
-from store import BatchStore
+from store import BatchStore, PreferenceStore, WatchlistParam
 from timestamp import now, utc_timestamp_to_datetime
 
 
@@ -44,10 +44,12 @@ if not has_config:
 consumer_token = load_consumer_token(app.config)
 
 batch_store: BatchStore
+preference_store: PreferenceStore
 database_params = load_database_params(app.config)
 if database_params is not None:
-    from database import DatabaseBatchStore
+    from database import DatabaseBatchStore, DatabasePreferenceStore
     batch_store = DatabaseBatchStore(database_params)
+    preference_store = DatabasePreferenceStore(batch_store)
 
     def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
@@ -63,9 +65,10 @@ if database_params is not None:
 
     app.wsgi_app = SometimesFlushQuerytimeMiddleware(app.wsgi_app)  # type: ignore # “cannot assign to a method”
 else:
-    from in_memory import InMemoryBatchStore
+    from in_memory import InMemoryBatchStore, InMemoryPreferenceStore
     print('No database configuration, using in-memory store (batches will be lost on every restart)')
     batch_store = InMemoryBatchStore()
+    preference_store = InMemoryPreferenceStore()
 
 stewards_global_user_ids_cache = cachetools.TTLCache(maxsize=1, ttl=24*60*60)  # type: cachetools.TTLCache[Any, list[int]]
 stewards_global_user_ids_cache_lock = threading.RLock()
@@ -605,7 +608,8 @@ def run_batch_slice(id: int) -> RRV:
     else:
         summary_batch_link = None
 
-    runner = Runner(session, batch.title, summary_batch_link)
+    watchlist_param = preference_store.get_watchlist_param(session) or WatchlistParam.preferences
+    runner = Runner(session, watchlist_param, batch.title, summary_batch_link)
 
     offset, limit = slice_from_args(flask.request.form)
     command_pendings = batch.command_records.make_plans_pending(offset, limit)
@@ -705,11 +709,19 @@ def stop_batch_background(id: int) -> RRV:
 
 @app.route('/preferences', methods=['GET', 'POST'])
 def preferences() -> RRV:
+    # preferences are currently a mixture between flask.session and preference_store;
+    # they should probably all move to preference_store eventually
+    # (and disable the whole page if not logged in)
+    session = authenticated_session()
+    watchlist_param = preference_store.get_watchlist_param(session) or WatchlistParam.preferences
+
     if flask.request.method == 'GET':
         return flask.render_template('preferences.html',
+                                     logged_in=session is not None,
                                      default_domain=flask.session.get('default-domain', None),
                                      suggested_domains=flask.session.get('suggested-domains', []),
-                                     notifications=flask.session.get('notifications', True))
+                                     notifications=flask.session.get('notifications', True),
+                                     watchlist_param=watchlist_param.name)
 
     if flask.request.form.get('default-domain', None):
         if is_wikimedia_domain(flask.request.form['default-domain']):
@@ -725,6 +737,15 @@ def preferences() -> RRV:
         flask.session['suggested-domains'] = suggested_domains
     else:
         flask.session.pop('suggested-domains', None)
+
+    if session:
+        try:
+            watchlist_param = WatchlistParam[flask.request.form['watchlist-param']]
+        except KeyError:
+            # form value not submitted or not a valid WatchlistParam, ignore
+            pass
+        else:
+            preference_store.set_watchlist_param(session, watchlist_param)
 
     if 'notifications' in flask.request.form:
         flask.session.pop('notifications', None)  # True is the default

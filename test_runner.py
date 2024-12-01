@@ -8,6 +8,7 @@ from action import Action, AddCategoryAction, RemoveCategoryAction
 from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from runner import Runner
+from store import WatchlistParam
 
 from test_utils import FakeSession
 
@@ -31,33 +32,40 @@ def test_resolve_pages_and_run_commands() -> None:
     command_A = Command(Page(title_A, True), actions)
     command_B = Command(Page(title_B, True), actions)
     command_C = Command(Page(title_C, False), actions)
-    runner = Runner(session, summary_batch_title='QuickCategories CI test')
+    runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_A = set_page_wikitext('setup',
                                title_A,
                                'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
-                               runner)
+                               runner,
+                               watchlist_param=WatchlistParam.unwatch)
     base_B = set_page_wikitext('setup',  # NOQA: F841 (unused)
                                title_B,
                                '#REDIRECT [[' + title_B2 + ']]\n\n[[Category:Unchanged cat]]',
-                               runner)
+                               runner,
+                               watchlist_param=WatchlistParam.unwatch)
     base_B2 = set_page_wikitext('setup',
                                 title_B2,
                                 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text',
-                                runner)
+                                runner,
+                                watchlist_param=WatchlistParam.unwatch)
     base_C = set_page_wikitext('setup',
                                title_C,
                                '#REDIRECT [[' + title_C2 + ']]\n\n[[Category:Already present cat]]\n[[Category:Removed cat]]',
-                               runner)
+                               runner,
+                               watchlist_param=WatchlistParam.unwatch)
     base_C2 = set_page_wikitext('setup',  # NOQA: F841 (unused)
                                 title_C2,
                                 'Test page for the QuickCategories tool.\n[[Category:Unchanged cat]]\nBottom text',
-                                runner)
+                                runner,
+                                watchlist_param=WatchlistParam.unwatch)
 
     runner.resolve_pages([command_A.page,
                           command_B.page,
                           command_C.page])
+    runner.watchlist_param = WatchlistParam.preferences
     edit_A = runner.run_command(CommandPending(0, command_A))
     edit_B = runner.run_command(CommandPending(0, command_B))
+    runner.watchlist_param = WatchlistParam.watch
     edit_C = runner.run_command(CommandPending(0, command_C))
 
     assert isinstance(edit_A, CommandEdit)
@@ -92,6 +100,19 @@ def test_resolve_pages_and_run_commands() -> None:
     assert revision_B['slots']['main']['content'] == '#REDIRECT [[' + title_B2 + ']]\n\n[[Category:Unchanged cat]]'
     assert revision_C2['slots']['main']['content'] == 'Test page for the QuickCategories tool.\n[[Category:Unchanged cat]]\nBottom text'
 
+    watchlist = session.get(action='query',
+                            list='watchlistraw',
+                            wrfromtitle='QuickCategories CI Test',
+                            wrtotitle='QuickCategories CI Tesu',
+                            wrlimit='max')['watchlistraw']
+    # the test assumes that the “Add pages and files I edit to my watchlist” preference is *not* set,
+    # so the only page in the watchlist should be title_C
+    # (but another test with a different suffix may be running concurrently)
+    relevant_titles = {title_A, title_B, title_B2, title_C, title_C2}
+    relevant_watched_titles = [page['title'] for page in watchlist
+                               if page['title'] in relevant_titles]
+    assert relevant_watched_titles == [title_C]
+
     set_page_wikitext('teardown', title_A, 'Test page for the QuickCategories tool.', runner)
     set_page_wikitext('teardown', title_B, '#REDIRECT [[' + title_B2 + ']]', runner)
     set_page_wikitext('teardown', title_B2, 'Test page for the QuickCategories tool.', runner)
@@ -109,7 +130,7 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
 
     actions: list[Action] = [AddCategoryAction('Added cat')]
     command = Command(Page(title, True), actions)
-    runner = Runner(session, summary_batch_title='QuickCategories CI test')
+    runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_content = '''
 {{:MediaWiki:Proofreadpage_index_template
 |Type=book
@@ -174,11 +195,18 @@ def logged_in_session(host: str) -> mwapi.Session:
                  lgtoken=lgtoken)
     return session
 
-def set_page_wikitext(summary: str, title: str, wikitext: str, runner: Runner) -> int:
+def set_page_wikitext(
+        summary: str,
+        title: str,
+        wikitext: str,
+        runner: Runner,
+        watchlist_param: WatchlistParam = WatchlistParam.preferences,
+) -> int:
     response = runner.session.post(**{'action': 'edit',
                                       'title': title,
                                       'text': wikitext,
                                       'summary': summary,
+                                      'watchlist': watchlist_param.name,
                                       'token': runner.csrf_token,
                                       'assert': 'user'})
     if 'nochange' in response['edit']:
@@ -259,7 +287,7 @@ def test_with_nochange() -> None:
         }
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     command = Command(Page('Main page', True), [AddCategoryAction('Added cat')])
     command_pending = CommandPending(0, command)
@@ -308,7 +336,7 @@ def test_with_missing_page() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Missing page', True)
 
@@ -370,7 +398,7 @@ def test_with_missing_page_unnormalized() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('missing page', True)
 
@@ -436,7 +464,7 @@ def test_with_missing_page_redirect_resolve() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Redirect to missing page', True)
 
@@ -499,7 +527,7 @@ def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Redirect to missing page', resolve_redirects)
 
@@ -566,7 +594,7 @@ def test_with_missing_page_unnormalized_redirect() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('redirect to missing page', True)
 
@@ -621,7 +649,7 @@ def test_with_invalid_title() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Invalid%20title', True)
 
@@ -678,7 +706,7 @@ def test_with_empty_title() -> None:
 
     session = FakeSession(get_response)
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('', True)
 
@@ -733,7 +761,7 @@ def test_with_hash_title() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('#', True)
 
@@ -793,7 +821,7 @@ def test_with_unnormalized_interwiki_title() -> None:
         },
     })
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Commons: Sandbox', True)
 
@@ -865,7 +893,7 @@ def test_with_protected_page() -> None:
         mwapi.errors.APIError('protectedpage', 'This page has been protected to prevent editing or other actions.', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     command_pending = CommandPending(0, Command(Page('Main page', True), [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
@@ -876,7 +904,7 @@ def test_with_bad_content_format() -> None:
     session = logged_in_session('https://test.wikipedia.org')
     title = 'User:Lucas Werkmeister/test-styles.css'
     command = Command(Page(title, True), [AddCategoryAction('Added cat')])
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     record = runner.run_command(CommandPending(0, command))
 
@@ -940,7 +968,7 @@ def test_with_edit_conflict() -> None:
         mwapi.errors.APIError('editconflict', 'Edit conflict: $1', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Main page', True)
 
@@ -1010,7 +1038,7 @@ def test_with_maxlag_exceeded() -> None:
         mwapi.errors.APIError('maxlag', 'Waiting for 10.64.48.35: 0.36570191383362 seconds lagged.', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Main page', True)
 
@@ -1081,7 +1109,7 @@ def test_with_blocked() -> None:
         mwapi.errors.APIError('blocked', 'You have been blocked from editing.', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Main page', True)
 
@@ -1152,7 +1180,7 @@ def test_with_autoblocked() -> None:
         mwapi.errors.APIError('autoblocked', 'Your IP address has been blocked automatically, because it was used by a blocked user.', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Main page', True)
 
@@ -1223,7 +1251,7 @@ def test_with_readonly() -> None:
         mwapi.errors.APIError('readonly', 'The wiki is currently in read-only mode.', None)
     )
     session.host = 'test.wikidata.org'
-    runner = Runner(session)
+    runner = Runner(session, WatchlistParam.preferences)
 
     page = Page('Main page', True)
 

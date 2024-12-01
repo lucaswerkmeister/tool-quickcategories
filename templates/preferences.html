@@ -30,6 +30,18 @@
         rows="5"
         placeholder="commons.wikimedia.org&#x0A;en.wikipedia.org">{{ suggested_domains | join('\n') }}</textarea>
     </div>
+    <div class="form-group">
+      <label for="watchlist-param">Watchlist behavior when editing pages</label>
+      <select
+        id="watchlist-param" class="custom-select"
+        name="watchlist-param"
+        {% if not logged_in %}disabled {%endif %}>
+        <option value="preferences" {% if watchlist_param == "preferences" %}selected{% endif %}>Follow your user preference on the target wiki</option>
+        <option value="nochange" {% if watchlist_param == "nochange" %}selected{% endif %}>Don’t watch edited pages</option>
+        <option value="watch" {% if watchlist_param == "watch" %}selected{% endif %}>Watch edited pages</option>
+        <!-- unwatch omitted, not sure why anyone would want that -->
+      </select>
+    </div>
     <div class="form-check">
       <input
         id="notifications" class="form-check-input"
@@ -75,6 +87,31 @@
                           }),
                           {
                               label: 'Suggested wiki domains for new batches:',
+                              align: 'top',
+                          }
+                      ),
+                      new OO.ui.FieldLayout(
+                          new OO.ui.DropdownInputWidget({
+                              name: 'watchlist-param',
+                              value: '{{ watchlist_param }}',
+                              disabled: {{ "true" if not logged_in else "false" }},
+                              options: [
+                                  {
+                                      data: 'preferences',
+                                      label: 'Follow your user preference on the target wiki',
+                                  },
+                                  {
+                                      data: 'nochange',
+                                      label: 'Don’t watch edited pages',
+                                  },
+                                  {
+                                      data: 'watch',
+                                      label: 'Watch edited pages',
+                                  },
+                              ],
+                          }),
+                          {
+                              label: 'Watchlist behavior when editing pages:',
                               align: 'top',
                           }
                       ),

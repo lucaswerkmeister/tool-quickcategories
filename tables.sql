@@ -118,6 +118,17 @@ COLLATE = 'utf8mb4_bin';
 -- we could enforce the bijection with a unique index on retry_new but it hardly seems necessary
 
 
+-- persistent user preferences
+CREATE TABLE preference (
+  preference_global_user_id int unsigned NOT NULL,
+  preference_key int unsigned NOT NULL,
+  preference_value int unsigned NOT NULL,
+  PRIMARY KEY(preference_global_user_id, preference_key)
+)
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_bin';
+
+
 -- runtime of SQL queries, to investigate what needs to be optimized
 CREATE TABLE querytime (
   querytime_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,

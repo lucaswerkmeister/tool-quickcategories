@@ -12,10 +12,11 @@ import time
 from typing import Any
 
 from command import CommandFailure
-from database import DatabaseBatchStore
+from database import DatabaseBatchStore, DatabasePreferenceStore
 from init import user_agent, load_config, load_consumer_token, load_database_params
 from querytime import flush_querytime
 from runner import Runner
+from store import WatchlistParam
 
 
 config = flask.Config(os.path.dirname(__file__))
@@ -35,6 +36,7 @@ if database_params is None:
     print('No database configuration, cannot run in background')
     sys.exit(1)
 batch_store = DatabaseBatchStore(database_params)
+preference_store = DatabasePreferenceStore(batch_store)
 
 if 'READ_ONLY_REASON' in config:
     print('Tool is in read-only mode according to config')
@@ -74,7 +76,8 @@ while not stopped:
             summary_batch_link = config['SUMMARY_BATCH_LINK'].format(batch.id)
         else:
             summary_batch_link = None
-        runner = Runner(session, batch.title, summary_batch_link)
+        watchlist_param = preference_store.get_watchlist_param(session) or WatchlistParam.preferences
+        runner = Runner(session, watchlist_param, batch.title, summary_batch_link)
 
         for attempt in range(5):
             command_finish = runner.run_command(command_pending)

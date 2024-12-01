@@ -7,11 +7,11 @@ from typing import Any, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
 from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
-from database import DatabaseBatchStore
-from in_memory import InMemoryBatchStore
+from database import DatabaseBatchStore, DatabasePreferenceStore
+from in_memory import InMemoryBatchStore, InMemoryPreferenceStore
 from localuser import LocalUser
 from page import Page
-from store import BatchStore
+from store import BatchStore, PreferenceStore, WatchlistParam
 from timestamp import now
 
 from test_action import addCategory1
@@ -48,6 +48,16 @@ def batch_store(request: Any) -> Iterator[BatchStore]:
         yield DatabaseBatchStore(database_connection_params)
     else:
         raise ValueError('Unknown param!')
+
+
+@pytest.fixture
+def preference_store(batch_store: BatchStore) -> Iterator[PreferenceStore]:
+    if isinstance(batch_store, InMemoryBatchStore):
+        yield InMemoryPreferenceStore()
+    elif isinstance(batch_store, DatabaseBatchStore):
+        yield DatabasePreferenceStore(batch_store)
+    else:
+        raise ValueError('Unknown batch store!')
 
 
 def test_BatchStore_get_batch(batch_store: BatchStore) -> None:
@@ -266,3 +276,9 @@ def test_BatchStore_make_plan_pending_background(batch_store: BatchStore, frozen
     # therefore, there is now nothing to do
     pending_4 = batch_store.make_plan_pending_background(mwoauth.ConsumerToken('fake', 'fake'), 'fake user agent')
     assert pending_4 is None
+
+def test_PreferenceStore(preference_store: PreferenceStore) -> None:
+    assert preference_store.get_watchlist_param(None) is None
+    assert preference_store.get_watchlist_param(fake_session) is None
+    preference_store.set_watchlist_param(fake_session, WatchlistParam.nochange)
+    assert preference_store.get_watchlist_param(fake_session) is WatchlistParam.nochange

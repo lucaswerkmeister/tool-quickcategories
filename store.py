@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import cachetools
 from collections.abc import Sequence
 import datetime
+from enum import Enum, unique
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
 import requests_oauthlib  # type: ignore
@@ -47,6 +48,42 @@ class BatchStore(ABC):
     def make_plan_pending_background(self, consumer_token: mwoauth.ConsumerToken, user_agent: str) -> Optional[tuple[OpenBatch, CommandPending, mwapi.Session]]:
         """Pick one planned command from a batch that’s marked to be run in the background,
            mark that command as pending and return it with credentials."""
+
+
+@unique
+class WatchlistParam(Enum):
+    """The watchlist parameter to the action=edit API.
+
+    The name is the parameter as sent to the API
+    (and hence lowercase, unlike Python’s strong recommendation for UPPER_CASE enum members),
+    the value is internal (used by the database store).
+    """
+    preferences = 0
+    nochange = 1
+    watch = 2
+    unwatch = 3  # only used in tests
+
+
+class PreferenceStore(ABC):
+    """A persistent store for user preferences.
+
+    Unlike flask.session, this is also available in the background runner.
+
+    For convenience, the session is optional in the getters
+    (which return None in that case),
+    so they can be called directly with authenticated_session().
+    """
+
+    # once we have more than one preference in this store,
+    # we might want multi-get+set methods
+
+    @abstractmethod
+    def get_watchlist_param(self, session: Optional[mwapi.Session]) -> Optional[WatchlistParam]:
+        """Get the watchlist parameter preference for the given session, if set."""
+
+    @abstractmethod
+    def set_watchlist_param(self, session: mwapi.Session, value: WatchlistParam) -> None:
+        """Set the watchlist parameter preference for the given session."""
 
 
 _local_user_cache: cachetools.LRUCache[tuple[str, str], LocalUser] = cachetools.LRUCache(maxsize=1024)
