@@ -93,6 +93,7 @@
               new OO.ui.ButtonInputWidget({
                   label: 'Update preferences',
                   type: 'submit',
+                  flags: [ 'primary', 'progressive' ],
               })
           ],
           action: "{{ url_for('preferences') }}",
