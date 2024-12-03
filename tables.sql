@@ -25,8 +25,12 @@ CREATE TABLE command (
 CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
 
--- index for finding commands of a certain batch, optionally filtering by status
--- (e. g. background runner wants the first planned command of a certain batch)
+-- index for finding commands of a certain batch in command ID order,
+-- used when listing (slices of) batches or export-streaming them
+CREATE INDEX command_batch ON command (command_batch);
+
+-- index for finding commands of a certain batch with a certain status,
+-- used by the batch summary and by the background runner (first planned command of a certain batch)
 CREATE INDEX command_batch_status ON command (command_batch, command_status);
 
 
