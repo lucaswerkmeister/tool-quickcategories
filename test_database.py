@@ -1,7 +1,9 @@
+import flask
 import json
 import pymysql
 import pytest
 from typing import Any, Optional, cast
+from unittest.mock import Mock, patch
 
 from batch import StoredBatch
 from command import CommandEdit, CommandFinish, CommandNoop, CommandRecord
@@ -184,6 +186,41 @@ def test_DatabaseBatchStore_row_to_command_record(expected_command_record: Comma
     full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json
     actual_command_record = DatabaseBatchStore({})._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
+
+def test_DatabaseBatchStore_connection_reuse() -> None:
+    with patch('database.DatabaseBatchStore._connect') as connect_patch:
+        connect_patch.side_effect = lambda: Mock()  # new mock per call
+        app = flask.Flask(__name__)
+        store = DatabaseBatchStore({}, app)
+        # reuse connection within one app context (and only close at the end)
+        with app.app_context():
+            with store.connect() as conn1:
+                pass
+            assert not cast(Mock, conn1.close).called
+            with store.connect() as conn2:
+                pass
+            assert not cast(Mock, conn2.close).called
+            assert conn2 is conn1
+        assert cast(Mock, conn1.close).called
+        assert cast(Mock, conn1.close).call_count == 1
+        # don’t reuse connection in another app context
+        with app.app_context():
+            with store.connect() as conn3:
+                pass
+            assert conn3 is not conn1
+
+def test_DatabaseBatchStore_connection_reuse_without_app() -> None:
+    with patch('database.DatabaseBatchStore._connect') as connect_patch:
+        connect_patch.side_effect = lambda: Mock()  # new mock per call
+        store = DatabaseBatchStore({})
+        # without an app, no connection reuse, close as soon as context manager exits
+        with store.connect() as conn1:
+            pass
+        assert cast(Mock, conn1.close).called
+        with store.connect() as conn2:
+            pass
+        assert cast(Mock, conn2.close).called
+        assert conn2 is not conn1
 
 
 def test_LocalUserStore_store_two_users(database_connection_params: dict) -> None:

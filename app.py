@@ -48,7 +48,7 @@ preference_store: PreferenceStore
 database_params = load_database_params(app.config)
 if database_params is not None:
     from database import DatabaseBatchStore, DatabasePreferenceStore
-    batch_store = DatabaseBatchStore(database_params)
+    batch_store = DatabaseBatchStore(database_params, app)
     preference_store = DatabasePreferenceStore(batch_store)
 
     def sometimes_flush_querytime() -> None:

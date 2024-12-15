@@ -2,6 +2,7 @@ from collections.abc import Generator, Iterator, Sequence
 import contextlib
 from dataclasses import dataclass
 import datetime
+import flask
 import itertools
 import json
 import mwapi  # type: ignore
@@ -41,7 +42,7 @@ class DatabaseBatchStore(BatchStore):
     _COMMAND_STATUS_PAGE_BAD_CONTENT_FORMAT = 137
     _COMMAND_STATUS_PAGE_BAD_CONTENT_MODEL = 138
 
-    def __init__(self, connection_params: dict) -> None:
+    def __init__(self, connection_params: dict, app: Optional[flask.Flask] = None) -> None:
         connection_params.setdefault('charset', 'utf8mb4')
         if connection_params.pop('enable_querytime', False):
             self.connection_params = {
@@ -61,6 +62,13 @@ class DatabaseBatchStore(BatchStore):
                 'cursorclass': pymysql.cursors.SSCursor,
                 **connection_params,
             }
+        self.app = app
+        if app is not None:
+            @app.teardown_appcontext
+            def teardown_connection(exception: Optional[BaseException]) -> None:
+                connection = flask.g.pop('database_connection', None)
+                if connection is not None:
+                    connection.close()
         self.domain_store = StringTableStore('domain', 'domain_id', 'domain_hash', 'domain_name')
         self.title_store = StringTableStore('title', 'title_id', 'title_hash', 'title_text')
         self.actions_store = StringTableStore('actions', 'actions_id', 'actions_hash', 'actions_tpsv')
@@ -68,11 +76,19 @@ class DatabaseBatchStore(BatchStore):
 
     @contextlib.contextmanager
     def connect(self) -> Generator[pymysql.connections.Connection, None, None]:
-        connection = pymysql.connect(**self.connection_params)
-        try:
-            yield connection
-        finally:
-            connection.close()
+        if self.app is not None:
+            if 'database_connection' not in flask.g:
+                flask.g.database_connection = self._connect()
+            yield flask.g.database_connection
+        else:
+            connection = self._connect()
+            try:
+                yield connection
+            finally:
+                connection.close()
+
+    def _connect(self) -> pymysql.connections.Connection:
+        return pymysql.connect(**self.connection_params)
 
     @contextlib.contextmanager
     def connect_streaming(self) -> Generator[pymysql.connections.Connection, None, None]:
