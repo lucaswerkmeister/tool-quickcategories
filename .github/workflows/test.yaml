@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: '3.11'
+          - python-version: '3.13'
             job-number: 1
           # the job number is included in the page title;
           # only pages for job numbers 1 and 2 have been set up so far,

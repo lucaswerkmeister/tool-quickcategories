@@ -15,7 +15,7 @@ To build a new version of the image,
 run the following command on Toolforge after becoming the tool account:
 
 ```sh
-toolforge build start https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+toolforge build start --use-latest-versions https://gitlab.wikimedia.org/toolforge-repos/quickcategories
 ```
 
 The image will contain all the dependencies listed in `requirements.txt`,
@@ -95,7 +95,7 @@ To update the tool, build a new version of the image as described above,
 then restart the webservice and background runner:
 
 ```sh
-toolforge build start https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+toolforge build start --use-latest-versions https://gitlab.wikimedia.org/toolforge-repos/quickcategories
 webservice restart
 toolforge jobs restart background-runner
 ```
