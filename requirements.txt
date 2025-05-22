@@ -92,7 +92,7 @@ pyflakes==3.3.2
     # via flake8
 pyjwt==2.10.1
     # via mwoauth
-pymysql==1.1.1
+pymysql @ git+https://github.com/PyMySQL/PyMySQL@main
     # via
     #   -r requirements.in
     #   toolforge
