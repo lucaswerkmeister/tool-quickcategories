@@ -46,7 +46,7 @@ def test_load_config_file_otherreadable(tmp_path: Path) -> None:
     config_file.write_text("SECRET_KEY: 'not so secret key'", encoding="utf-8")
     # no chmod
     config = flask.Config(root_path=tmp_path)
-    with pytest.raises(ValueError, match='must be exclusively user-readable'):
+    with pytest.raises(ValueError, match='should be private'):
         load_config(config)
 
 def test_load_config_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
