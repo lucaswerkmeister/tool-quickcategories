@@ -27,7 +27,9 @@
       id="actions" class="form-control"
       name="actions" type="text"
       required
-      {% if page_pile_id %}
+      {% if actions %}
+      value="{{ actions }}"
+      {% elif page_pile_id %}
       autofocus
       {% endif %}
       placeholder="+Category:Test|-Category:Other test|+Category:Sandbox##sort key">
@@ -39,6 +41,9 @@
       name="title" type="text"
       aria-describedby="titleHelp"
       maxlength="800"
+      {% if title %}
+      value="{{ title }}"
+      {% endif %}
       placeholder="based on Wikidata [[d:P:P1532|country for sport]]">
     <small id="titleHelp" class="form-text text-muted">
       Optional.
