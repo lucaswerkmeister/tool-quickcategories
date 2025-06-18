@@ -377,6 +377,8 @@ def new_batch_from_pagepile() -> RRV:
     if flask.request.method == 'GET':
         return flask.render_template('new_batch_from_pagepile.html',
                                      page_pile_id=flask.request.args.get('page_pile_id'),
+                                     actions=flask.request.args.get('actions'),
+                                     title=flask.request.args.get('title'),
                                      read_only_reason=app.config.get('READ_ONLY_REASON'))
 
     if read_only_reason := app.config.get('READ_ONLY_REASON'):
