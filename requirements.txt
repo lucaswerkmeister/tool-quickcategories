@@ -6,9 +6,9 @@
 #
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.12.12
+aiohttp==3.12.13
     # via mwapi
-aiosignal==1.3.2
+aiosignal==1.4.0
     # via aiohttp
 attrs==25.3.0
     # via aiohttp
@@ -16,9 +16,9 @@ beautifulsoup4==4.13.4
     # via -r requirements.in
 blinker==1.9.0
     # via flask
-cachetools==6.0.0
+cachetools==6.1.0
     # via -r requirements.in
-certifi==2025.4.26
+certifi==2025.6.15
     # via requests
 charset-normalizer==3.4.2
     # via requests
@@ -26,7 +26,7 @@ click==8.2.1
     # via flask
 decorator==5.2.1
     # via toolforge
-flake8==7.2.0
+flake8==7.3.0
     # via -r requirements.in
 flask==3.1.1
     # via -r requirements.in
@@ -58,7 +58,7 @@ markupsafe==3.0.2
     #   werkzeug
 mccabe==0.7.0
     # via flake8
-multidict==6.4.4
+multidict==6.6.3
     # via
     #   aiohttp
     #   yarl
@@ -66,13 +66,13 @@ mwapi==0.6.1
     # via -r requirements.in
 mwoauth==0.4.0
     # via -r requirements.in
-mwparserfromhell==0.6.6
+mwparserfromhell==0.7.2
     # via -r requirements.in
-mypy==1.16.0
+mypy==1.16.1
     # via -r requirements.in
 mypy-extensions==1.1.0
     # via mypy
-oauthlib==3.2.2
+oauthlib==3.3.1
     # via
     #   mwoauth
     #   requests-oauthlib
@@ -88,11 +88,11 @@ propcache==0.3.2
     # via
     #   aiohttp
     #   yarl
-pycodestyle==2.13.0
+pycodestyle==2.14.0
     # via flake8
-pyflakes==3.3.2
+pyflakes==3.4.0
     # via flake8
-pygments==2.19.1
+pygments==2.19.2
     # via pytest
 pyjwt==2.10.1
     # via mwoauth
@@ -100,7 +100,7 @@ pymysql @ git+https://github.com/PyMySQL/PyMySQL@main
     # via
     #   -r requirements.in
     #   toolforge
-pytest==8.4.0
+pytest==8.4.1
     # via -r requirements.in
 python-dateutil==2.9.0.post0
     # via freezegun
@@ -135,11 +135,11 @@ types-pyyaml==6.0.12.20250516
     # via -r requirements.in
 types-requests==2.32.4.20250611
     # via -r requirements.in
-typing-extensions==4.14.0
+typing-extensions==4.14.1
     # via
     #   beautifulsoup4
     #   mypy
-urllib3==2.4.0
+urllib3==2.5.0
     # via
     #   requests
     #   types-requests

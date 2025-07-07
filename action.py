@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import mwparserfromhell  # type: ignore
-from mwparserfromhell.nodes.wikilink import Wikilink  # type: ignore
+import mwparserfromhell
+from mwparserfromhell.nodes.wikilink import Wikilink
 import re
 from typing import ClassVar, Optional
 
@@ -216,14 +216,14 @@ class RemoveCategoryAction(CategoryAction):
             if self._reject_category_link(wikilink, category_info):
                 # also remove preceding line break
                 if index-1 >= 0 and \
-                   isinstance(wikicode.nodes[index-1], mwparserfromhell.nodes.text.Text) and \
-                   wikicode.nodes[index-1].value.endswith('\n'):
-                    wikicode.nodes[index-1].value = wikicode.nodes[index-1].value[:-1]
+                   isinstance(node := wikicode.nodes[index-1], mwparserfromhell.nodes.text.Text) and \
+                   node.value.endswith('\n'):
+                    node.value = node.value[:-1]
                 # or following line break
                 elif (index+1 < len(wikicode.nodes) and
-                      isinstance(wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and
-                      wikicode.nodes[index+1].value.startswith('\n')):
-                    wikicode.nodes[index+1].value = wikicode.nodes[index+1].value[1:]
+                      isinstance(node := wikicode.nodes[index+1], mwparserfromhell.nodes.text.Text) and
+                      node.value.startswith('\n')):
+                    node.value = node.value[1:]
                 del wikicode.nodes[index]  # this should happen *after* the above blocks, otherwise the indices get confusing
                 break
         return str(wikicode)
