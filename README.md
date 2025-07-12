@@ -109,7 +109,7 @@ You can also run the tool locally, which is much more convenient for development
 git clone https://gitlab.wikimedia.org/toolforge-repos/quickcategories.git
 cd tool-quickcategories
 pip3 install -r requirements.txt
-flask --debugrun
+flask --debug run
 ```
 
 If you want, you can do this inside some virtualenv too.
