@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install --upgrade pip
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt -r dev-requirements.txt
       - run: make check
         env:
           MARIADB_ROOT_PASSWORD: 'mariadb-root-password'
@@ -37,3 +37,19 @@ jobs:
           MW_USERNAME: ${{ secrets.MW_USERNAME }}
           MW_PASSWORD: ${{ secrets.MW_PASSWORD }}
           CI_JOB_NUMBER: ${{ matrix.job-number }}
+  prod-requirements:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.13'
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install --upgrade pip
+      # only install prod requirements
+      - run: pip install -r requirements.txt
+      # check that app.py runs without crashing on a missing import
+      - run: python app.py

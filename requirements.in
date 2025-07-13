@@ -1,24 +1,15 @@
 beautifulsoup4
 cachetools >= 5.0.0
-flake8
 Flask >= 2.0.3
-freezegun
 gunicorn
 humanize
 MarkupSafe
 mwapi >= 0.6.0
 mwoauth
 mwparserfromhell
-mypy
 pymysql @ git+https://github.com/PyMySQL/PyMySQL@main
-pytest
 PyYAML
 requests
 requests_oauthlib
 toolforge >= 6.1
-types-beautifulsoup4
-types-cachetools
-types-PyMySQL
-types-PyYAML
-types-requests
 werkzeug

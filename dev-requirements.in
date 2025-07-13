@@ -1,0 +1,9 @@
+flake8
+freezegun
+mypy
+pytest
+types-beautifulsoup4
+types-cachetools
+types-PyMySQL
+types-PyYAML
+types-requests
