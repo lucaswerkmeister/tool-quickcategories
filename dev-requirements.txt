@@ -17,7 +17,9 @@ mypy==1.16.1
 mypy-extensions==1.1.0
     # via mypy
 packaging==25.0
-    # via pytest
+    # via
+    #   -c /home/lucas/git/quickcategories/requirements.txt
+    #   pytest
 pathspec==0.12.1
     # via mypy
 pluggy==1.6.0
@@ -47,6 +49,10 @@ types-pyyaml==6.0.12.20250516
 types-requests==2.32.4.20250611
     # via -r dev-requirements.in
 typing-extensions==4.14.1
-    # via mypy
+    # via
+    #   -c /home/lucas/git/quickcategories/requirements.txt
+    #   mypy
 urllib3==2.5.0
-    # via types-requests
+    # via
+    #   -c /home/lucas/git/quickcategories/requirements.txt
+    #   types-requests
