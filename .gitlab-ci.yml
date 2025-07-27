@@ -1,0 +1,42 @@
+default:
+  image: python:3.13
+  cache:
+    - key: pip-python-3.13
+      paths:
+        - .cache/pip
+
+stages:
+  - test
+
+variables:
+  PYTHONDONTWRITEBYTECODE: "1"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+test-job:
+  stage: test
+  script:
+    - python3 -m pip install -r requirements.txt -r dev-requirements.txt
+    - make check
+  variables:
+    # MW_USERNAME and MW_PASSWORD are set in project variables
+    MARIADB_HOST: mariadb
+    MARIADB_ROOT_PASSWORD: mariadb-root-password
+    # The job number is included in the page title,
+    # and was used to support parallel tests of more than one Python version.
+    # If this ever becomes relevant again,
+    # note that only pages for job numbers 1 and 2 have been set up so far,
+    # so if you add a third job, you must manually create the extra pages first
+    # (the bot password does not have permission to create pages) –
+    # see test_runner.py (note that it uses two test wikis).
+    CI_JOB_NUMBER: '1'
+  services:
+    - name: mariadb:10.6
+      alias: mariadb
+
+test-prod-requirements-job:
+  stage: test
+  script:
+    # only install prod requirements
+    - python3 -m pip install -r requirements.txt
+    # check that app.py runs without crashing on a missing import
+    - python3 app.py

@@ -29,7 +29,7 @@ def internet_connection() -> Iterator[None]:
 def fresh_database_connection_params() -> Iterator[dict]:
     if 'MARIADB_ROOT_PASSWORD' not in os.environ:
         pytest.skip('MariaDB credentials not provided')
-    host = 'localhost'
+    host = os.environ.get('MARIADB_HOST', 'localhost')
     port = int(os.environ.get('MARIADB_PORT', 0))
     connection = pymysql.connect(host=host,
                                  port=port,
