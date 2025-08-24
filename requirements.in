@@ -7,7 +7,6 @@ MarkupSafe
 mwapi >= 0.6.0
 mwoauth
 mwparserfromhell
-pymysql @ git+https://github.com/PyMySQL/PyMySQL@main
 PyYAML
 requests
 requests_oauthlib

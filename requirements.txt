@@ -6,27 +6,27 @@
 #
 aiohappyeyeballs==2.6.1
     # via aiohttp
-aiohttp==3.12.14
+aiohttp==3.12.15
     # via mwapi
 aiosignal==1.4.0
     # via aiohttp
 attrs==25.3.0
     # via aiohttp
-beautifulsoup4==4.13.4
+beautifulsoup4==4.13.5
     # via -r requirements.in
 blinker==1.9.0
     # via flask
 cachetools==6.1.0
     # via -r requirements.in
-certifi==2025.7.9
+certifi==2025.8.3
     # via requests
-charset-normalizer==3.4.2
+charset-normalizer==3.4.3
     # via requests
 click==8.2.1
     # via flask
 decorator==5.2.1
     # via toolforge
-flask==3.1.1
+flask==3.1.2
     # via -r requirements.in
 frozenlist==1.7.0
     # via
@@ -50,7 +50,7 @@ markupsafe==3.0.2
     #   flask
     #   jinja2
     #   werkzeug
-multidict==6.6.3
+multidict==6.6.4
     # via
     #   aiohttp
     #   yarl
@@ -72,13 +72,11 @@ propcache==0.3.2
     #   yarl
 pyjwt==2.10.1
     # via mwoauth
-pymysql @ git+https://github.com/PyMySQL/PyMySQL@main
-    # via
-    #   -r requirements.in
-    #   toolforge
+pymysql==1.1.2
+    # via toolforge
 pyyaml==6.0.2
     # via -r requirements.in
-requests==2.32.4
+requests==2.32.5
     # via
     #   -r requirements.in
     #   mwapi
