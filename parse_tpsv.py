@@ -34,7 +34,7 @@ def parse_command(line: str) -> Command:
     else:
         title = title_field
         resolve_redirects = True
-    page = Page(title, resolve_redirects)
+    page = Page(title, resolve_redirects=resolve_redirects)
     actions = []
     errors = []
     for field in other_fields:

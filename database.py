@@ -380,7 +380,7 @@ class DatabaseBatchStore(BatchStore):
         return status, outcome
 
     def _row_to_page(self, title: str, resolve_redirects: Optional[int]) -> Page:
-        return Page(title, self._tinyint_to_bool(resolve_redirects))
+        return Page(title, resolve_redirects=self._tinyint_to_bool(resolve_redirects))
 
     def _row_to_command(self, title: str, resolve_redirects: Optional[int], actions_tpsv: str) -> Command:
         return Command(self._row_to_page(title, self._tinyint_to_bool(resolve_redirects)),

@@ -29,9 +29,9 @@ def test_resolve_pages_and_run_commands() -> None:
                              AddCategoryAction('Already present cat'),
                              RemoveCategoryAction('Removed cat'),
                              RemoveCategoryAction('Not present cat')]
-    command_A = Command(Page(title_A, True), actions)
-    command_B = Command(Page(title_B, True), actions)
-    command_C = Command(Page(title_C, False), actions)
+    command_A = Command(Page(title_A, resolve_redirects=True), actions)
+    command_B = Command(Page(title_B, resolve_redirects=True), actions)
+    command_C = Command(Page(title_C, resolve_redirects=False), actions)
     runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_A = set_page_wikitext('setup',
                                title_A,
@@ -129,7 +129,7 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
     title = 'Index:QuickCategories CI Test' + suffix
 
     actions: list[Action] = [AddCategoryAction('Added cat')]
-    command = Command(Page(title, True), actions)
+    command = Command(Page(title, resolve_redirects=True), actions)
     runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_content = '''
 {{:MediaWiki:Proofreadpage_index_template
@@ -289,7 +289,7 @@ def test_with_nochange() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    command = Command(Page('Main page', True), [AddCategoryAction('Added cat')])
+    command = Command(Page('Main page', resolve_redirects=True), [AddCategoryAction('Added cat')])
     command_pending = CommandPending(0, command)
     command_record = runner.run_command(command_pending)
 
@@ -338,7 +338,7 @@ def test_with_missing_page() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Missing page', True)
+    page = Page('Missing page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -400,7 +400,7 @@ def test_with_missing_page_unnormalized() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('missing page', True)
+    page = Page('missing page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -466,7 +466,7 @@ def test_with_missing_page_redirect_resolve() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Redirect to missing page', True)
+    page = Page('Redirect to missing page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -529,7 +529,7 @@ def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Redirect to missing page', resolve_redirects)
+    page = Page('Redirect to missing page', resolve_redirects=resolve_redirects)
 
     runner.resolve_pages([page])
 
@@ -596,7 +596,7 @@ def test_with_missing_page_unnormalized_redirect() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('redirect to missing page', True)
+    page = Page('redirect to missing page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -651,7 +651,7 @@ def test_with_invalid_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Invalid%20title', True)
+    page = Page('Invalid%20title', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -708,7 +708,7 @@ def test_with_empty_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('', True)
+    page = Page('', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -763,7 +763,7 @@ def test_with_hash_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('#', True)
+    page = Page('#', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -823,7 +823,7 @@ def test_with_unnormalized_interwiki_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Commons: Sandbox', True)
+    page = Page('Commons: Sandbox', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -895,7 +895,7 @@ def test_with_protected_page() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    command_pending = CommandPending(0, Command(Page('Main page', True), [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(Page('Main page', resolve_redirects=True), [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
@@ -903,7 +903,7 @@ def test_with_protected_page() -> None:
 def test_with_bad_content_format() -> None:
     session = logged_in_session('https://test.wikipedia.org')
     title = 'User:Lucas Werkmeister/test-styles.css'
-    command = Command(Page(title, True), [AddCategoryAction('Added cat')])
+    command = Command(Page(title, resolve_redirects=True), [AddCategoryAction('Added cat')])
     runner = Runner(session, WatchlistParam.preferences)
 
     record = runner.run_command(CommandPending(0, command))
@@ -970,7 +970,7 @@ def test_with_edit_conflict() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', True)
+    page = Page('Main page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -1040,7 +1040,7 @@ def test_with_maxlag_exceeded() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', True)
+    page = Page('Main page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -1111,7 +1111,7 @@ def test_with_blocked() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', True)
+    page = Page('Main page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -1182,7 +1182,7 @@ def test_with_autoblocked() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', True)
+    page = Page('Main page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 
@@ -1253,7 +1253,7 @@ def test_with_readonly() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', True)
+    page = Page('Main page', resolve_redirects=True)
 
     runner.resolve_pages([page])
 

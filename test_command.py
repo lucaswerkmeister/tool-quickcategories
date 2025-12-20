@@ -15,10 +15,10 @@ command2 = Command(page2, [addCategory2])
 
 def test_Command_apply() -> None:
     wikitext = 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Removed cat]]\nBottom text'
-    command = Command(Page('Page title', True), [AddCategoryAction('Added cat'),
-                                                 AddCategoryAction('Already present cat'),
-                                                 RemoveCategoryAction('Removed cat'),
-                                                 RemoveCategoryAction('Not present cat')])
+    command = Command(Page('Page title', resolve_redirects=True), [AddCategoryAction('Added cat'),
+                                                                   AddCategoryAction('Already present cat'),
+                                                                   RemoveCategoryAction('Removed cat'),
+                                                                   RemoveCategoryAction('Not present cat')])
     new_wikitext, actions = command.apply(wikitext, ('Category', ['Category'], 'first-letter'))
     assert new_wikitext == 'Test page for the QuickCategories tool.\n[[Category:Already present cat]]\n[[Category:Added cat]]\nBottom text'
     assert actions == [(command.actions[0], False),
@@ -27,9 +27,9 @@ def test_Command_apply() -> None:
                        (command.actions[3], True)]
 
 def test_Command_cleanup() -> None:
-    command = Command(Page('Page_from_URL', True), [AddCategoryAction('Category_from_URL')])
+    command = Command(Page('Page_from_URL', resolve_redirects=True), [AddCategoryAction('Category_from_URL')])
     command.cleanup()
-    assert command == Command(Page('Page from URL', True), [AddCategoryAction('Category from URL')])
+    assert command == Command(Page('Page from URL', resolve_redirects=True), [AddCategoryAction('Category from URL')])
 
 def test_Command_actions_tpsv() -> None:
     assert command1.actions_tpsv() == '+Category:Cat 1|-Category:Cat 1'
@@ -70,7 +70,7 @@ def test_CommandNoop_str() -> None:
     assert str(commandNoop1) == '# ' + str(command2)
 
 
-commandWithMissingPage = Command(Page('Page that definitely does not exist', True), command2.actions)
+commandWithMissingPage = Command(Page('Page that definitely does not exist', resolve_redirects=True), command2.actions)
 commandPageMissing1 = CommandPageMissing(42, commandWithMissingPage, '2019-03-11T23:26:02Z')
 
 
@@ -87,7 +87,7 @@ def test_CommandPageMissing_str() -> None:
     assert str(commandPageMissing1) == '# ' + str(commandWithMissingPage)
 
 
-commandWithInvalidTitle = Command(Page('Category:', True), command2.actions)
+commandWithInvalidTitle = Command(Page('Category:', resolve_redirects=True), command2.actions)
 commandTitleInvalid1 = CommandTitleInvalid(42, commandWithInvalidTitle, '2019-03-11T23:26:02Z')
 
 
@@ -104,7 +104,7 @@ def test_CommandTitleInvalid_str() -> None:
     assert str(commandTitleInvalid1) == '# ' + str(commandWithInvalidTitle)
 
 
-commandWithInterwikiTitle = Command(Page('Commons: Sandbox', True), command2.actions)
+commandWithInterwikiTitle = Command(Page('Commons: Sandbox', resolve_redirects=True), command2.actions)
 commandTitleInterwiki1 = CommandTitleInterwiki(42, commandWithInterwikiTitle, '2022-02-15T18:46:30Z')
 
 
@@ -121,7 +121,7 @@ def test_CommandTitleInterwiki_str() -> None:
     assert str(commandTitleInterwiki1) == '# ' + str(commandWithInterwikiTitle)
 
 
-commandWithProtectedPage = Command(Page('Main Page', True), command2.actions)
+commandWithProtectedPage = Command(Page('Main Page', resolve_redirects=True), command2.actions)
 commandPageProtected1 = CommandPageProtected(42, commandWithProtectedPage, '2019-03-11T23:26:02Z')
 
 

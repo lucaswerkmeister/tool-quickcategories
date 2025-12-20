@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, KW_ONLY
 from typing import Optional
 
 
@@ -7,6 +7,7 @@ class Page:
     """A specifier for a page on a wiki, optionally resolved."""
 
     title: str
+    _: KW_ONLY
     resolve_redirects: Optional[bool]
     resolution: Optional[dict] = None
 

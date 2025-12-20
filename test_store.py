@@ -187,10 +187,10 @@ def test_BatchStore_retry(batch_store: BatchStore) -> None:
     assert command_record_3.id != command_record_4.id
 
 def test_BatchStore_make_plans_pending_and_make_pendings_planned(batch_store: BatchStore) -> None:
-    command_1 = Command(Page('Page 1', True), [addCategory1])
-    command_2 = Command(Page('Page 2', True), [addCategory1])
-    command_3 = Command(Page('Page 3', True), [addCategory1])
-    command_4 = Command(Page('Page 4', True), [addCategory1])
+    command_1 = Command(Page('Page 1', resolve_redirects=True), [addCategory1])
+    command_2 = Command(Page('Page 2', resolve_redirects=True), [addCategory1])
+    command_3 = Command(Page('Page 3', resolve_redirects=True), [addCategory1])
+    command_4 = Command(Page('Page 4', resolve_redirects=True), [addCategory1])
     open_batch = batch_store.store_batch(NewBatch([command_1, command_2, command_3, command_4], 'test batch'), fake_session)
     command_records = open_batch.command_records
     [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]
