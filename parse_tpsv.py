@@ -8,7 +8,7 @@ from command import Command
 from page import Page
 
 
-def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
+def parse_batch(tpsv: str, *, title: Optional[str], default_resolve_redirects: bool, default_create_missing_page: bool) -> NewBatch:
     commands = []
     errors = []
     for line in tpsv.split('\n'):
@@ -16,7 +16,9 @@ def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
         if not line:
             continue
         try:
-            commands.append(parse_command(line))
+            commands.append(parse_command(line,
+                                          default_resolve_redirects=default_resolve_redirects,
+                                          default_create_missing_page=default_create_missing_page))
         except Exception as e:
             errors.append(e)
     if errors:
@@ -24,17 +26,42 @@ def parse_batch(tpsv: str, title: Optional[str]) -> NewBatch:
     return NewBatch(commands, title)
 
 
-def parse_command(line: str) -> Command:
-    [title_field, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
+def parse_command(line: str, *, default_resolve_redirects: bool, default_create_missing_page: bool) -> Command:
+    [page_field, *other_fields] = [field.strip() for field in line.replace('\t', '|').split('|')]
     if not other_fields:
-        raise ValueError("no actions for page '%s'" % title_field)
-    if title_field.startswith('!'):
-        title = title_field[1:]
-        resolve_redirects = False
+        raise ValueError("no actions for page '%s'" % page_field)
+    if '#' in page_field:
+        page_title, page_flags_str = page_field.split('#', maxsplit=1)
+        resolve_redirects = default_resolve_redirects
+        create_missing_page = default_create_missing_page
+        for flag_str in page_flags_str.split(','):
+            if '=' not in flag_str:
+                raise ValueError(f'Invalid flag {flag_str!r} for page {page_title!r}')
+            flag_key, flag_value = flag_str.split('=', maxsplit=1)
+            if flag_key == 'resolve_redirects':
+                if flag_value == 'yes':
+                    resolve_redirects = True
+                elif flag_value == 'no':
+                    resolve_redirects = False
+                else:
+                    raise ValueError(f'Invalid resolve_redirects= flag value {flag_value!r}')
+            elif flag_key == 'create_missing_page':
+                if flag_value == 'yes':
+                    create_missing_page = True
+                elif flag_value == 'no':
+                    create_missing_page = False
+                else:
+                    raise ValueError(f'Invalid create_missing_page= flag value {flag_value!r}')
+            else:
+                raise ValueError(f'Unknown flag {flag_str!r}')
+        page = Page(page_title,
+                    resolve_redirects=resolve_redirects,
+                    create_missing_page=create_missing_page)
     else:
-        title = title_field
-        resolve_redirects = True
-    page = Page(title, resolve_redirects=resolve_redirects)
+        page_title = page_field
+        page = Page(page_title,
+                    resolve_redirects=default_resolve_redirects,
+                    create_missing_page=default_create_missing_page)
     actions = []
     errors = []
     for field in other_fields:

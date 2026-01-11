@@ -17,7 +17,7 @@ CREATE TABLE command (
   command_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
   command_batch int unsigned NOT NULL, -- referencing batch.batch_id
   command_page_title text NOT NULL,
-  command_page_resolve_redirects bool,
+  command_page_flags tinyint unsigned NOT NULL, -- bit 2^0 = resolve_redirects, bit 2^1 = resolve_redirects is NULL/None, bit 2^2 = create_missing_page, bit 2^3 = create_missing_page is NULL/None, rest reserved
   command_actions int unsigned NOT NULL, -- referencing actions.actions_id
   command_status int unsigned NOT NULL,
   command_outcome text

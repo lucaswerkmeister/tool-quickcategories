@@ -3,11 +3,13 @@ import datetime
 import mwapi  # type: ignore
 from typing import Optional, cast
 
-from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import CommandPending, CommandFinish, CommandEdit, CommandNoop, CommandCreation, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from store import WatchlistParam
 import siteinfo
 
+
+wikitext_content_models = {'wikitext', 'proofread-index'}
 
 @dataclass
 class Runner():
@@ -39,6 +41,9 @@ class Runner():
     def do_resolve_redirects(self, resolve_redirects: Optional[bool]) -> bool:
         return resolve_redirects is True  # None is equivalent to False
 
+    def do_create_missing_page(self, create_missing_page: Optional[bool]) -> bool:
+        return create_missing_page is True  # None is equivalent to False
+
     def resolve_pages_of_one_kind(self, pages: list[Page]) -> None:
         assert pages
         assert len(pages) <= 50
@@ -55,7 +60,7 @@ class Runner():
 
         response = self.session.get(action='query',
                                     titles=titles,
-                                    prop=['revisions'],
+                                    prop=['info', 'revisions'],
                                     rvprop=['ids', 'content', 'contentmodel', 'timestamp'],
                                     rvslots=['main'],
                                     curtimestamp=True,
@@ -83,7 +88,16 @@ class Runner():
                 page.resolution = {
                     'missing': True,
                     'curtimestamp': response['curtimestamp'],
+                    'contentmodel': response_page['contentmodel'],
                 }
+                if page.resolution['contentmodel'] in wikitext_content_models:
+                    page.resolution |= {
+                        'wikitext': '',
+                    }
+                else:
+                    page.resolution |= {
+                        'badcontentmodel': True,
+                    }
                 continue
             if 'invalid' in response_page:
                 page.resolution = {
@@ -106,7 +120,7 @@ class Runner():
                 page.resolution |= {
                     'badcontentformat': True,
                 }
-            elif slot['contentmodel'] not in ('wikitext', 'proofread-index'):
+            elif slot['contentmodel'] not in wikitext_content_models:
                 # wikitext but unknown context model, better be safe and not use it
                 # (but it might be possible to add support later if users request it –
                 # we just need an example page to try it out on)
@@ -142,7 +156,7 @@ class Runner():
         resolution = cast(dict, page.resolution)
         category_info = siteinfo.category_info(self.session)
 
-        if 'missing' in resolution:
+        if 'missing' in resolution and not self.do_create_missing_page(page.create_missing_page):
             return CommandPageMissing(command_pending.id, command_pending.command,
                                       curtimestamp=resolution['curtimestamp'])
         if 'invalid' in resolution:
@@ -189,15 +203,12 @@ class Runner():
             summary += self.summary_batch_link
 
         if wikitext == resolution['wikitext']:
-            return CommandNoop(command_pending.id, command_pending.command, resolution['base_revid'])
+            return CommandNoop(command_pending.id, command_pending.command, resolution.get('base_revid'))
         try:
             params = {'action': 'edit',
-                      'pageid': resolution['page_id'],
                       'text': wikitext,
                       'summary': summary,
                       'bot': True,
-                      'basetimestamp': resolution['base_timestamp'],
-                      'starttimestamp': resolution['start_timestamp'],
                       'watchlist': self.watchlist_param.name,
                       'contentformat': 'text/x-wiki',
                       'contentmodel': resolution['contentmodel'],  # usually 'wikitext'
@@ -205,11 +216,23 @@ class Runner():
                       'assert': 'user',
                       'maxlag': 5,
                       'formatversion': 2}
+            if 'missing' in resolution:
+                params |= {
+                    'title': page.title,
+                    'createonly': True,
+                }
+            else:
+                params |= {
+                    'pageid': resolution['page_id'],
+                    'basetimestamp': resolution['base_timestamp'],
+                    'starttimestamp': resolution['start_timestamp'],
+                }
             if minor_commands < 2 and not major_commands:
                 params['minor'] = ''
             response = self.session.post(**params)
         except mwapi.errors.APIError as e:
-            if e.code == 'editconflict':
+            if e.code in {'editconflict', 'articleexists'}:
+                # 'articleexists' means someone else created the page of this create_missing_page=True command since we resolved it
                 page.resolution = None  # this must be outdated now
                 return CommandEditConflict(command_pending.id, command_pending.command)
             elif e.code == 'protectedpage':
@@ -237,8 +260,15 @@ class Runner():
 
         if 'nochange' in response['edit']:
             page.resolution = None  # this must be outdated now, otherwise we would’ve detected the no-op before trying to edit
+            assert 'missing' not in resolution  # creating a page cannot be a 'nochange'
             return CommandNoop(command_pending.id, command_pending.command, resolution['base_revid'])
 
-        assert response['edit']['oldrevid'] == resolution['base_revid']
+        if 'missing' not in resolution:
+            assert response['edit']['oldrevid'] == resolution['base_revid']
         page.resolution = None  # this must be outdated now, and we don’t know the new wikitext since non-conflicting edits may have been merged
-        return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])
+        if 'new' in response['edit']:
+            assert 'missing' in resolution
+            return CommandCreation(command_pending.id, command_pending.command, response['edit']['newrevid'])
+        else:
+            assert 'missing' not in resolution
+            return CommandEdit(command_pending.id, command_pending.command, response['edit']['oldrevid'], response['edit']['newrevid'])

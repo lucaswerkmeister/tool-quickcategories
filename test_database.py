@@ -43,10 +43,13 @@ def test_DatabaseBatchStore_store_batch(database_connection_params: dict) -> Non
 
     with store.connect() as connection:
         with connection.cursor() as cursor:
-            cursor.execute('SELECT `command_page_title`, `command_page_resolve_redirects`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
-            command2_page_title, command2_page_resolve_redirects, command2_actions_tpsv = cast(tuple[Any, ...], cursor.fetchone())
+            cursor.execute('SELECT `command_page_title`, `command_page_flags`, `actions_tpsv` FROM `command` JOIN `actions` on `command_actions` = `actions_id` WHERE `command_id` = %s AND `command_batch` = %s', (command2.id, open_batch.id))
+            command2_page_title, command2_page_flags, command2_actions_tpsv = cast(tuple[Any, ...], cursor.fetchone())
             assert command2_page_title == command2.command.page.title
-            assert command2_page_resolve_redirects == command2.command.page.resolve_redirects
+            assert bool(command2_page_flags & 1) == bool(command2.command.page.resolve_redirects)
+            assert bool(command2_page_flags & 2) == (command2.command.page.resolve_redirects is None)
+            assert bool(command2_page_flags & 4) == bool(command2.command.page.create_missing_page)
+            assert bool(command2_page_flags & 8) == (command2.command.page.create_missing_page is None)
             assert command2_actions_tpsv == command2.command.actions_tpsv()
 
 def test_DatabaseBatchStore_update_batch(database_connection_params: dict, frozen_time: Any) -> None:
@@ -183,8 +186,9 @@ def test_DatabaseBatchStore_command_finish_to_row(command_finish: CommandFinish,
 def test_DatabaseBatchStore_row_to_command_record(expected_command_record: CommandRecord, row: tuple[int, Optional[dict]]) -> None:
     status, outcome = row
     outcome_json = json.dumps(outcome) if outcome else None
-    full_row = expected_command_record.id, expected_command_record.command.page.title, expected_command_record.command.page.resolve_redirects, expected_command_record.command.actions_tpsv(), status, outcome_json
-    actual_command_record = DatabaseBatchStore({})._row_to_command_record(*full_row)
+    store = DatabaseBatchStore({})
+    full_row = expected_command_record.id, expected_command_record.command.page.title, store._page_to_flags(expected_command_record.command.page), expected_command_record.command.actions_tpsv(), status, outcome_json
+    actual_command_record = store._row_to_command_record(*full_row)
     assert expected_command_record == actual_command_record
 
 def test_DatabaseBatchStore_connection_reuse() -> None:

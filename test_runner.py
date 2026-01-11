@@ -5,7 +5,7 @@ import pytest
 from typing import Any, Optional
 
 from action import Action, AddCategoryAction, RemoveCategoryAction
-from command import Command, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPending, CommandEdit, CommandNoop, CommandCreation, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from page import Page
 from runner import Runner
 from store import WatchlistParam
@@ -29,9 +29,9 @@ def test_resolve_pages_and_run_commands() -> None:
                              AddCategoryAction('Already present cat'),
                              RemoveCategoryAction('Removed cat'),
                              RemoveCategoryAction('Not present cat')]
-    command_A = Command(Page(title_A, resolve_redirects=True), actions)
-    command_B = Command(Page(title_B, resolve_redirects=True), actions)
-    command_C = Command(Page(title_C, resolve_redirects=False), actions)
+    command_A = Command(Page(title_A, resolve_redirects=True, create_missing_page=False), actions)
+    command_B = Command(Page(title_B, resolve_redirects=True, create_missing_page=False), actions)
+    command_C = Command(Page(title_C, resolve_redirects=False, create_missing_page=False), actions)
     runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_A = set_page_wikitext('setup',
                                title_A,
@@ -129,7 +129,7 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
     title = 'Index:QuickCategories CI Test' + suffix
 
     actions: list[Action] = [AddCategoryAction('Added cat')]
-    command = Command(Page(title, resolve_redirects=True), actions)
+    command = Command(Page(title, resolve_redirects=True, create_missing_page=False), actions)
     runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
     base_content = '''
 {{:MediaWiki:Proofreadpage_index_template
@@ -289,12 +289,75 @@ def test_with_nochange() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    command = Command(Page('Main page', resolve_redirects=True), [AddCategoryAction('Added cat')])
+    command = Command(Page('Main page', resolve_redirects=True, create_missing_page=False), [AddCategoryAction('Added cat')])
     command_pending = CommandPending(0, command)
     command_record = runner.run_command(command_pending)
 
     assert isinstance(command_record, CommandNoop)
     assert command_record.revision == 195259
+    assert command.page.resolution is None
+
+def test_with_creation() -> None:
+    curtimestamp = '2026-01-11T16:02:59Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'ns': 0,
+                        'title': 'Missing page',
+                        'missing': True,
+                        'contentmodel': 'wikitext',
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        'name': 'comma-separator',
+                        'content': ', ',
+                    },
+                    {
+                        'name': 'semicolon-separator',
+                        'content': '; ',
+                    },
+                    {
+                        'name': 'parentheses',
+                        'content': '($1)',
+                    },
+                ],
+            },
+        },
+        {
+            'edit': {
+                'new': True,
+                'result': 'Success',
+                'pageid': 12345,
+                'title': 'Missing page',
+                'contentmodel': 'wikitext',
+                'oldrevid': 0,
+                'newrevid': 123456,
+            }
+        }
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session, WatchlistParam.preferences)
+
+    command = Command(Page('Missing page', resolve_redirects=True, create_missing_page=True), [AddCategoryAction('Added cat')])
+    command_pending = CommandPending(0, command)
+    command_record = runner.run_command(command_pending)
+
+    assert isinstance(command_record, CommandCreation)
+    assert command_record.revision == 123456
     assert command.page.resolution is None
 
 def test_with_missing_page() -> None:
@@ -308,6 +371,7 @@ def test_with_missing_page() -> None:
                     'ns': 0,
                     'title': 'Missing page',
                     'missing': True,
+                    'contentmodel': 'wikibase-item',
                 },
             ],
             'namespaces': {
@@ -338,13 +402,15 @@ def test_with_missing_page() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Missing page', resolve_redirects=True)
+    page = Page('Missing page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
     assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
+        'contentmodel': 'wikibase-item',
+        'badcontentmodel': True,
     }
 
     command = Command(page, [AddCategoryAction('Added cat')])
@@ -364,6 +430,7 @@ def test_with_missing_page_unnormalized() -> None:
                     'ns': 0,
                     'title': 'Missing page',
                     'missing': True,
+                    'contentmodel': 'wikibase-item',
                 },
             ],
             'normalized': [
@@ -400,13 +467,15 @@ def test_with_missing_page_unnormalized() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('missing page', resolve_redirects=True)
+    page = Page('missing page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
     assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
+        'contentmodel': 'wikibase-item',
+        'badcontentmodel': True,
     }
 
     command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
@@ -430,6 +499,7 @@ def test_with_missing_page_redirect_resolve() -> None:
                     'ns': 0,
                     'title': 'Missing page',
                     'missing': True,
+                    'contentmodel': 'wikibase-item',
                 },
             ],
             'redirects': [
@@ -466,13 +536,15 @@ def test_with_missing_page_redirect_resolve() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Redirect to missing page', resolve_redirects=True)
+    page = Page('Redirect to missing page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
     assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
+        'contentmodel': 'wikibase-item',
+        'badcontentmodel': True,
     }
 
     command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
@@ -492,6 +564,7 @@ def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[
                     'ns': 0,
                     'title': 'Redirect to missing page',
                     'missing': True,
+                    'contentmodel': 'wikibase-item',
                 },
                 # no entry for Missing page, if Runner resolves redirect it should crash
             ],
@@ -529,13 +602,15 @@ def test_with_missing_page_redirect_without_resolve(resolve_redirects: Optional[
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Redirect to missing page', resolve_redirects=resolve_redirects)
+    page = Page('Redirect to missing page', resolve_redirects=resolve_redirects, create_missing_page=False)
 
     runner.resolve_pages([page])
 
     assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
+        'contentmodel': 'wikibase-item',
+        'badcontentmodel': True,
     }
 
     command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
@@ -554,6 +629,7 @@ def test_with_missing_page_unnormalized_redirect() -> None:
                     'ns': 0,
                     'title': 'Missing page',
                     'missing': True,
+                    'contentmodel': 'wikibase-item',
                 },
             ],
             'normalized': [
@@ -596,19 +672,83 @@ def test_with_missing_page_unnormalized_redirect() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('redirect to missing page', resolve_redirects=True)
+    page = Page('redirect to missing page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
     assert page.resolution == {
         'missing': True,
         'curtimestamp': curtimestamp,
+        'contentmodel': 'wikibase-item',
+        'badcontentmodel': True,
     }
 
     command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageMissing(command_pending.id, command_pending.command, curtimestamp)
+
+def test_with_missing_page_created_conflictingly() -> None:
+    curtimestamp = '2026-01-11T16:08:16Z'
+    session = FakeSession(
+        {
+            'curtimestamp': curtimestamp,
+            'query': {
+                'tokens': {'csrftoken': '+\\'},
+                'pages': [
+                    {
+                        'ns': 0,
+                        'title': 'Missing page',
+                        'missing': True,
+                        'contentmodel': 'wikitext',
+                    },
+                ],
+                'namespaces': {
+                    '14': {
+                        'id': 14,
+                        'name': 'Category',
+                        'canonical': 'Category',
+                        'case': 'first-letter',
+                    },
+                },
+                'namespacealiases': [],
+                'allmessages': [
+                    {
+                        'name': 'comma-separator',
+                        'content': ', ',
+                    },
+                    {
+                        'name': 'semicolon-separator',
+                        'content': '; ',
+                    },
+                    {
+                        'name': 'parentheses',
+                        'content': '($1)',
+                    },
+                ],
+            },
+        },
+        mwapi.errors.APIError('articleexists', 'The page you tried to create has been created already.', None)
+    )
+    session.host = 'test.wikidata.org'
+    runner = Runner(session, WatchlistParam.preferences)
+
+    page = Page('Missing page', resolve_redirects=True, create_missing_page=True)
+
+    runner.resolve_pages([page])
+
+    assert page.resolution == {
+        'missing': True,
+        'curtimestamp': curtimestamp,
+        'contentmodel': 'wikitext',
+        'wikitext': '',
+    }
+
+    command_pending = CommandPending(0, Command(page, [AddCategoryAction('Added cat')]))
+    command_record = runner.run_command(command_pending)
+
+    assert command_record == CommandEditConflict(command_pending.id, command_pending.command)
+    assert page.resolution is None
 
 def test_with_invalid_title() -> None:
     curtimestamp = '2019-03-11T23:33:30Z'
@@ -651,7 +791,7 @@ def test_with_invalid_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Invalid%20title', resolve_redirects=True)
+    page = Page('Invalid%20title', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -708,7 +848,7 @@ def test_with_empty_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('', resolve_redirects=True)
+    page = Page('', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -763,7 +903,7 @@ def test_with_hash_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('#', resolve_redirects=True)
+    page = Page('#', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -823,7 +963,7 @@ def test_with_unnormalized_interwiki_title() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Commons: Sandbox', resolve_redirects=True)
+    page = Page('Commons: Sandbox', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -895,7 +1035,7 @@ def test_with_protected_page() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    command_pending = CommandPending(0, Command(Page('Main page', resolve_redirects=True), [AddCategoryAction('Added cat')]))
+    command_pending = CommandPending(0, Command(Page('Main page', resolve_redirects=True, create_missing_page=False), [AddCategoryAction('Added cat')]))
     command_record = runner.run_command(command_pending)
 
     assert command_record == CommandPageProtected(command_pending.id, command_pending.command, curtimestamp)
@@ -903,7 +1043,7 @@ def test_with_protected_page() -> None:
 def test_with_bad_content_format() -> None:
     session = logged_in_session('https://test.wikipedia.org')
     title = 'User:Lucas Werkmeister/test-styles.css'
-    command = Command(Page(title, resolve_redirects=True), [AddCategoryAction('Added cat')])
+    command = Command(Page(title, resolve_redirects=True, create_missing_page=False), [AddCategoryAction('Added cat')])
     runner = Runner(session, WatchlistParam.preferences)
 
     record = runner.run_command(CommandPending(0, command))
@@ -970,7 +1110,7 @@ def test_with_edit_conflict() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', resolve_redirects=True)
+    page = Page('Main page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -1040,7 +1180,7 @@ def test_with_maxlag_exceeded() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', resolve_redirects=True)
+    page = Page('Main page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -1111,7 +1251,7 @@ def test_with_blocked() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', resolve_redirects=True)
+    page = Page('Main page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -1182,7 +1322,7 @@ def test_with_autoblocked() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', resolve_redirects=True)
+    page = Page('Main page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 
@@ -1253,7 +1393,7 @@ def test_with_readonly() -> None:
     session.host = 'test.wikidata.org'
     runner = Runner(session, WatchlistParam.preferences)
 
-    page = Page('Main page', resolve_redirects=True)
+    page = Page('Main page', resolve_redirects=True, create_missing_page=False)
 
     runner.resolve_pages([page])
 

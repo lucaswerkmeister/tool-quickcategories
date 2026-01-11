@@ -22,7 +22,7 @@ import warnings
 import werkzeug
 
 from batch import StoredBatch, OpenBatch
-from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandRecord, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandCreation, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from init import user_agent, load_config, load_consumer_token, load_database_params
 from localuser import LocalUser
 from pagepile import load_pagepile, create_pagepile
@@ -197,6 +197,10 @@ def render_command_record(command_record: CommandRecord, domain: str) -> Markup:
         command_record_markup = flask.render_template('command_noop.html',
                                                       domain=domain,
                                                       command_noop=command_record)
+    elif isinstance(command_record, CommandCreation):
+        command_record_markup = flask.render_template('command_creation.html',
+                                                      domain=domain,
+                                                      command_creation=command_record)
     elif isinstance(command_record, CommandPageMissing):
         command_record_markup = flask.render_template('command_page_missing.html',
                                                       domain=domain,
@@ -249,6 +253,7 @@ def render_command_record_type(command_record_type: type[CommandRecord]) -> Mark
         CommandPending: 'command_pending_badge.html',
         CommandEdit: 'command_edit_badge.html',
         CommandNoop: 'command_noop_badge.html',
+        CommandCreation: 'command_creation_badge.html',
         CommandPageMissing: 'command_page_missing_badge.html',
         CommandTitleInvalid: 'command_title_invalid_badge.html',
         CommandTitleInterwiki: 'command_title_interwiki_badge.html',
@@ -362,7 +367,10 @@ def new_batch_from_commands() -> RRV:
                                      domain=domain), 400
 
     try:
-        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''), title=title)
+        batch = parse_tpsv.parse_batch(flask.request.form.get('commands', ''),
+                                       title=title,
+                                       default_resolve_redirects='default_resolve_redirects' in flask.request.form,
+                                       default_create_missing_page='default_create_missing_page' in flask.request.form)
     except parse_tpsv.ParseBatchError as e:
         return flask.render_template('new_batch_error.html',
                                      message=str(e)), 400
@@ -421,7 +429,9 @@ def new_batch_from_pagepile() -> RRV:
     try:
         batch = parse_tpsv.parse_batch('\n'.join([page + '|' + actions
                                                   for page in pages]),
-                                       title=title)
+                                       title=title,
+                                       default_resolve_redirects='default_resolve_redirects' in flask.request.form,
+                                       default_create_missing_page='default_create_missing_page' in flask.request.form)
     except parse_tpsv.ParseBatchError as e:
         return flask.render_template('new_batch_error.html',
                                      message=str(e)), 400

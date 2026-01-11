@@ -9,7 +9,7 @@ from command import Command, CommandPlan, CommandEdit  # NOQA “unused” impor
 from localuser import LocalUser  # NOQA “unused” import LocalUser needed for eval(repr) test
 from page import Page
 
-from test_command import command1, command2, commandPlan1, commandEdit1
+from test_command import command1, command2, commandPlan1, commandEdit1, irrelevant_flags
 from test_localuser import localUser2
 
 
@@ -17,19 +17,19 @@ newBatch1 = NewBatch([command1, command2], 'Test batch 1')
 
 
 def test_NewBatch_cleanup() -> None:
-    batch = NewBatch([Command(Page('Page_1_from_URL', resolve_redirects=True), [AddCategoryAction('Category_from_URL')]),
-                      Command(Page('Page_2_from_URL', resolve_redirects=True), [AddCategoryAction('Category_from_URL')])],
+    batch = NewBatch([Command(Page('Page_1_from_URL', **irrelevant_flags), [AddCategoryAction('Category_from_URL')]),
+                      Command(Page('Page_2_from_URL', **irrelevant_flags), [AddCategoryAction('Category_from_URL')])],
                      '   test batch\t ')
     batch.cleanup()
-    assert batch == NewBatch([Command(Page('Page 1 from URL', resolve_redirects=True), [AddCategoryAction('Category from URL')]),
-                              Command(Page('Page 2 from URL', resolve_redirects=True), [AddCategoryAction('Category from URL')])],
+    assert batch == NewBatch([Command(Page('Page 1 from URL', **irrelevant_flags), [AddCategoryAction('Category from URL')]),
+                              Command(Page('Page 2 from URL', **irrelevant_flags), [AddCategoryAction('Category from URL')])],
                              'test batch')
 
 def test_NewBatch_str() -> None:
     assert str(newBatch1) == '''
 # Test batch 1
-Page 1|+Category:Cat 1|-Category:Cat 1
-!Page 2|+Category:Cat 2
+Page 1#resolve_redirects=yes,create_missing_page=no|+Category:Cat 1|-Category:Cat 1
+Page 2#resolve_redirects=no,create_missing_page=no|+Category:Cat 2
 '''.strip()
 
 

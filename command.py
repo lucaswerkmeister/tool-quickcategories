@@ -95,6 +95,13 @@ class CommandEdit(CommandSuccess):
 class CommandNoop(CommandSuccess):
     """A command that resulted in no change to a page."""
 
+    revision: Optional[int]  # None = page did not exist and the command would have resulted in empty wikitext
+
+
+@dataclass(frozen=True)
+class CommandCreation(CommandSuccess):
+    """A command that resulted in a previously page being created."""
+
     revision: int
 
 
@@ -231,9 +238,9 @@ class CommandPageBadContentModel(CommandFailure):
     as long as they use the text/x-wiki content format;
     an error of this kind can potentially be made supported later."""
 
-    content_format: str
+    content_format: Optional[str]  # None = page did not exist and the API only told us the content model it would have, not its format
     content_model: str
-    revision: int
+    revision: Optional[int]  # None = page did not exist
 
     def can_retry_immediately(self) -> bool:
         return False

@@ -63,6 +63,7 @@
       {% endif %}
       placeholder="Commons:Sandbox|+Category:Test|-Category:Other test&#x0A;Other page|+Category:Sandbox##sort key"></textarea>
   </div>
+  {% include "new_batch_flags.html" %}
   <button type="submit" class="btn btn-primary" {% if not user_logged_in() or read_only_reason %} disabled {% endif %}>Submit batch</button>
   {% if not user_logged_in() %}
   <span class="alert alert-warning">

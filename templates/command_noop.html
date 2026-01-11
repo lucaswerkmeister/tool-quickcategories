@@ -1,2 +1,3 @@
-<a href="https://{{ domain }}/wiki/Special:PermanentLink/{{ command_noop.revision }}">{% include "command_noop_badge.html" %}</a>
+{% if command_noop.revision is not none %}<a href="https://{{ domain }}/wiki/Special:PermanentLink/{{ command_noop.revision }}">{% include "command_noop_badge.html" %}</a>
+{%- else %}{% include "command_noop_badge.html" %}{% endif %}
 {{ render_command(command_noop.command, domain) }}

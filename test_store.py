@@ -6,7 +6,7 @@ import random
 from typing import Any, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
-from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandPageMissing, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
+from command import Command, CommandPlan, CommandPending, CommandEdit, CommandNoop, CommandCreation, CommandPageMissing, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from database import DatabaseBatchStore, DatabasePreferenceStore
 from in_memory import InMemoryBatchStore, InMemoryPreferenceStore
 from localuser import LocalUser
@@ -85,10 +85,10 @@ def test_BatchStore_store_get_with_title(batch_store: BatchStore) -> None:
     assert stored_batch.title == 'Test batch'
     assert loaded_batch.title == 'Test batch'
 
-def test_BatchStore_store_get_with_resolve_redirect_flags(batch_store: BatchStore) -> None:
-    command_True = Command(Page(command1.page.title, resolve_redirects=True), command1.actions)
-    command_False = Command(Page(command1.page.title, resolve_redirects=False), command1.actions)
-    command_None = Command(Page(command1.page.title, resolve_redirects=None), command1.actions)
+def test_BatchStore_store_get_with_resolve_redirects(batch_store: BatchStore) -> None:
+    command_True = Command(Page(command1.page.title, resolve_redirects=True, create_missing_page=None), command1.actions)
+    command_False = Command(Page(command1.page.title, resolve_redirects=False, create_missing_page=None), command1.actions)
+    command_None = Command(Page(command1.page.title, resolve_redirects=None, create_missing_page=None), command1.actions)
 
     stored_batch = batch_store.store_batch(NewBatch([command_True, command_False, command_None], title=None), fake_session)
     loaded_batch = cast(StoredBatch, batch_store.get_batch(stored_batch.id))
@@ -98,27 +98,42 @@ def test_BatchStore_store_get_with_resolve_redirect_flags(batch_store: BatchStor
     assert loaded_False.command.page.resolve_redirects is False
     assert loaded_None.command.page.resolve_redirects is None
 
+def test_BatchStore_store_get_with_create_missing_page(batch_store: BatchStore) -> None:
+    command_True = Command(Page(command1.page.title, resolve_redirects=None, create_missing_page=True), command1.actions)
+    command_False = Command(Page(command1.page.title, resolve_redirects=None, create_missing_page=False), command1.actions)
+    command_None = Command(Page(command1.page.title, resolve_redirects=None, create_missing_page=None), command1.actions)
+
+    stored_batch = batch_store.store_batch(NewBatch([command_True, command_False, command_None], title=None), fake_session)
+    loaded_batch = cast(StoredBatch, batch_store.get_batch(stored_batch.id))
+
+    [loaded_True, loaded_False, loaded_None] = loaded_batch.command_records.get_slice(0, 3)
+    assert loaded_True.command.page.create_missing_page is True
+    assert loaded_False.command.page.create_missing_page is False
+    assert loaded_None.command.page.create_missing_page is None
+
 def test_BatchStore_get_batch_missing(batch_store: BatchStore) -> None:
     loaded_batch = batch_store.get_batch(1)
     assert loaded_batch is None
 
 def test_BatchCommandRecords_get_summary(batch_store: BatchStore) -> None:
-    batch = batch_store.store_batch(NewBatch([command1]*11, title=None), fake_session)
-    [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9, cr10, cr11] = batch.command_records.get_slice(0, 11)
+    batch = batch_store.store_batch(NewBatch([command1]*12, title=None), fake_session)
+    [cr1, cr2, cr3, cr4, cr5, cr6, cr7, cr8, cr9, cr10, cr11, cr12] = batch.command_records.get_slice(0, 12)
     batch.command_records.store_finish(CommandEdit(cr1.id, cr1.command, 1, 4))
     batch.command_records.store_finish(CommandNoop(cr2.id, cr2.command, 2))
     batch.command_records.store_finish(CommandEdit(cr3.id, cr3.command, 3, 5))
-    batch.command_records.store_finish(CommandPageMissing(cr4.id, cr4.command, "curtimestamp"))
-    batch.command_records.store_finish(CommandPageProtected(cr5.id, cr5.command, "curtimestamp"))
-    batch.command_records.store_finish(CommandPageBadContentFormat(cr6.id, cr6.command, "text/css", "sanitized-css", 12345))
-    batch.command_records.store_finish(CommandPageBadContentModel(cr7.id, cr7.command, "text/x-wiki", "unknown", 12345))
-    batch.command_records.store_finish(CommandEditConflict(cr8.id, cr8.command))
-    batch.command_records.store_finish(CommandMaxlagExceeded(cr9.id, cr9.command, now()))
-    batch.command_records.store_finish(CommandBlocked(cr10.id, cr10.command, False, None))
-    batch.command_records.store_finish(CommandWikiReadOnly(cr11.id, cr11.command, None, now()))
+    batch.command_records.store_finish(CommandCreation(cr4.id, cr4.command, 6))
+    batch.command_records.store_finish(CommandPageMissing(cr5.id, cr5.command, "curtimestamp"))
+    batch.command_records.store_finish(CommandPageProtected(cr6.id, cr6.command, "curtimestamp"))
+    batch.command_records.store_finish(CommandPageBadContentFormat(cr7.id, cr7.command, "text/css", "sanitized-css", 12345))
+    batch.command_records.store_finish(CommandPageBadContentModel(cr8.id, cr8.command, "text/x-wiki", "unknown", 12345))
+    batch.command_records.store_finish(CommandEditConflict(cr9.id, cr9.command))
+    batch.command_records.store_finish(CommandMaxlagExceeded(cr10.id, cr10.command, now()))
+    batch.command_records.store_finish(CommandBlocked(cr11.id, cr11.command, False, None))
+    batch.command_records.store_finish(CommandWikiReadOnly(cr12.id, cr12.command, None, now()))
     assert batch.command_records.get_summary() == {
         CommandEdit: 2,
         CommandNoop: 1,
+        CommandCreation: 1,
         CommandPageMissing: 1,
         CommandPageProtected: 1,
         CommandPageBadContentFormat: 1,
@@ -187,10 +202,10 @@ def test_BatchStore_retry(batch_store: BatchStore) -> None:
     assert command_record_3.id != command_record_4.id
 
 def test_BatchStore_make_plans_pending_and_make_pendings_planned(batch_store: BatchStore) -> None:
-    command_1 = Command(Page('Page 1', resolve_redirects=True), [addCategory1])
-    command_2 = Command(Page('Page 2', resolve_redirects=True), [addCategory1])
-    command_3 = Command(Page('Page 3', resolve_redirects=True), [addCategory1])
-    command_4 = Command(Page('Page 4', resolve_redirects=True), [addCategory1])
+    command_1 = Command(Page('Page 1', resolve_redirects=True, create_missing_page=False), [addCategory1])
+    command_2 = Command(Page('Page 2', resolve_redirects=True, create_missing_page=False), [addCategory1])
+    command_3 = Command(Page('Page 3', resolve_redirects=True, create_missing_page=False), [addCategory1])
+    command_4 = Command(Page('Page 4', resolve_redirects=True, create_missing_page=False), [addCategory1])
     open_batch = batch_store.store_batch(NewBatch([command_1, command_2, command_3, command_4], 'test batch'), fake_session)
     command_records = open_batch.command_records
     [id_1, id_2, id_3, id_4] = [command_record.id for command_record in command_records.get_slice(0, 4)]
