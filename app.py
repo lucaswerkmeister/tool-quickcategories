@@ -136,10 +136,19 @@ def authentication_area() -> Markup:
                 Markup.escape(flask.url_for('login')) +
                 Markup(r'">Log in</a></span>'))
 
-    response = session.get(action='query',
-                           meta=['userinfo', 'notifications'],
-                           notcrosswikisummary=True,
-                           notprop=['count'])
+    try:
+        response = session.get(action='query',
+                               meta=['userinfo', 'notifications'],
+                               notcrosswikisummary=True,
+                               notprop=['count'])
+    except mwapi.errors.APIError as e:
+        if e.code == 'mwoauth-invalid-authorization':
+            # outdated access token (OAuth client/consumer changed), must log in again
+            del flask.session['oauth_access_token']
+            # self-call to return the login link from above
+            return authentication_area()
+        else:
+            raise e
     user_name = response['query']['userinfo']['name']
     notifications = response['query']['notifications']['rawcount']
 
