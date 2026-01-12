@@ -53,7 +53,7 @@ if database_params is not None:
 
     def sometimes_flush_querytime() -> None:
         if random.randrange(128) == 0:
-            with cast(DatabaseBatchStore, batch_store).connect() as connection:
+            with cast(DatabaseBatchStore, batch_store)._connect() as connection:
                 flush_querytime(connection)
 
     class SometimesFlushQuerytimeMiddleware:
