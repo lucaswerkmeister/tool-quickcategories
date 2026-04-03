@@ -138,7 +138,8 @@ def authentication_area() -> Markup:
 
     try:
         response = session.get(action='query',
-                               meta=['userinfo', 'notifications'],
+                               # meta=['userinfo', 'notifications']  # T421991
+                               meta=['userinfo'],
                                notcrosswikisummary=True,
                                notprop=['count'])
     except mwapi.errors.APIError as e:
@@ -150,7 +151,8 @@ def authentication_area() -> Markup:
         else:
             raise e
     user_name = response['query']['userinfo']['name']
-    notifications = response['query']['notifications']['rawcount']
+    # notifications = response['query']['notifications']['rawcount']  # T421991
+    notifications = 0
 
     area = (Markup(r'<span class="navbar-text pl-2">Logged in as ') +
             user_link(user_name))
