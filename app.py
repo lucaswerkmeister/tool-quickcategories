@@ -136,10 +136,12 @@ def authentication_area() -> Markup:
                 Markup.escape(flask.url_for('login')) +
                 Markup(r'">Log in</a></span>'))
 
+    notifications_enabled = flask.session.get('notifications', True)
+    notifications_enabled = False  # T421991
+
     try:
         response = session.get(action='query',
-                               # meta=['userinfo', 'notifications']  # T421991
-                               meta=['userinfo'],
+                               meta=['userinfo', 'notifications'] if notifications_enabled else ['userinfo'],
                                notcrosswikisummary=True,
                                notprop=['count'])
     except mwapi.errors.APIError as e:
@@ -151,13 +153,12 @@ def authentication_area() -> Markup:
         else:
             raise e
     user_name = response['query']['userinfo']['name']
-    # notifications = response['query']['notifications']['rawcount']  # T421991
-    notifications = 0
 
     area = (Markup(r'<span class="navbar-text pl-2">Logged in as ') +
             user_link(user_name))
 
-    if notifications and flask.session.get('notifications', True):
+    if (notifications_enabled and
+            (notifications := response['query']['notifications']['rawcount'])):
         number = '99+' if notifications >= 99 else str(notifications)
         word = 'notification' if notifications == 1 else 'notifications'
         area += (Markup(r' (<a href="https://meta.wikimedia.org/wiki/Special:Notifications">') +
