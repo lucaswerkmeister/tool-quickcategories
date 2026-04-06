@@ -142,8 +142,8 @@ def authentication_area() -> Markup:
     try:
         response = session.get(action='query',
                                meta=['userinfo', 'notifications'] if notifications_enabled else ['userinfo'],
-                               notcrosswikisummary=True,
-                               notprop=['count'])
+                               notcrosswikisummary=notifications_enabled,
+                               notprop=['count'] if notifications_enabled else None)
     except mwapi.errors.APIError as e:
         if e.code == 'mwoauth-invalid-authorization':
             # outdated access token (OAuth client/consumer changed), must log in again
