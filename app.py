@@ -137,7 +137,6 @@ def authentication_area() -> Markup:
                 Markup(r'">Log in</a></span>'))
 
     notifications_enabled = flask.session.get('notifications', True)
-    notifications_enabled = False  # T421991
 
     try:
         response = session.get(action='query',
