@@ -126,12 +126,14 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
     suffix = ''
     if 'CI_JOB_NUMBER' in os.environ:
         suffix = ' ' + os.environ['CI_JOB_NUMBER']
-    title = 'Index:QuickCategories CI Test' + suffix
+    index_title = 'Index:QuickCategories CI Test' + suffix
+    page_title = 'Page:QuickCategories CI test' + suffix
 
     actions: list[Action] = [AddCategoryAction('Added cat')]
-    command = Command(Page(title, resolve_redirects=True, create_missing_page=False), actions)
+    index_command = Command(Page(index_title, resolve_redirects=True, create_missing_page=False), actions)
+    page_command = Command(Page(page_title, resolve_redirects=True, create_missing_page=False), actions)
     runner = Runner(session, WatchlistParam.preferences, summary_batch_title='QuickCategories CI test')
-    base_content = '''
+    index_base_content = '''
 {{:MediaWiki:Proofreadpage_index_template
 |Type=book
 |Title=%s
@@ -163,24 +165,39 @@ def test_resolve_pages_and_run_commands_test2wiki() -> None:
 |Header=
 |Footer=
 }}
-'''.strip() % title[len('Index:'):]
-    base = set_page_wikitext('setup', title, base_content, runner)
+'''.strip() % page_title[len('Index:'):]
+    index_base = set_page_wikitext('setup', index_title, index_base_content, runner)
+    page_base_content = '[[toolforge:QuickCategories]] CI test page'
+    page_base = set_page_wikitext('setup', page_title, page_base_content, runner)
 
-    runner.resolve_pages([command.page])
-    edit = runner.run_command(CommandPending(0, command))
+    runner.resolve_pages([index_command.page, page_command.page])
+    index_edit = runner.run_command(CommandPending(0, index_command))
+    page_edit = runner.run_command(CommandPending(0, page_command))
 
-    assert isinstance(edit, CommandEdit)
-    assert edit.base_revision == base
-    assert command.page.resolution is None
+    assert isinstance(index_edit, CommandEdit)
+    assert index_edit.base_revision == index_base
+    assert index_command.page.resolution is None
 
-    revision = get_page_revision(title, runner)
-    assert revision['comment'] == '+[[Category:Added cat]]; QuickCategories CI test'
-    assert revision['minor']
+    assert isinstance(page_edit, CommandEdit)
+    assert page_edit.base_revision == page_base
+    assert page_command.page.resolution is None
 
-    expected_page_content = base_content + '\n[[Category:Added cat]]'
-    assert revision['slots']['main']['content'] == expected_page_content
+    index_revision = get_page_revision(index_title, runner)
+    assert index_revision['comment'] == '+[[Category:Added cat]]; QuickCategories CI test'
+    assert index_revision['minor']
 
-    set_page_wikitext('teardown', title, base_content, runner)
+    page_revision = get_page_revision(page_title, runner)
+    assert page_revision['comment'] == '+[[Category:Added cat]]; QuickCategories CI test'
+    assert page_revision['minor']
+
+    index_expected_content = index_base_content + '\n[[Category:Added cat]]'
+    assert index_revision['slots']['main']['content'] == index_expected_content
+
+    assert page_base_content in page_revision['slots']['main']['content']
+    assert '\n[[Category:Added cat]]' in page_revision['slots']['main']['content']
+
+    set_page_wikitext('teardown', index_title, index_base_content, runner)
+    set_page_wikitext('teardown', page_title, page_base_content, runner)
 
 def logged_in_session(host: str) -> mwapi.Session:
     if 'MW_USERNAME' not in os.environ or 'MW_PASSWORD' not in os.environ:

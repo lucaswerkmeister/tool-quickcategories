@@ -9,7 +9,7 @@ from store import WatchlistParam
 import siteinfo
 
 
-wikitext_content_models = {'wikitext', 'proofread-index'}
+wikitext_content_models = {'wikitext', 'proofread-index', 'proofread-page'}
 
 @dataclass
 class Runner():
