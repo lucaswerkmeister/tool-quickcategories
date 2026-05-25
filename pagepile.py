@@ -12,9 +12,12 @@ def load_pagepile(session: mwapi.Session, id: int | str) -> Optional[tuple[str, 
                                         'action': 'get_data',
                                         'format': 'json'}
         r = requests.get('https://pagepile.toolforge.org/api.php', params=params)
+        if not r.ok:
+            return None
         pile = r.json()
     except ValueError:
         # PagePile doesn’t properly catch most errors, it just dumps them to the output, producing invalid JSON
+        # (as of 2026-05-25, this may no longer be true, but we may as well keep this code anyway)
         # we simply treat them all as “no such pile”
         return None
     domain = sitematrix.dbname_to_domain(session, pile['wiki'])
