@@ -1,0 +1,21 @@
+source_url: https://gitlab.wikimedia.org/toolforge-repos/quickcategories/-/raw/main/toolforge.yaml
+components:
+  quickcategories:
+    component_type: continuous
+    build:
+      repository: https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+      ref: main
+    run:
+      command: web
+      mount: none
+      port: 8000
+      publish: /
+      health_check_http: /healthz
+  background-runner:
+    component_type: continuous
+    build:
+      reuse_from: quickcategories
+    run:
+      command: background-runner
+      mount: none
+      health_check_script: unlink /tmp/quickcategories-background-runner-healthy

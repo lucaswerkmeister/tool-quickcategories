@@ -7,63 +7,54 @@ please see the tool’s [on-wiki documentation page](https://meta.wikimedia.org/
 ## Toolforge setup
 
 On Wikimedia Toolforge, this tool runs under the `quickcategories` tool name,
-from a container built using the [Toolforge Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service).
+using the [Toolforge Components Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Deploy_your_tool) to coordinate
+building a container with the [Toolforge Build Service](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Build_Service)
+and then deploying that for the webservice and background runner.
+The components configuration is in the `toolforge.yaml` file.
 
-### Image build
-
-To build a new version of the image,
+To start a new deployment,
 run the following command on Toolforge after becoming the tool account:
 
 ```sh
-toolforge build start --use-latest-versions https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+toolforge components deployment create
 ```
 
-The image will contain all the dependencies listed in `requirements.txt`,
-as well as the commands specified in the `Procfile`.
+This should automatically kick off an image build and restart the webservice and background runner at the end.
 
-### Webservice
+### Details and troubleshooting
 
-The web frontend of the tool runs as a webservice using the `buildpack` type.
-The web service runs the first command in the `Procfile` (`web`),
-which runs the Flask WSGI app using gunicorn.
-
-```
-webservice start
-```
-
-Or, if the `~/service.template` file went missing:
-
-```
-webservice --mount=none buildservice start
-```
-
-If it’s acting up, try the same command with `restart` instead of `start`.
-
-### Background runner
-
-The background runner for batches runs as a [continuous job](https://wikitech.wikimedia.org/wiki/Help:Toolforge/Jobs_framework#Creating_continuous_jobs),
-as described in the `jobs.yaml` file.
-To reload the jobs configuration, run the following command:
+To inspect the overall deployment status, run:
 
 ```sh
-curl -sL 'https://gitlab.wikimedia.org/toolforge-repos/quickcategories/-/raw/main/jobs.yaml' | toolforge jobs load /dev/stdin
+toolforge components deployment show
 ```
 
-To inspect the job, you can use `toolforge jobs` commands:
+To debug the image build step, it may be useful to trigger an image build explicitly –
+you can add `--ref=foobar` to build from the `foobar` branch instead of the `main` branch:
 
 ```sh
-toolforge jobs list
+toolforge build start https://gitlab.wikimedia.org/toolforge-repos/quickcategories
+```
+
+The web frontent is a Flask WSGI app using gunicorn,
+and runs as the `quickcategories` job,
+which you may inspect with commands like these:
+
+```sh
+toolforge jobs show quickcategories
+toolforge jobs logs quickcategories
+kubectl get deployment quickcategories
+kubectl exec -it deployment/quickcategories -- bash
+```
+
+The background runner runs the `background-runner` command from the `Procfile` as the `background-runner` job,
+and can be inspected likewise:
+
+```sh
 toolforge jobs show background-runner
 toolforge jobs logs background-runner
-```
-
-Or underlying Kubernetes commands:
-
-```sh
-kubectl get deployments
-kubectl get pods
-kubectl logs background-runner-5b74775c8d-h9kcd # the hashes will vary
-kubectl exec -it background-runner-5b74775c8d-h9kcd -- bash # ditto
+kubectl get deployment background-runner
+kubectl exec -it deployment/background-runner -- bash
 ```
 
 ### Configuration
@@ -91,14 +82,7 @@ For the available configuration variables, see the `config.yaml.example` file.
 
 ### Update
 
-To update the tool, build a new version of the image as described above,
-then restart the webservice and background runner:
-
-```sh
-toolforge build start --use-latest-versions https://gitlab.wikimedia.org/toolforge-repos/quickcategories
-webservice restart
-toolforge jobs restart background-runner
-```
+To update the tool, run `toolforge components deployment create` as described above.
 
 ## Local development setup
 

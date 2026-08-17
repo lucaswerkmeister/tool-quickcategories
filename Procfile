@@ -1,2 +1,2 @@
-web: gunicorn --bind 0.0.0.0 --workers 4 app:app
+web: gunicorn --bind 0.0.0.0:8000 --workers 4 app:app
 background-runner: ./background_runner.py
