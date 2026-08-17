@@ -82,7 +82,8 @@ For the available configuration variables, see the `config.yaml.example` file.
 
 ### Update
 
-To update the tool, run `toolforge components deployment create` as described above.
+The tool should automatically be updated on every push to the `main` branch.
+To trigger a manual update, run `toolforge components deployment create` as described above.
 
 ## Local development setup
 
