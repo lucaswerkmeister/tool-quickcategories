@@ -1,7 +1,10 @@
 import datetime
 import flask
+from typing import Generator
+import os
 from pathlib import Path
 import pytest
+import unittest.mock
 
 from init import load_config, load_consumer_token, load_database_params
 
@@ -19,6 +22,11 @@ expected_config = {
         },
     },
 }
+
+@pytest.fixture(autouse=True)
+def clear_env() -> Generator[None]:
+    with unittest.mock.patch.dict(os.environ, clear=True):
+        yield
 
 def test_load_config_file(tmp_path: Path) -> None:
     config_file = tmp_path / "config.yaml"
