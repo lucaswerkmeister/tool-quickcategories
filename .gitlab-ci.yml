@@ -6,8 +6,7 @@ default:
         - .cache/pip
 
 include:
-  - project: "lucaswerkmeister/gitlab-ci"
-    ref: description
+  - project: "repos/cloud/cicd/gitlab-ci"
     file: "toolforge-cd/deploy-to-toolforge.yaml"
 
 stages:
