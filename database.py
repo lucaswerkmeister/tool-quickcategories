@@ -781,20 +781,13 @@ class _LocalUserStore:
             cursor.execute('''INSERT INTO `localuser`
                               (`localuser_user_name`, `localuser_domain`, `localuser_local_user_id`, `localuser_global_user_id`)
                               VALUES (%s, %s, %s, %s)
-                              ON DUPLICATE KEY UPDATE `localuser_user_name` = %s''',
+                              ON DUPLICATE KEY UPDATE `localuser_user_name` = %s
+                              RETURNING `localuser_id`''',
                            (local_user.user_name, domain_id, local_user.local_user_id, local_user.global_user_id,
                             local_user.user_name))
-            localuser_id = cursor.lastrowid
-            if not localuser_id:  # not returned in the ON DUPLICATE KEY UPDATE case, apparently
-                cursor.execute('''SELECT `localuser_id`
-                                  FROM `localuser`
-                                  WHERE `localuser_local_user_id` = %s
-                                  AND `localuser_domain` = %s''',
-                               (local_user.local_user_id, domain_id))
-                result = cursor.fetchone()
-                assert result, "COUNT(*) must return a result"
-                (localuser_id,) = result
-                assert cursor.fetchone() is None
+            result = cursor.fetchone()
+            assert result is not None, 'INSERT...RETURNING must return a row'
+            (localuser_id,) = result
         connection.commit()
         return localuser_id
 
