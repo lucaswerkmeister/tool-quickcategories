@@ -332,9 +332,6 @@ def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.
 def anonymous_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
     return mwapi.Session(host='https://'+domain, user_agent=user_agent)
 
-def any_session(domain: str = 'meta.wikimedia.org') -> mwapi.Session:
-    return authenticated_session(domain) or anonymous_session(domain)
-
 @app.route('/')
 def index() -> RRV:
     return flask.render_template('index.html',
