@@ -76,15 +76,19 @@ def test_DatabaseBatchStore_update_batch(database_connection_params: dict, froze
     reloaded_batch = cast(StoredBatch, store.get_batch(stored_batch.id))
     assert reloaded_batch.last_updated > reloaded_batch.created
 
-def test_DatabaseBatchStore_start_background_inserts_row(database_connection_params: dict) -> None:
+def test_DatabaseBatchStore_start_background_inserts_rows(database_connection_params: dict) -> None:
     store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `localuser_user_name`, `background_auth` FROM `background` JOIN `localuser` ON `background_started_localuser` = `localuser_id`')
+        cursor.execute('SELECT `background_started_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        user_name, auth = cast(tuple[Any, ...], cursor.fetchone())
+        timestamp, user_name = cast(tuple[int, str], cursor.fetchone())
+        assert timestamp > 0
         assert user_name == 'Lucas Werkmeister'
+        cursor.execute('SELECT `oauth_access_token` FROM `oauth` JOIN `localuser` ON `oauth_global_user_id` = `localuser_global_user_id` JOIN `background` ON `background_started_localuser` = `localuser_id`')
+        assert cursor.rowcount == 1
+        (auth,) = cast(tuple[str], cursor.fetchone())
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
 
@@ -102,18 +106,17 @@ def test_DatabaseBatchStore_start_background_does_not_insert_extra_row(database_
         assert cursor.rowcount == 1
         assert (background_id, background_started_utc_timestamp) == cursor.fetchone()
 
-def test_DatabaseBatchStore_stop_background_updates_row_removes_auth(database_connection_params: dict) -> None:
+def test_DatabaseBatchStore_stop_background_updates_row(database_connection_params: dict) -> None:
     store = DatabaseBatchStore(database_connection_params)
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     store.stop_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('SELECT `background_auth`, `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser` = `localuser_id`')
+        cursor.execute('SELECT `background_stopped_utc_timestamp`, `localuser_user_name` FROM `background` JOIN `localuser` ON `background_stopped_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        auth, stopped_utc_timestamp, stopped_user_name = cast(tuple[Any, ...], cursor.fetchone())
+        stopped_utc_timestamp, stopped_user_name = cast(tuple[Any, ...], cursor.fetchone())
         assert stopped_utc_timestamp > 0
         assert stopped_user_name == 'Lucas Werkmeister'
-        assert auth is None
 
 def test_DatabaseBatchStore_stop_background_without_session(database_connection_params: dict) -> None:
     store = DatabaseBatchStore(database_connection_params)
@@ -132,7 +135,7 @@ def test_DatabaseBatchStore_stop_background_multiple_closes_all_raises_exception
     open_batch = store.store_batch(newBatch1, fake_session)
     store.start_background(open_batch, fake_session)
     with store.connect() as connection, connection.cursor() as cursor:
-        cursor.execute('INSERT INTO `background` (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser`) SELECT `background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser` FROM `background`')
+        cursor.execute('INSERT INTO `background` (`background_batch`, `background_started_utc_timestamp`, `background_started_localuser`) SELECT `background_batch`, `background_started_utc_timestamp`, `background_started_localuser` FROM `background`')
         connection.commit()
     with pytest.raises(RuntimeError, match='Should have stopped at most 1 background operation, actually affected 2!'):
         store.stop_background(open_batch)
