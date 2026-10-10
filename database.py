@@ -225,16 +225,23 @@ class DatabaseBatchStore(BatchStore):
                     return
 
             assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
-            auth = {'resource_owner_key': session.session.auth.client.resource_owner_key,
-                    'resource_owner_secret': session.session.auth.client.resource_owner_secret}
+            auth = json.dumps({
+                'resource_owner_key': session.session.auth.client.resource_owner_key,
+                'resource_owner_secret': session.session.auth.client.resource_owner_secret,
+            })
 
             localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
 
             with connection.cursor() as cursor:
                 cursor.execute('''INSERT INTO `background`
-                                  (`background_batch`, `background_auth`, `background_started_utc_timestamp`, `background_started_localuser`)
-                                  VALUES (%s, %s, %s, %s)''',
-                               (batch.id, json.dumps(auth), started_utc_timestamp, localuser_id))
+                                  (`background_batch`, `background_started_utc_timestamp`, `background_started_localuser`)
+                                  VALUES (%s, %s, %s)''',
+                               (batch.id, started_utc_timestamp, localuser_id))
+                cursor.execute('''INSERT INTO `oauth`
+                                  (`oauth_global_user_id`, `oauth_access_token`)
+                                  VALUES (%s, %s)
+                                  ON DUPLICATE KEY UPDATE `oauth_access_token` = %s''',
+                               (local_user.global_user_id, auth, auth))
             connection.commit()
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
@@ -252,7 +259,7 @@ class DatabaseBatchStore(BatchStore):
                 localuser_id = None
             with connection.cursor() as cursor:
                 cursor.execute('''UPDATE `background`
-                                  SET `background_auth` = NULL, `background_stopped_utc_timestamp` = %s, `background_stopped_localuser` = %s, `background_suspended_until_utc_timestamp` = NULL
+                                  SET `background_stopped_utc_timestamp` = %s, `background_stopped_localuser` = %s, `background_suspended_until_utc_timestamp` = NULL
                                   WHERE `background_batch` = %s
                                   AND `background_stopped_utc_timestamp` IS NULL''',
                                (stopped_utc_timestamp, localuser_id, batch_id))
@@ -306,13 +313,14 @@ class DatabaseBatchStore(BatchStore):
 
             # get the rest of the data now that we know we need it (without locking it)
             with connection.cursor() as cursor:
-                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `background_auth`, `command_id`, `command_page_title`, `command_page_flags`, `actions_tpsv`
+                cursor.execute('''SELECT `batch_id`, `localuser_user_name`, `localuser_local_user_id`, `localuser_global_user_id`, `domain_name`, `title_text`, `batch_created_utc_timestamp`, `batch_last_updated_utc_timestamp`, `batch_status`, `oauth_access_token`, `command_id`, `command_page_title`, `command_page_flags`, `actions_tpsv`
                                   FROM `background`
                                   JOIN `batch` ON `background_batch` = `batch_id`
                                   JOIN `command` ON `command_batch` = `batch_id`
                                   JOIN `domain` ON `batch_domain` = `domain_id`
                                   JOIN `actions` ON `command_actions` = `actions_id`
                                   JOIN `localuser` ON `batch_localuser` = `localuser_id`
+                                  JOIN `oauth` ON `localuser_global_user_id` = `oauth_global_user_id`
                                   LEFT JOIN `title` ON `batch_title` = `title_id`
                                   WHERE `command_id` = %s
                                   AND `background_stopped_utc_timestamp` IS NULL

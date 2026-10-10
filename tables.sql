@@ -78,7 +78,6 @@ CREATE INDEX actions_hash ON actions (actions_hash);
 CREATE TABLE background (
   background_id int unsigned NOT NULL PRIMARY KEY AUTO_INCREMENT,
   background_batch int unsigned NOT NULL, -- referencing batch.batch_id
-  background_auth text, -- NULL after the background run was stopped
   background_started_utc_timestamp int unsigned NOT NULL,
   background_started_localuser int unsigned NOT NULL, -- referencing localuser.localuser_id
   background_stopped_utc_timestamp int unsigned,
@@ -110,6 +109,15 @@ COLLATE = 'utf8mb4_bin';
 -- we use the same localuser record, effectively updating all past batches to use the new name too
 -- (with the local user ID first because it has much higher selectivity, being virtually unique on its own)
 CREATE UNIQUE INDEX localuser_local_user_id_domain_id ON localuser (localuser_local_user_id, localuser_domain);
+
+
+-- OAuth credentials (must have a single source of truth because OAuth 2 access tokens are regularly refreshed)
+CREATE TABLE oauth (
+  oauth_global_user_id int unsigned NOT NULL PRIMARY KEY,
+  oauth_access_token text NOT NULL
+)
+CHARACTER SET = 'utf8mb4'
+COLLATE = 'utf8mb4_bin';
 
 
 -- retries of certain failed commands, linking the original to the retried command row
