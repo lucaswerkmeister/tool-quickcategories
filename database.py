@@ -99,6 +99,37 @@ class DatabaseBatchStore(BatchStore):
         finally:
             connection.close()
 
+    def store_auth(self, global_user_id: int, session: mwapi.Session) -> None:
+        with self.connect() as connection, connection.cursor() as cursor:
+            self._upsert_auth(global_user_id, session, cursor)
+            connection.commit()
+
+    def _upsert_auth(self, global_user_id: int, session: mwapi.Session, cursor: pymysql.cursors.Cursor) -> None:
+        assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
+        auth = json.dumps({
+            'resource_owner_key': session.session.auth.client.resource_owner_key,
+            'resource_owner_secret': session.session.auth.client.resource_owner_secret,
+        })
+        cursor.execute('''INSERT INTO `oauth`
+                          (`oauth_global_user_id`, `oauth_access_token`)
+                          VALUES (%s, %s)
+                          ON DUPLICATE KEY UPDATE `oauth_access_token` = %s''',
+                       (global_user_id, auth, auth))
+
+    def get_auth(self, global_user_id: int, consumer_token: mwoauth.ConsumerToken, host: str, user_agent: str) -> Optional[mwapi.Session]:
+        with self.connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''SELECT `oauth_access_token`
+                              FROM `oauth`
+                              WHERE `oauth_global_user_id` = %s''',
+                           (global_user_id,))
+            result = cursor.fetchone()
+        if result is None:
+            return None
+        auth_data = json.loads(result[0])
+        auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
+                                        resource_owner_key=auth_data['resource_owner_key'], resource_owner_secret=auth_data['resource_owner_secret'])
+        return mwapi.Session(host=host, auth=auth, user_agent=user_agent)
+
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
         created_utc_timestamp = datetime_to_utc_timestamp(created)
@@ -224,12 +255,6 @@ class DatabaseBatchStore(BatchStore):
                     connection.commit()  # finish the FOR UPDATE
                     return
 
-            assert isinstance(session.session.auth, requests_oauthlib.OAuth1)
-            auth = json.dumps({
-                'resource_owner_key': session.session.auth.client.resource_owner_key,
-                'resource_owner_secret': session.session.auth.client.resource_owner_secret,
-            })
-
             localuser_id = self.local_user_store.acquire_localuser_id(connection, local_user)
 
             with connection.cursor() as cursor:
@@ -237,11 +262,7 @@ class DatabaseBatchStore(BatchStore):
                                   (`background_batch`, `background_started_utc_timestamp`, `background_started_localuser`)
                                   VALUES (%s, %s, %s)''',
                                (batch.id, started_utc_timestamp, localuser_id))
-                cursor.execute('''INSERT INTO `oauth`
-                                  (`oauth_global_user_id`, `oauth_access_token`)
-                                  VALUES (%s, %s)
-                                  ON DUPLICATE KEY UPDATE `oauth_access_token` = %s''',
-                               (local_user.global_user_id, auth, auth))
+                self._upsert_auth(local_user.global_user_id, session, cursor)
             connection.commit()
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:

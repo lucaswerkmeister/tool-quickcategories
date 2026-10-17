@@ -17,6 +17,16 @@ from localuser import LocalUser
 class BatchStore(ABC):
 
     @abstractmethod
+    def store_auth(self, global_user_id: int, session: mwapi.Session) -> None:
+        """Store the authentication data of the given session for the given global user ID."""
+
+    @abstractmethod
+    def get_auth(self, global_user_id: int, consumer_token: mwoauth.ConsumerToken, host: str, user_agent: str) -> Optional[mwapi.Session]:
+        """Get the authentication data for the given global user ID.
+
+        The consumer_token, host and user_agent are used to reconstruct the session."""
+
+    @abstractmethod
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         """Store the given batch and return it as a batch with ID."""
 

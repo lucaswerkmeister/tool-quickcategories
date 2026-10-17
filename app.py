@@ -146,7 +146,7 @@ def authentication_area() -> Markup:
     except mwapi.errors.APIError as e:
         if e.code == 'mwoauth-invalid-authorization':
             # outdated access token (OAuth client/consumer changed), must log in again
-            del flask.session['oauth_access_token']
+            del flask.session['global_user_id']
             # self-call to return the login link from above
             return authentication_area()
         else:
@@ -319,13 +319,30 @@ def render_batch_title_text(batch: StoredBatch) -> Optional[Markup]:
         return None
     return html_text(title_html)
 
-def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
-    if 'oauth_access_token' in flask.session:
-        assert consumer_token is not None
+def store_access_token(access_token: mwoauth.tokens.AccessToken) -> None:
+    assert consumer_token is not None
+    auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
+                                    resource_owner_key=access_token.key, resource_owner_secret=access_token.secret)
+    session = mwapi.Session(host='https://meta.wikimedia.org', auth=auth, user_agent=user_agent)
+    global_user_id = session.get(action='query',
+                                 meta='userinfo',
+                                 uiprop='centralids')['query']['userinfo']['centralids']['CentralAuth']
+    batch_store.store_auth(global_user_id, session)
+    flask.session['global_user_id'] = global_user_id
+
+@app.before_request
+def move_access_token_to_store() -> None:
+    try:
         access_token = mwoauth.AccessToken(**flask.session['oauth_access_token'])
-        auth = requests_oauthlib.OAuth1(client_key=consumer_token.key, client_secret=consumer_token.secret,
-                                        resource_owner_key=access_token.key, resource_owner_secret=access_token.secret)
-        return mwapi.Session(host='https://'+domain, auth=auth, user_agent=user_agent)
+    except KeyError:
+        return
+    store_access_token(access_token)
+    flask.session.pop('oauth_access_token')
+
+def authenticated_session(domain: str = 'meta.wikimedia.org') -> Optional[mwapi.Session]:
+    if 'global_user_id' in flask.session:
+        assert consumer_token is not None
+        return batch_store.get_auth(flask.session['global_user_id'], consumer_token, 'https://'+domain, user_agent)
     else:
         return None
 
@@ -785,11 +802,11 @@ def oauth_callback() -> RRV:
     oauth_request_token = flask.session.pop('oauth_request_token', None)
     if oauth_request_token is None:
         return flask.render_template('oauth_callback_error.html',
-                                     already_logged_in='oauth_access_token' in flask.session,
+                                     already_logged_in='global_user_id' in flask.session,
                                      query_string=flask.request.query_string.decode('utf8'))
     request_token = mwoauth.RequestToken(**oauth_request_token)
     access_token = mwoauth.complete('https://meta.wikimedia.org/w/index.php', consumer_token, request_token, flask.request.query_string, user_agent=user_agent)
-    flask.session['oauth_access_token'] = dict(zip(access_token._fields, access_token))
+    store_access_token(access_token)
     flask.session.permanent = True
     flask.session.pop('csrf_token', None)
     return flask.redirect(flask.url_for('index'))

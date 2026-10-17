@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import datetime
 import mwapi  # type: ignore
 import mwoauth  # type: ignore
+import requests_oauthlib  # type: ignore
 from typing import Any, Optional, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
@@ -21,8 +22,17 @@ class InMemoryBatchStore(BatchStore):
         self.next_batch_id = 1
         self.next_command_id = 1
         self.batches: dict[int, StoredBatch] = {}
-        self.background_sessions: dict[int, mwapi.Session] = {}
+        self.auths: dict[int, requests_oauthlib.OAuth1] = {}
         self.background_suspensions: dict[int, datetime.datetime] = {}
+
+    def store_auth(self, global_user_id: int, session: mwapi.Session) -> None:
+        self.auths[global_user_id] = session.session.auth
+
+    def get_auth(self, global_user_id: int, consumer_token: mwoauth.ConsumerToken, host: str, user_agent: str) -> Optional[mwapi.Session]:
+        try:
+            return mwapi.Session(host=host, user_agent=user_agent, auth=self.auths[global_user_id])
+        except KeyError:
+            return None
 
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
@@ -76,7 +86,7 @@ class InMemoryBatchStore(BatchStore):
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
             background_runs.background_runs.append(((started, local_user), None))
-            self.background_sessions[batch.id] = session
+            self.auths[local_user.global_user_id] = session.session.auth
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
         stopped = now()
@@ -88,7 +98,6 @@ class InMemoryBatchStore(BatchStore):
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if background_runs.currently_running():
             background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, local_user))
-            del self.background_sessions[batch.id]
             self.background_suspensions.pop(batch.id, None)
 
     def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
@@ -99,6 +108,8 @@ class InMemoryBatchStore(BatchStore):
         for batch in batches_by_last_updated:
             if not batch.background_runs.currently_running():
                 continue
+            last_background_run = batch.background_runs.get_last()
+            assert last_background_run is not None
             if batch.id in self.background_suspensions:
                 if self.background_suspensions[batch.id] < now():
                     del self.background_suspensions[batch.id]
@@ -111,7 +122,10 @@ class InMemoryBatchStore(BatchStore):
                     continue
                 command_pending = CommandPending(command_plan.id, command_plan.command)
                 batch.command_records.command_records[index] = command_pending
-                return batch, command_pending, self.background_sessions[batch.id]
+                host = 'https://'+batch.domain
+                starting_local_user = last_background_run[0][1]
+                auth = self.auths[starting_local_user.global_user_id]
+                return batch, command_pending, mwapi.Session(host=host, auth=auth, user_agent=user_agent)
         return None
 
 
