@@ -116,14 +116,14 @@ def test_load_database_params_localhost(tmp_path: Path) -> None:
         'DATABASE': {
             'user': 'test user',
             'password': 'test password',
-            'db': 'test database',
+            'database': 'test database',
         },
     })
     database_params = load_database_params(config)
     assert database_params == {
         'user': 'test user',
         'password': 'test password',
-        'db': 'test database',
+        'database': 'test database',
     }
 
 def test_load_database_params_toolsdb(tmp_path: Path) -> None:
@@ -132,12 +132,12 @@ def test_load_database_params_toolsdb(tmp_path: Path) -> None:
         'TOOLSDB_PASSWORD': 'test password',
         'DATABASE': {
             'toolsdb': True,
-            'db': 's53976__quickcategories',
+            'database': 's53976__quickcategories',
         },
     })
     database_params = load_database_params(config)
     assert database_params == {
-        'db': 's53976__quickcategories',
+        'database': 's53976__quickcategories',
         'host': 'tools.db.svc.wikimedia.cloud',
         'user': 's53976',
         'password': 'test password',
