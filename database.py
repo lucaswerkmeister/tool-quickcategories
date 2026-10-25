@@ -110,11 +110,14 @@ class DatabaseBatchStore(BatchStore):
             'resource_owner_key': session.session.auth.client.resource_owner_key,
             'resource_owner_secret': session.session.auth.client.resource_owner_secret,
         })
+        updated = now()
+        updated_utc_timestamp = datetime_to_utc_timestamp(updated)
         cursor.execute('''INSERT INTO `oauth`
-                          (`oauth_global_user_id`, `oauth_access_token`)
-                          VALUES (%s, %s)
-                          ON DUPLICATE KEY UPDATE `oauth_access_token` = %s''',
-                       (global_user_id, auth, auth))
+                          (`oauth_global_user_id`, `oauth_access_token`, `oauth_touched_utc_timestamp`)
+                          VALUES (%s, %s, %s)
+                          ON DUPLICATE KEY UPDATE `oauth_access_token` = %s, `oauth_touched_utc_timestamp` = %s''',
+                       (global_user_id, auth, updated_utc_timestamp,
+                        auth, updated_utc_timestamp))
 
     def get_auth(self, global_user_id: int, consumer_token: mwoauth.ConsumerToken, host: str, user_agent: str) -> Optional[mwapi.Session]:
         with self.connect() as connection, connection.cursor() as cursor:

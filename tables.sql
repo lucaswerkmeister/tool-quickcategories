@@ -114,10 +114,14 @@ CREATE UNIQUE INDEX localuser_local_user_id_domain_id ON localuser (localuser_lo
 -- OAuth credentials (must have a single source of truth because OAuth 2 access tokens are regularly refreshed)
 CREATE TABLE oauth (
   oauth_global_user_id int unsigned NOT NULL PRIMARY KEY,
-  oauth_access_token text NOT NULL
+  oauth_access_token text NOT NULL,
+  oauth_touched_utc_timestamp int unsigned NOT NULL -- time when the access token was most recently updated
 )
 CHARACTER SET = 'utf8mb4'
 COLLATE = 'utf8mb4_bin';
+
+-- index for finding the oldest access tokens so we can delete them
+CREATE INDEX oauth_touched_utc_timestamp ON oauth (oauth_touched_utc_timestamp);
 
 
 -- retries of certain failed commands, linking the original to the retried command row

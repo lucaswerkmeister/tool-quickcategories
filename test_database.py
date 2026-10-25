@@ -86,11 +86,12 @@ def test_DatabaseBatchStore_start_background_inserts_rows(database_connection_pa
         timestamp, user_name = cast(tuple[int, str], cursor.fetchone())
         assert timestamp > 0
         assert user_name == 'Lucas Werkmeister'
-        cursor.execute('SELECT `oauth_access_token` FROM `oauth` JOIN `localuser` ON `oauth_global_user_id` = `localuser_global_user_id` JOIN `background` ON `background_started_localuser` = `localuser_id`')
+        cursor.execute('SELECT `oauth_access_token`, `oauth_touched_utc_timestamp` FROM `oauth` JOIN `localuser` ON `oauth_global_user_id` = `localuser_global_user_id` JOIN `background` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
-        (auth,) = cast(tuple[str], cursor.fetchone())
+        auth, touched_timestamp = cast(tuple[str, int], cursor.fetchone())
         assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
                                     'resource_owner_secret': 'fake resource owner secret'}
+        assert touched_timestamp > 0
 
 def test_DatabaseBatchStore_start_background_does_not_insert_extra_row(database_connection_params: dict) -> None:
     store = DatabaseBatchStore(database_connection_params)
