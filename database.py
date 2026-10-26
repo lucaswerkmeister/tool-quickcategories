@@ -11,7 +11,8 @@ import pymysql
 import requests_oauthlib  # type: ignore
 from typing import Any, Optional, cast
 
-from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords, BatchBackgroundRuns
+from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch, BatchCommandRecords
+from batch_background_runs import BatchBackgroundStart, BatchBackgroundStop, BatchBackgroundRun, BatchBackgroundRuns
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandEdit, CommandNoop, CommandCreation, CommandFailure, CommandPageMissing, CommandTitleInvalid, CommandTitleInterwiki, CommandPageProtected, CommandPageBadContentFormat, CommandPageBadContentModel, CommandEditConflict, CommandMaxlagExceeded, CommandBlocked, CommandWikiReadOnly
 from localuser import LocalUser
 from page import Page
@@ -750,21 +751,24 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
     def _row_to_background_run(self,
                                started_utc_timestamp: int, started_user_name: str, started_local_user_id: int, started_global_user_id: int,
                                stopped_utc_timestamp: int, stopped_user_name: str, stopped_local_user_id: int, stopped_global_user_id: int) \
-                               -> tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]:  # NOQA: E127 (indentation)
-        background_start = (utc_timestamp_to_datetime(started_utc_timestamp), LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id))
-        background_stop: Optional[tuple[datetime.datetime, Optional[LocalUser]]]
+                               -> BatchBackgroundRun:  # NOQA: E127 (indentation)
+        background_start = BatchBackgroundStart(
+            utc_timestamp_to_datetime(started_utc_timestamp),
+            LocalUser(started_user_name, self.domain, started_local_user_id, started_global_user_id),
+        )
+        background_stop: Optional[BatchBackgroundStop]
         if stopped_utc_timestamp:
             stopped_local_user: Optional[LocalUser]
             if stopped_user_name:
                 stopped_local_user = LocalUser(stopped_user_name, self.domain, stopped_local_user_id, stopped_global_user_id)
             else:
                 stopped_local_user = None
-            background_stop = (utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user)
+            background_stop = BatchBackgroundStop(utc_timestamp_to_datetime(stopped_utc_timestamp), stopped_local_user)
         else:
             background_stop = None
-        return (background_start, background_stop)
+        return BatchBackgroundRun(background_start, background_stop)
 
-    def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_last(self) -> Optional[BatchBackgroundRun]:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`
@@ -780,7 +784,7 @@ class _BatchBackgroundRunsDatabase(BatchBackgroundRuns):
             else:
                 return None
 
-    def get_all(self) -> Sequence[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_all(self) -> Sequence[BatchBackgroundRun]:
         with self.store.connect() as connection, connection.cursor() as cursor:
             cursor.execute('''SELECT `background_started_utc_timestamp`, `started`.`localuser_user_name`, `started`.`localuser_local_user_id`, `started`.`localuser_global_user_id`, `background_stopped_utc_timestamp`, `stopped`.`localuser_user_name`, `stopped`.`localuser_local_user_id`, `stopped`.`localuser_global_user_id`
                               FROM `background`

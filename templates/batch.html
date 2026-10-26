@@ -6,7 +6,7 @@
 <h2>{{ render_batch_title( batch ) }}</h2>
 {% endif %}
 {% set background_run = batch.background_runs.get_last() %}
-{% set currently_running = background_run and not background_run[1] %}
+{% set currently_running = background_run and not background_run.stop %}
 <p class="lead">
   Targeting <a href="https://{{ batch.domain }}/">{{ batch.domain }}</a>
   {%- if edit_group_link %}
@@ -31,11 +31,11 @@
   {% endif %}
   <p>
     {% if currently_running %}
-    Running in background since {{ background_run[0][0] | render_datetime }},
+    Running in background since {{ background_run.start.time | render_datetime }},
     <a id="reload" href="{{ current_url() }}">reload</a> to refresh
     {% else %}
-    Ran in background from {{ background_run[0][0] | render_datetime }} to {{ background_run[1][0] | render_datetime }}{% if background_run[1][1] and background_run[1][1] != background_run[0][1] %},
-    stopped by {{ render_local_user(background_run[1][1]) }}
+    Ran in background from {{ background_run.start.time | render_datetime }} to {{ background_run.stop.time | render_datetime }}{% if background_run.stop.user and background_run.stop.user != background_run.start.user %},
+    stopped by {{ render_local_user(background_run.stop.user) }}
     {% endif %}
     {% endif %}
     (<a href="{{ url_for('batch_background_history', id=batch.id) }}">full history</a>).

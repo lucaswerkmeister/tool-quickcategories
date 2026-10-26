@@ -1,9 +1,39 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
+from dataclasses import dataclass
 import datetime
 from typing import Optional
 
 from localuser import LocalUser
+
+
+@dataclass(frozen=True)
+class BatchBackgroundStart:
+    """The time and user starting the background run."""
+
+    time: datetime.datetime
+    user: LocalUser
+
+
+@dataclass(frozen=True)
+class BatchBackgroundStop:
+    """The time and user stopping the background run.
+
+    If user is None, the run was stopped by the system,
+    usually because the batch finished."""
+
+    time: datetime.datetime
+    user: Optional[LocalUser]
+
+
+@dataclass(frozen=True)
+class BatchBackgroundRun:
+    """A background run.
+
+    If stop is None, the batch is currently running."""
+
+    start: BatchBackgroundStart
+    stop: Optional[BatchBackgroundStop]
 
 
 class BatchBackgroundRuns(ABC):
@@ -11,15 +41,12 @@ class BatchBackgroundRuns(ABC):
 
     def currently_running(self) -> bool:
         last = self.get_last()
-        return last is not None and last[1] is None
+        return last is not None and last.stop is None
 
     @abstractmethod
-    def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
-        """Get the last background run, if any.
-
-           A background run is a tuple of the time and user starting the background run,
-           and (if it’s finished) the time and (if it didn’t stop on its own) user stopping it."""
+    def get_last(self) -> Optional[BatchBackgroundRun]:
+        """Get the last background run, if any."""
 
     @abstractmethod
-    def get_all(self) -> Sequence[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_all(self) -> Sequence[BatchBackgroundRun]:
         """Get all the background runs."""

@@ -7,7 +7,7 @@ import requests_oauthlib  # type: ignore
 from typing import Any, Optional, cast
 
 from batch import NewBatch, StoredBatch, OpenBatch, ClosedBatch
-from batch_background_runs import BatchBackgroundRuns
+from batch_background_runs import BatchBackgroundStart, BatchBackgroundStop, BatchBackgroundRun, BatchBackgroundRuns
 from batch_command_records import BatchCommandRecords
 from command import Command, CommandPlan, CommandPending, CommandRecord, CommandFinish, CommandFailure
 from localuser import LocalUser
@@ -85,7 +85,10 @@ class InMemoryBatchStore(BatchStore):
         local_user = _local_user_from_session(session)
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if not background_runs.currently_running():
-            background_runs.background_runs.append(((started, local_user), None))
+            background_runs.background_runs.append(BatchBackgroundRun(
+                start=BatchBackgroundStart(started, local_user),
+                stop=None,
+            ))
             self.auths[local_user.global_user_id] = session.session.auth
 
     def stop_background(self, batch: StoredBatch, session: Optional[mwapi.Session] = None) -> None:
@@ -97,7 +100,10 @@ class InMemoryBatchStore(BatchStore):
             local_user = None
         background_runs = cast(_BatchBackgroundRunsList, batch.background_runs)
         if background_runs.currently_running():
-            background_runs.background_runs[-1] = (background_runs.background_runs[-1][0], (stopped, local_user))
+            background_runs.background_runs[-1] = BatchBackgroundRun(
+                start=background_runs.background_runs[-1].start,
+                stop=BatchBackgroundStop(stopped, local_user),
+            )
             self.background_suspensions.pop(batch.id, None)
 
     def suspend_background(self, batch: StoredBatch, until: datetime.datetime) -> None:
@@ -123,7 +129,7 @@ class InMemoryBatchStore(BatchStore):
                 command_pending = CommandPending(command_plan.id, command_plan.command)
                 batch.command_records.command_records[index] = command_pending
                 host = 'https://'+batch.domain
-                starting_local_user = last_background_run[0][1]
+                starting_local_user = last_background_run.start.user
                 auth = self.auths[starting_local_user.global_user_id]
                 return batch, command_pending, mwapi.Session(host=host, auth=auth, user_agent=user_agent)
         return None
@@ -201,16 +207,16 @@ class _BatchCommandRecordsList(BatchCommandRecords):
 @dataclass(frozen=True)
 class _BatchBackgroundRunsList(BatchBackgroundRuns):
 
-    background_runs: list[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]
+    background_runs: list[BatchBackgroundRun]
     store: InMemoryBatchStore
 
-    def get_last(self) -> Optional[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_last(self) -> Optional[BatchBackgroundRun]:
         if self.background_runs:
             return self.background_runs[-1]
         else:
             return None
 
-    def get_all(self) -> Sequence[tuple[tuple[datetime.datetime, LocalUser], Optional[tuple[datetime.datetime, Optional[LocalUser]]]]]:
+    def get_all(self) -> Sequence[BatchBackgroundRun]:
         return self.background_runs
 
     def __eq__(self, value: Any) -> bool:
