@@ -19,3 +19,11 @@ components:
       command: background-runner
       mount: none
       health_check_script: unlink /tmp/quickcategories-background-runner-healthy
+  delete-old-oauths:
+    component_type: scheduled
+    build:
+      reuse_from: quickcategories
+    run:
+      command: delete-old-oauths
+      mount: none
+      schedule: @monthly

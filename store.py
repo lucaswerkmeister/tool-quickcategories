@@ -27,6 +27,15 @@ class BatchStore(ABC):
         The consumer_token, host and user_agent are used to reconstruct the session."""
 
     @abstractmethod
+    def delete_old_auths(self) -> tuple[int, int]:
+        """Delete all authentication data older than (ca.) one year.
+
+        Any open background runs relying on the authentication data are stopped,
+        with None (i.e. system) as the stopping LocalUser.
+
+        Returns the number of deleted entries and the number of stopped background runs."""
+
+    @abstractmethod
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         """Store the given batch and return it as a batch with ID."""
 

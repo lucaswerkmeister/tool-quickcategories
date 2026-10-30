@@ -1,5 +1,6 @@
 import flask
 import json
+import mwoauth  # type: ignore
 import pymysql
 import pytest
 from typing import Any, Optional, cast
@@ -34,6 +35,50 @@ fake_session = FakeSession({
     }
 })
 fake_session.host = 'https://commons.wikimedia.org'
+
+fake_session_2 = FakeSession({
+    'query': {
+        'userinfo': {
+            'id': 12585784,
+            'name': 'Lucas Werkmeister CI',
+            'centralids': {
+                'CentralAuth': 60282465,
+                'local': 12585784
+            },
+            'attachedlocal': {
+                'CentralAuth': '',
+                'local': ''
+            }
+        }
+    }
+})
+fake_session_2.host = 'https://commons.wikimedia.org'
+
+
+def test_DatabaseBatchStore_delete_old_auths(database_connection_params: dict) -> None:
+    store = DatabaseBatchStore(database_connection_params)
+    old_batch = store.store_batch(newBatch1, fake_session)
+    new_batch = store.store_batch(newBatch1, fake_session_2)
+    store.start_background(old_batch, fake_session)
+    store.start_background(new_batch, fake_session_2)
+
+    with store.connect() as connection, connection.cursor() as cursor:
+        cursor.execute('''SELECT * FROM `oauth`''')
+        cursor.execute('''UPDATE `oauth`
+                          SET `oauth_touched_utc_timestamp` = `oauth_touched_utc_timestamp` - (60*60*24*366 + 1)
+                          WHERE oauth_global_user_id = 46054761''')
+        connection.commit()
+
+    assert store.delete_old_auths() == (1, 1)
+
+    fake_consumer_token = mwoauth.ConsumerToken('consumer key', 'consumer secret')
+    host = 'https://commons.wikimedia.org'
+    user_agent = ''
+    assert store.get_auth(46054761, fake_consumer_token, host, user_agent) is None
+    assert store.get_auth(60282465, fake_consumer_token, host, user_agent) is not None
+
+    assert old_batch.background_runs.currently_running() is False
+    assert new_batch.background_runs.currently_running() is True
 
 
 def test_DatabaseBatchStore_store_batch(database_connection_params: dict) -> None:
@@ -89,8 +134,10 @@ def test_DatabaseBatchStore_start_background_inserts_rows(database_connection_pa
         cursor.execute('SELECT `oauth_access_token`, `oauth_touched_utc_timestamp` FROM `oauth` JOIN `localuser` ON `oauth_global_user_id` = `localuser_global_user_id` JOIN `background` ON `background_started_localuser` = `localuser_id`')
         assert cursor.rowcount == 1
         auth, touched_timestamp = cast(tuple[str, int], cursor.fetchone())
-        assert json.loads(auth) == {'resource_owner_key': 'fake resource owner key',
-                                    'resource_owner_secret': 'fake resource owner secret'}
+        auth_data = json.loads(auth)
+        assert auth_data.keys() == {'resource_owner_key', 'resource_owner_secret'}
+        assert auth_data['resource_owner_key'].startswith('fake resource owner key #')
+        assert auth_data['resource_owner_secret'].startswith('fake resource owner secret #')
         assert touched_timestamp > 0
 
 def test_DatabaseBatchStore_start_background_does_not_insert_extra_row(database_connection_params: dict) -> None:

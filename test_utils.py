@@ -1,4 +1,5 @@
 from collections.abc import Callable
+import random
 import requests
 import requests_oauthlib  # type: ignore
 from typing import Any, Optional
@@ -13,8 +14,13 @@ class FakeSession:
         self.post_response = post_response
         self.host = None
         self.session = requests.Session()
-        self.session.auth = requests_oauthlib.OAuth1(client_key='fake client key', client_secret='fake client secret',
-                                                     resource_owner_key='fake resource owner key', resource_owner_secret='fake resource owner secret')
+        id = random.randrange(2**64-1)
+        self.session.auth = requests_oauthlib.OAuth1(
+            client_key='fake client key',
+            client_secret='fake client secret',
+            resource_owner_key=f'fake resource owner key #{id}',
+            resource_owner_secret='fake resource owner secret #{id}'
+        )
 
     def get(self, *args: Any, **kwargs: Any) -> dict:
         if callable(self.get_response):

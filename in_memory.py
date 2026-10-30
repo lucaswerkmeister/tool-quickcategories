@@ -34,6 +34,10 @@ class InMemoryBatchStore(BatchStore):
         except KeyError:
             return None
 
+    def delete_old_auths(self) -> tuple[int, int]:
+        # the in-memory store never has old auths
+        return 0, 0
+
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
         local_user = _local_user_from_session(session)

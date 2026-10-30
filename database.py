@@ -134,6 +134,27 @@ class DatabaseBatchStore(BatchStore):
                                         resource_owner_key=auth_data['resource_owner_key'], resource_owner_secret=auth_data['resource_owner_secret'])
         return mwapi.Session(host=host, auth=auth, user_agent=user_agent)
 
+    def delete_old_auths(self) -> tuple[int, int]:
+        stopped = now()
+        stopped_utc_timestamp = datetime_to_utc_timestamp(stopped)
+        expired = stopped - datetime.timedelta(days=366)
+        expired_utc_timestamp = datetime_to_utc_timestamp(expired)
+        with self.connect() as connection, connection.cursor() as cursor:
+            cursor.execute('''UPDATE `background`
+                              JOIN `batch` ON `background_batch` = `batch_id`
+                              JOIN `localuser` on `batch_localuser` = `localuser_id`
+                              JOIN `oauth` ON `localuser_global_user_id` = `oauth_global_user_id`
+                              SET `background_stopped_utc_timestamp` = %s, `background_stopped_localuser` = NULL, `background_suspended_until_utc_timestamp` = NULL
+                              WHERE `oauth_touched_utc_timestamp` < %s''',
+                           (stopped_utc_timestamp, expired_utc_timestamp,))
+            stopped_backgrounds = cursor.rowcount
+            cursor.execute('''DELETE FROM `oauth`
+                              WHERE `oauth_touched_utc_timestamp` < %s''',
+                           (expired_utc_timestamp,))
+            deleted_oauths = cursor.rowcount
+            connection.commit()
+            return deleted_oauths, stopped_backgrounds
+
     def store_batch(self, new_batch: NewBatch, session: mwapi.Session) -> OpenBatch:
         created = now()
         created_utc_timestamp = datetime_to_utc_timestamp(created)
