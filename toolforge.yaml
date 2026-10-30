@@ -26,4 +26,4 @@ components:
     run:
       command: delete-old-oauths
       mount: none
-      schedule: @monthly
+      schedule: "@monthly"
