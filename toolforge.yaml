@@ -27,3 +27,6 @@ components:
       command: delete-old-oauths
       mount: none
       schedule: "@monthly"
+defaults:
+  alerts:
+    notify: true
